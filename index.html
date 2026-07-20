@@ -4146,6 +4146,14 @@
         }
       } catch (err) {
         console.error("Firebase RTDB Error:", err);
+        if (err.message && err.message.includes("permission_denied")) {
+          showToast("Akses Firebase ditolak! Buka Firebase Console -> Realtime Database -> Rules -> ubah .read & .write menjadi true.", "danger");
+          // Fallback ke LocalStorage jika aturan Firebase belum dipublish
+          if (action === "login" || action === "getDashboard") {
+            console.warn("Fallback ke Mockup LocalStorage...");
+            return callMockApi(action, payload);
+          }
+        }
         throw err;
       }
     }
@@ -7937,6 +7945,43 @@
       });
       
       renderKepalaKondisiSiswaTable(filtered);
+    }
+
+    function renderWakasekJurnal7KIHTable(list = null) {
+      const tbody = document.getElementById('w-jurnal7kih-table-body');
+      if (!tbody) return;
+      tbody.innerHTML = "";
+      
+      const dataToRender = list || appState.jurnal7KIHList || [];
+      if (dataToRender.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="12" style="text-align: center; color: var(--text-muted);">Belum ada riwayat jurnal 7KIH dari siswa.</td></tr>`;
+        return;
+      }
+      
+      dataToRender.forEach(item => {
+        const tr = document.createElement('tr');
+        const formattedDate = item.tanggal ? new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
+        
+        tr.innerHTML = `
+          <td style="font-weight:500; white-space:nowrap;">${formattedDate}</td>
+          <td style="font-family: monospace;">${item.nis || '-'}</td>
+          <td style="font-weight:600;"><i class="fa-regular fa-user" style="color:var(--primary); margin-right:0.3rem;"></i> ${item.guruWali || 'Umum'}</td>
+          <td style="font-weight:600;">${item.namaSiswa}</td>
+          <td><span class="badge badge-primary">${item.kelas || '-'}</span></td>
+          <td>${getStatusKihIcon(item.bangunPagi)}</td>
+          <td>${getStatusKihIcon(item.beribadah)}</td>
+          <td>${getStatusKihIcon(item.berolahraga)}</td>
+          <td>${getStatusKihIcon(item.makanSehat)}</td>
+          <td>${getStatusKihIcon(item.gemarBelajar)}</td>
+          <td>${getStatusKihIcon(item.bermasyarakat)}</td>
+          <td>${getStatusKihIcon(item.tidurCepat)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function populateWakasekFilterDropdowns() {
+      // Safe no-op or populate Wakasek filter dropdowns if present
     }
 
     function renderKepalaJurnal7KIHTable(list = null) {
