@@ -1,0 +1,35 @@
+{
+  "name": "PATRIOT SMAPAT - SMAN 4 SOPPENG",
+  "short_name": "PATRIOT",
+  "description": "Platform Terintegrasi Informasi, dan Operasional Akademik SMAN 4 SOPPENG",
+  "start_url": "./index.html",
+  "scope": "./",
+  "id": "./",
+  "display": "standalone",
+  "background_color": "#0b0f19",
+  "theme_color": "#6366f1",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "./icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Form 7KIH Siswa",
+      "short_name": "Jurnal 7KIH",
+      "description": "Isi Jurnal 7 Kebiasaan Anak Indonesia Hebat Siswa",
+      "url": "./index.html#jurnal7kih-siswa",
+      "icons": [{ "src": "./icon.png", "sizes": "192x192" }]
+    }
+  ]
+}
