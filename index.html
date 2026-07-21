@@ -1954,7 +1954,6 @@
                     <option value="Guru Wali">Guru Wali</option>
                   </select>
                 </div>
-              </div>
               <div style="display:flex; gap:1rem;">
                 <button type="submit" class="btn btn-primary" style="flex:1;">
                   <i class="fa-solid fa-user-plus"></i> Simpan Akun Guru
@@ -3952,7 +3951,7 @@
           const j7kihRaw = Object.keys(j7Obj).map(k => ({ id: k, ...j7Obj[k] }));
           const cbRaw = Object.keys(cbObj).map(k => ({ id: k, ...cbObj[k] }));
 
-          const teachers = users.filter(u => u.role === "Guru" || u.role === "Wali Kelas" || u.role === "Guru Wali" || u.role === "Kepala Sekolah");
+           const teachers = users;
 
           let result = {
             role: role,
@@ -4371,7 +4370,7 @@
           const cbRaw = cbSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
           const settings = setSnap.exists ? setSnap.data() : { hariBelajar: 5, daftarKelas: ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"] };
-          const teachers = users.filter(u => u.role === "Guru" || u.role === "Wali Kelas" || u.role === "Guru Wali" || u.role === "Kepala Sekolah");
+          const teachers = users;
 
           let result = {
             role: role,
@@ -7029,7 +7028,7 @@
              const j7kihRaw = JSON.parse(localStorage.getItem('db_jurnal7kih')) || [];
              const cbRaw = JSON.parse(localStorage.getItem('db_catatanbimbingan')) || [];
              
-             const teachers = users.filter(u => u.role === "Guru" || u.role === "Wali Kelas" || u.role === "Guru Wali");
+             const teachers = users;
  
              let result = {
                role: role,
