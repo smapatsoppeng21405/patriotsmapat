@@ -230,9 +230,7 @@
       font-size: 1.75rem;
       font-weight: 700;
       margin-bottom: 0.5rem;
-      background: linear-gradient(to right, #ffffff, #a5b4fc);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      color: var(--text-main);
     }
 
     .auth-header p {
@@ -261,7 +259,7 @@
       background-color: var(--bg-input);
       border: 1px solid var(--border-color);
       border-radius: 0.75rem;
-      color: white;
+      color: var(--text-main);
       font-family: var(--font-sans);
       font-size: 0.95rem;
       transition: var(--transition);
@@ -371,9 +369,7 @@
     .sidebar-brand-text {
       font-weight: 700;
       font-size: 1.15rem;
-      background: linear-gradient(to right, white, #cbd5e1);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      color: var(--text-main);
     }
 
     .sidebar-profile {
@@ -384,7 +380,7 @@
       border-radius: 1rem;
       background-color: rgba(255, 255, 255, 0.02);
       border: 1px solid rgba(255, 255, 255, 0.03);
-      margin-bottom: 2rem;
+      margin-bottom: 1.5rem;
     }
     .profile-avatar {
       width: 45px;
@@ -408,6 +404,7 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      color: var(--text-main);
     }
     .profile-role {
       font-size: 0.75rem;
@@ -420,6 +417,9 @@
       flex-direction: column;
       gap: 0.5rem;
       flex: 1;
+      overflow-y: auto;
+      max-height: calc(100vh - 250px);
+      padding-right: 0.25rem;
     }
 
     .nav-link {
@@ -435,8 +435,9 @@
       cursor: pointer;
     }
     .nav-link:hover, .nav-link.active {
-      color: white;
+      color: var(--primary);
       background-color: var(--primary-glow);
+      font-weight: 600;
     }
     .nav-link.active {
       border-left: 3px solid var(--primary);
@@ -449,7 +450,7 @@
 
     .sidebar-footer {
       margin-top: auto;
-      padding-top: 1.5rem;
+      padding-top: 1rem;
       border-top: 1px solid var(--border-color);
     }
 
@@ -472,7 +473,7 @@
       position: sticky;
       top: 0;
       z-index: 90;
-      background-color: rgba(11, 15, 25, 0.85);
+      background-color: var(--glass-bg);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
     }
