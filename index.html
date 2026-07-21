@@ -30,6 +30,7 @@
 
   <style>
     /* DESIGN SYSTEM & VARIABLE DEFINITIONS */
+    /* DARK THEME (DEFAULT) */
     :root {
       --bg-main: #0b0f19;
       --bg-card: #151c2c;
@@ -56,8 +57,28 @@
       --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
-      --glass-bg: rgba(21, 28, 44, 0.7);
-      --glass-border: rgba(255, 255, 255, 0.05);
+      --glass-bg: rgba(21, 28, 44, 0.75);
+      --glass-border: rgba(255, 255, 255, 0.08);
+    }
+
+    /* LIGHT THEME */
+    [data-theme="light"] {
+      --bg-main: #f1f5f9;
+      --bg-card: #ffffff;
+      --bg-input: #f8fafc;
+      --border-color: #cbd5e1;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --primary-glow: rgba(79, 70, 229, 0.15);
+      --accent: #7c3aed;
+      --accent-glow: rgba(124, 58, 237, 0.15);
+      
+      --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+      --glass-bg: rgba(255, 255, 255, 0.88);
+      --glass-border: rgba(0, 0, 0, 0.08);
     }
 
     * {
@@ -165,7 +186,9 @@
       align-items: center;
       justify-content: center;
       min-height: 100vh;
+      width: 100%;
       padding: 2rem 1rem;
+      overflow-y: auto;
       background: radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 40%),
                   radial-gradient(circle at 90% 80%, rgba(139, 92, 246, 0.15) 0%, transparent 40%);
     }
@@ -173,12 +196,13 @@
     .auth-card {
       width: 100%;
       max-width: 450px;
+      max-height: 90vh;
+      overflow-y: auto;
       border-radius: 1.5rem;
       padding: 2.5rem;
       box-shadow: var(--shadow);
       border: 1px solid var(--border-color);
       position: relative;
-      overflow: hidden;
     }
 
     .auth-header {
@@ -1028,6 +1052,11 @@
   <!-- ==================== 1. VIEW LOGIN ==================== -->
   <div class="auth-container" id="authView">
     <div class="auth-card glass-effect" id="loginCard">
+      <div style="position: absolute; top: 1.25rem; right: 1.25rem; z-index: 10;">
+        <button type="button" class="btn btn-secondary" onclick="toggleAppTheme()" title="Ubah Tema Terang / Gelap" style="padding: 0.4rem 0.75rem; font-size: 0.8rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 0.5rem;">
+          <i class="fa-solid fa-sun" style="color: #f59e0b;"></i> <span class="authThemeText">Terang</span>
+        </button>
+      </div>
       <div class="auth-header">
         <div class="auth-logo" style="background: transparent; border: none; box-shadow: none; width: auto; height: auto; margin-bottom: 0.75rem;">
           <img src="./icon.png" alt="Logo SMAN 4 SOPPENG PATRIOT SMAPAT" style="width: 110px; height: 110px; object-fit: contain; filter: drop-shadow(0 6px 16px rgba(0,0,0,0.4));">
@@ -1139,53 +1168,110 @@
         </div>
 
         <h4 style="margin: 1.5rem 0 1rem; color: #a5b4fc; font-weight: 600; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; font-size: 0.95rem;">
-          <i class="fa-solid fa-circle-check"></i> Checklist 7 Kebiasaan Harian Anda:
+          <i class="fa-solid fa-list-check" style="color: var(--primary); margin-right: 0.35rem;"></i> Checklist 7 Kebiasaan Harian Anda:
         </h4>
 
-        <!-- 7 Kebiasaan Checklist -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.75rem; margin-bottom: 1.5rem;">
-          <div style="background: rgba(255,255,255,0.01); border: 1px solid var(--border-color); border-radius: 0.5rem; padding: 0.75rem; display: flex; align-items: center; justify-content: space-between;">
-            <div>
-              <strong style="display: block; font-size: 0.85rem; color: var(--text-main);">1. Bangun Pagi</strong>
+        <!-- 7 Kebiasaan Visual Cards Checklist -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0.85rem; margin-bottom: 1.5rem;">
+          
+          <!-- 1. Bangun Pagi -->
+          <label style="cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 0.85rem; padding: 0.85rem 1rem; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; transition: var(--transition);" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border-color)'">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <div style="width: 40px; height: 40px; border-radius: 0.65rem; background: rgba(245, 158, 11, 0.15); color: #f59e0b; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; flex-shrink: 0;">
+                <i class="fa-solid fa-sun"></i>
+              </div>
+              <div>
+                <strong style="display: block; font-size: 0.9rem; color: var(--text-main);">1. Bangun Pagi</strong>
+                <span style="font-size: 0.75rem; color: var(--text-muted);">Tepat waktu sebelum subuh/fajar</span>
+              </div>
             </div>
-            <input type="checkbox" id="studentBangunPagi" style="width: 18px; height: 18px; accent-color: var(--success);">
-          </div>
-          <div style="background: rgba(255,255,255,0.01); border: 1px solid var(--border-color); border-radius: 0.5rem; padding: 0.75rem; display: flex; align-items: center; justify-content: space-between;">
-            <div>
-              <strong style="display: block; font-size: 0.85rem; color: var(--text-main);">2. Beribadah</strong>
+            <input type="checkbox" id="studentBangunPagi" style="width: 20px; height: 20px; accent-color: var(--success); cursor: pointer;">
+          </label>
+
+          <!-- 2. Beribadah -->
+          <label style="cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 0.85rem; padding: 0.85rem 1rem; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; transition: var(--transition);" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border-color)'">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <div style="width: 40px; height: 40px; border-radius: 0.65rem; background: rgba(16, 185, 129, 0.15); color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; flex-shrink: 0;">
+                <i class="fa-solid fa-hands-praying"></i>
+              </div>
+              <div>
+                <strong style="display: block; font-size: 0.9rem; color: var(--text-main);">2. Beribadah</strong>
+                <span style="font-size: 0.75rem; color: var(--text-muted);">Sesuai agama & kepercayaan</span>
+              </div>
             </div>
-            <input type="checkbox" id="studentBeribadah" style="width: 18px; height: 18px; accent-color: var(--success);">
-          </div>
-          <div style="background: rgba(255,255,255,0.01); border: 1px solid var(--border-color); border-radius: 0.5rem; padding: 0.75rem; display: flex; align-items: center; justify-content: space-between;">
-            <div>
-              <strong style="display: block; font-size: 0.85rem; color: var(--text-main);">3. Berolahraga</strong>
+            <input type="checkbox" id="studentBeribadah" style="width: 20px; height: 20px; accent-color: var(--success); cursor: pointer;">
+          </label>
+
+          <!-- 3. Berolahraga -->
+          <label style="cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 0.85rem; padding: 0.85rem 1rem; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; transition: var(--transition);" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border-color)'">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <div style="width: 40px; height: 40px; border-radius: 0.65rem; background: rgba(59, 130, 246, 0.15); color: #3b82f6; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; flex-shrink: 0;">
+                <i class="fa-solid fa-person-running"></i>
+              </div>
+              <div>
+                <strong style="display: block; font-size: 0.9rem; color: var(--text-main);">3. Berolahraga</strong>
+                <span style="font-size: 0.75rem; color: var(--text-muted);">Aktivitas fisik & menjaga tubuh</span>
+              </div>
             </div>
-            <input type="checkbox" id="studentBerolahraga" style="width: 18px; height: 18px; accent-color: var(--success);">
-          </div>
-          <div style="background: rgba(255,255,255,0.01); border: 1px solid var(--border-color); border-radius: 0.5rem; padding: 0.75rem; display: flex; align-items: center; justify-content: space-between;">
-            <div>
-              <strong style="display: block; font-size: 0.85rem; color: var(--text-main);">4. Makan Sehat & Bergizi</strong>
+            <input type="checkbox" id="studentBerolahraga" style="width: 20px; height: 20px; accent-color: var(--success); cursor: pointer;">
+          </label>
+
+          <!-- 4. Makan Sehat & Bergizi -->
+          <label style="cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 0.85rem; padding: 0.85rem 1rem; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; transition: var(--transition);" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border-color)'">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <div style="width: 40px; height: 40px; border-radius: 0.65rem; background: rgba(239, 68, 68, 0.15); color: #ef4444; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; flex-shrink: 0;">
+                <i class="fa-solid fa-apple-whole"></i>
+              </div>
+              <div>
+                <strong style="display: block; font-size: 0.9rem; color: var(--text-main);">4. Makan Sehat</strong>
+                <span style="font-size: 0.75rem; color: var(--text-muted);">Sarapan & makanan bergizi</span>
+              </div>
             </div>
-            <input type="checkbox" id="studentMakanSehat" style="width: 18px; height: 18px; accent-color: var(--success);">
-          </div>
-          <div style="background: rgba(255,255,255,0.01); border: 1px solid var(--border-color); border-radius: 0.5rem; padding: 0.75rem; display: flex; align-items: center; justify-content: space-between;">
-            <div>
-              <strong style="display: block; font-size: 0.85rem; color: var(--text-main);">5. Gemar Belajar</strong>
+            <input type="checkbox" id="studentMakanSehat" style="width: 20px; height: 20px; accent-color: var(--success); cursor: pointer;">
+          </label>
+
+          <!-- 5. Gemar Belajar -->
+          <label style="cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 0.85rem; padding: 0.85rem 1rem; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; transition: var(--transition);" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border-color)'">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <div style="width: 40px; height: 40px; border-radius: 0.65rem; background: rgba(139, 92, 246, 0.15); color: #8b5cf6; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; flex-shrink: 0;">
+                <i class="fa-solid fa-book-open-reader"></i>
+              </div>
+              <div>
+                <strong style="display: block; font-size: 0.9rem; color: var(--text-main);">5. Gemar Belajar</strong>
+                <span style="font-size: 0.75rem; color: var(--text-muted);">Membaca & belajar hal positif</span>
+              </div>
             </div>
-            <input type="checkbox" id="studentGemarBelajar" style="width: 18px; height: 18px; accent-color: var(--success);">
-          </div>
-          <div style="background: rgba(255,255,255,0.01); border: 1px solid var(--border-color); border-radius: 0.5rem; padding: 0.75rem; display: flex; align-items: center; justify-content: space-between;">
-            <div>
-              <strong style="display: block; font-size: 0.85rem; color: var(--text-main);">6. Bermasyarakat (Sosial)</strong>
+            <input type="checkbox" id="studentGemarBelajar" style="width: 20px; height: 20px; accent-color: var(--success); cursor: pointer;">
+          </label>
+
+          <!-- 6. Bermasyarakat -->
+          <label style="cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 0.85rem; padding: 0.85rem 1rem; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; transition: var(--transition);" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border-color)'">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <div style="width: 40px; height: 40px; border-radius: 0.65rem; background: rgba(236, 72, 153, 0.15); color: #ec4899; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; flex-shrink: 0;">
+                <i class="fa-solid fa-people-hold"></i>
+              </div>
+              <div>
+                <strong style="display: block; font-size: 0.9rem; color: var(--text-main);">6. Bermasyarakat</strong>
+                <span style="font-size: 0.75rem; color: var(--text-muted);">Membantu sesama & berbuat baik</span>
+              </div>
             </div>
-            <input type="checkbox" id="studentBermasyarakat" style="width: 18px; height: 18px; accent-color: var(--success);">
-          </div>
-          <div style="background: rgba(255,255,255,0.01); border: 1px solid var(--border-color); border-radius: 0.5rem; padding: 0.75rem; display: flex; align-items: center; justify-content: space-between;">
-            <div>
-              <strong style="display: block; font-size: 0.85rem; color: var(--text-main);">7. Tidur Cepat (Istirahat)</strong>
+            <input type="checkbox" id="studentBermasyarakat" style="width: 20px; height: 20px; accent-color: var(--success); cursor: pointer;">
+          </label>
+
+          <!-- 7. Tidur Cepat -->
+          <label style="cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 0.85rem; padding: 0.85rem 1rem; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; transition: var(--transition);" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border-color)'">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <div style="width: 40px; height: 40px; border-radius: 0.65rem; background: rgba(99, 102, 241, 0.15); color: #6366f1; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; flex-shrink: 0;">
+                <i class="fa-solid fa-moon"></i>
+              </div>
+              <div>
+                <strong style="display: block; font-size: 0.9rem; color: var(--text-main);">7. Tidur Tepat Waktu</strong>
+                <span style="font-size: 0.75rem; color: var(--text-muted);">Istirahat cukup & tidak begadang</span>
+              </div>
             </div>
-            <input type="checkbox" id="studentTidurCepat" style="width: 18px; height: 18px; accent-color: var(--success);">
-          </div>
+            <input type="checkbox" id="studentTidurCepat" style="width: 20px; height: 20px; accent-color: var(--success); cursor: pointer;">
+          </label>
+
         </div>
 
         <button type="submit" class="btn btn-success" style="width: 100%; font-size: 1rem; padding: 0.8rem; margin-bottom: 1rem;">
@@ -1249,6 +1335,11 @@
         </div>
 
         <div class="header-right">
+          <!-- THEME TOGGLE BUTTON -->
+          <button class="btn btn-secondary" id="themeToggleBtn" onclick="toggleAppTheme()" title="Ubah Tema Terang / Gelap" style="padding: 0.45rem 0.85rem; font-size: 0.85rem; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 0.5rem;">
+            <i class="fa-solid fa-sun" style="color: #f59e0b;"></i> <span id="themeToggleText">Terang</span>
+          </button>
+
           <!-- PWA INSTALL BUTTON -->
           <button class="sync-btn" id="installPwaBtn" onclick="triggerPwaInstall()" style="display: none; background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.3);">
             <i class="fa-solid fa-download"></i> Instal App
@@ -3524,6 +3615,45 @@
         showLoading(false);
       }
     }
+
+    // ==================== TEMA TERANG / GELAP SWITCHER ====================
+    function toggleAppTheme() {
+      const current = document.documentElement.getAttribute('data-theme') || 'dark';
+      const target = current === 'light' ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', target);
+      localStorage.setItem('app_theme', target);
+      updateThemeToggleUI(target);
+      showToast(`Tema aplikasi diubah ke mode ${target === 'light' ? 'Terang (Light Mode)' : 'Gelap (Dark Mode)'}`);
+    }
+
+    function initAppTheme() {
+      const saved = localStorage.getItem('app_theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', saved);
+      updateThemeToggleUI(saved);
+    }
+
+    function updateThemeToggleUI(theme) {
+      const btnText = document.getElementById('themeToggleText');
+      const btnIcon = document.querySelector('#themeToggleBtn i');
+      
+      const authTexts = document.querySelectorAll('.authThemeText');
+      const authIcons = document.querySelectorAll('.auth-card button i.fa-sun, .auth-card button i.fa-moon');
+
+      if (theme === 'light') {
+        if (btnText) btnText.textContent = "Gelap";
+        if (btnIcon) { btnIcon.className = "fa-solid fa-moon"; btnIcon.style.color = "#8b5cf6"; }
+        authTexts.forEach(el => el.textContent = "Gelap");
+        authIcons.forEach(el => { el.className = "fa-solid fa-moon"; el.style.color = "#8b5cf6"; });
+      } else {
+        if (btnText) btnText.textContent = "Terang";
+        if (btnIcon) { btnIcon.className = "fa-solid fa-sun"; btnIcon.style.color = "#f59e0b"; }
+        authTexts.forEach(el => el.textContent = "Terang");
+        authIcons.forEach(el => { el.className = "fa-solid fa-sun"; el.style.color = "#f59e0b"; });
+      }
+    }
+
+    // Inisialisasi Tema
+    initAppTheme();
 
     // SETUP SESSION INTERFACES
     function setupSessionUI() {
