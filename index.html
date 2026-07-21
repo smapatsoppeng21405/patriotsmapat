@@ -5760,6 +5760,133 @@
       }
     }
 
+    // ==================== MANAJEMEN DAFTAR KELAS SEKOLAH ====================
+    function renderActiveClassesList() {
+      const container = document.getElementById('activeClassesListContainer');
+      if (!container) return;
+      
+      let classes = [];
+      if (appState.settings && appState.settings.daftar_kelas) {
+        if (Array.isArray(appState.settings.daftar_kelas)) {
+          classes = appState.settings.daftar_kelas;
+        } else if (typeof appState.settings.daftar_kelas === 'string') {
+          classes = appState.settings.daftar_kelas.split(",").map(s => s.trim()).filter(Boolean);
+        }
+      } else if (appState.settings && appState.settings.daftarKelas) {
+        classes = appState.settings.daftarKelas;
+      } else {
+        classes = ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"];
+      }
+
+      if (!appState.settings) appState.settings = {};
+      appState.settings.daftarKelas = classes;
+
+      container.innerHTML = "";
+      if (classes.length === 0) {
+        container.innerHTML = '<span style="color:var(--text-muted); font-size:0.85rem; font-style:italic;">Belum ada kelas terdaftar.</span>';
+        return;
+      }
+
+      classes.forEach(cls => {
+        const badge = document.createElement('div');
+        badge.className = 'badge badge-primary';
+        badge.style.cssText = "padding: 0.5rem 0.85rem; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 0.4rem; color: #a5b4fc;";
+        badge.innerHTML = `
+          <span>${cls}</span>
+          <i class="fa-solid fa-xmark" onclick="deleteClass('${cls}')" style="cursor: pointer; opacity: 0.7; font-size: 0.9rem; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'" title="Hapus Kelas ${cls}"></i>
+        `;
+        container.appendChild(badge);
+      });
+
+      populateClassDropdowns();
+    }
+
+    async function addNewClass() {
+      const input = document.getElementById('newClassNameInput');
+      if (!input) return;
+      const newName = input.value.trim().toUpperCase();
+      
+      if (!newName) {
+        showToast("Masukkan nama kelas baru (contoh: 10-C).", "warning");
+        return;
+      }
+
+      let currentClasses = appState.settings.daftarKelas || ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"];
+      if (currentClasses.includes(newName)) {
+        showToast(`Kelas ${newName} sudah ada di dalam daftar!`, "warning");
+        return;
+      }
+
+      currentClasses.push(newName);
+      showLoading(true, "Menambahkan kelas baru...");
+      try {
+        await callApi("updateSettings", { key: "daftar_kelas", value: currentClasses.join(",") });
+        appState.settings.daftar_kelas = currentClasses.join(",");
+        appState.settings.daftarKelas = currentClasses;
+        input.value = "";
+        showToast(`Kelas ${newName} berhasil ditambahkan!`, "success");
+        renderActiveClassesList();
+      } catch (err) {
+        showToast("Gagal menambah kelas: " + err.message, "danger");
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    async function deleteClass(className) {
+      const confirmed = await showCustomConfirm("Hapus Kelas", `Apakah Anda yakin ingin menghapus kelas ${className}?`, "Ya, Hapus", true);
+      if (!confirmed) return;
+
+      let currentClasses = appState.settings.daftarKelas || ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"];
+      const updatedClasses = currentClasses.filter(c => c !== className);
+
+      showLoading(true, `Menghapus kelas ${className}...`);
+      try {
+        await callApi("updateSettings", { key: "daftar_kelas", value: updatedClasses.join(",") });
+        appState.settings.daftar_kelas = updatedClasses.join(",");
+        appState.settings.daftarKelas = updatedClasses;
+        showToast(`Kelas ${className} berhasil dihapus!`, "success");
+        renderActiveClassesList();
+      } catch (err) {
+        showToast("Gagal menghapus kelas: " + err.message, "danger");
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    function populateClassDropdowns() {
+      const classList = appState.settings && appState.settings.daftarKelas && appState.settings.daftarKelas.length > 0
+        ? appState.settings.daftarKelas
+        : ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"];
+
+      const dropdownIds = [
+        'jurnalKelas', 'guruMasterKelas', 'jadwalKelas', 'laporanKelas', 'absenKelas',
+        'studentKelas', 'siswaGWKelas', 'w-filter-kelas', 'w-filter-absen-kelas',
+        'w-filter-kondisi-kelas', 'rosterKelasSelect', 'ks-filter-kelas', 'ks-filter-absen-kelas',
+        'ks-filter-kondisi-kelas'
+      ];
+
+      dropdownIds.forEach(id => {
+        const select = document.getElementById(id);
+        if (!select) return;
+        const currentVal = select.value;
+        
+        const isFilter = id.startsWith('w-filter') || id.startsWith('ks-filter');
+        select.innerHTML = isFilter ? '<option value="">Semua Kelas</option>' : '<option value="">Pilih Kelas</option>';
+
+        classList.forEach(cls => {
+          const opt = document.createElement('option');
+          opt.value = cls;
+          opt.textContent = cls;
+          select.appendChild(opt);
+        });
+
+        if (currentVal && classList.includes(currentVal)) {
+          select.value = currentVal;
+        }
+      });
+    }
+
     // Submit Master Data Guru (Tambah / Edit)
     async function submitGuruMasterForm(e) {
       e.preventDefault();
