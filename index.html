@@ -1038,9 +1038,9 @@
 
       <form id="loginForm" onsubmit="handleLogin(event)">
         <div class="form-group">
-          <label for="loginEmail">Email Pengguna</label>
-          <input type="email" id="loginEmail" class="form-control" placeholder="nama@sekolah.com" required>
-          <i class="fa-solid fa-envelope form-icon"></i>
+          <label for="loginEmail">NIP atau Email Login</label>
+          <input type="text" id="loginEmail" class="form-control" placeholder="Masukkan NIP atau Email..." required>
+          <i class="fa-solid fa-id-card form-icon"></i>
         </div>
 
         <div class="form-group" style="margin-bottom: 2rem;">
@@ -1063,6 +1063,12 @@
         <button type="button" class="btn" style="background: rgba(16, 185, 129, 0.1); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.2); width: 100%; padding: 0.75rem;" onclick="showStudent7KIHView(true)">
           <i class="fa-solid fa-heart-pulse"></i> Portal Pengisian 7KIH Siswa
         </button>
+      </div>
+
+      <!-- CREDITS & LICENSE FOOTER -->
+      <div style="text-align: center; margin-top: 1.25rem; border-top: 1px dashed var(--border-color); padding-top: 0.85rem; color: var(--text-muted); font-size: 0.8rem; line-height: 1.5;">
+        <div><i class="fa-solid fa-code" style="color: var(--primary); margin-right: 0.35rem;"></i> Pembuat Aplikasi: <strong>PASYA (SMAN 4 Soppeng)</strong></div>
+        <div><i class="fa-solid fa-scale-balanced" style="color: var(--success); margin-right: 0.35rem;"></i> Lisensi: <strong>MIT License © 2026 SMAN 4 SOPPENG</strong></div>
       </div>
 
       <!-- DEMO ACCOUNTS HELPER -->
@@ -1219,10 +1225,14 @@
       </nav>
 
       <div class="sidebar-footer">
-        <a class="nav-link" onclick="handleLogout()" style="color: var(--danger); border-radius: 0.75rem;">
+        <a class="nav-link" onclick="handleLogout()" style="color: var(--danger); border-radius: 0.75rem; margin-bottom: 0.75rem;">
           <i class="fa-solid fa-right-from-bracket"></i>
           <span>Keluar Sesi</span>
         </a>
+        <div style="font-size: 0.75rem; color: var(--text-muted); text-align: center; border-top: 1px solid var(--border-color); padding-top: 0.75rem; line-height: 1.4;">
+          <div style="color: var(--text-main); font-weight: 600;">PASYA SMAN 4 Soppeng</div>
+          <div style="font-size: 0.7rem; opacity: 0.8;">MIT License © 2026</div>
+        </div>
       </div>
     </aside>
 
@@ -1828,17 +1838,22 @@
                   <input type="text" id="teacherNama" class="form-control" style="padding-left: 1rem;" placeholder="E.g., Bu Siti, Pak Joko" required>
                 </div>
                 <div class="form-group">
-                  <label for="teacherEmail">Email Login</label>
-                  <input type="email" id="teacherEmail" class="form-control" style="padding-left: 1rem;" placeholder="E.g., siti@sekolah.com" required>
+                  <label for="teacherNip">NIP (Opsional - Untuk Login)</label>
+                  <input type="text" id="teacherNip" class="form-control" style="padding-left: 1rem;" placeholder="E.g., 198501012010011001">
                 </div>
               </div>
               <div class="form-grid">
                 <div class="form-group">
+                  <label for="teacherEmail">Email Login</label>
+                  <input type="email" id="teacherEmail" class="form-control" style="padding-left: 1rem;" placeholder="E.g., siti@sekolah.com" required>
+                </div>
+                <div class="form-group">
                   <label for="teacherPassword">Password</label>
                   <input type="text" id="teacherPassword" class="form-control" style="padding-left: 1rem;" placeholder="E.g., siti123" required>
                 </div>
-                <div class="form-group">
-                  <label for="teacherRole">Role Sesi & Jabatan</label>
+              </div>
+              <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label for="teacherRole">Role Sesi & Jabatan</label>
                   <select id="teacherRole" class="filter-control" style="padding: 0.85rem 1rem;" required>
                     <option value="Wakasek">Wakasek Kurikulum</option>
                     <option value="Kepala Sekolah">Kepala Sekolah</option>
@@ -3754,14 +3769,16 @@
             usersObj = demoUsers;
           }
 
-          const emailTarget = payload.email.toLowerCase().trim();
+          const inputTarget = payload.email.toLowerCase().trim();
           const passTarget = payload.password.toString().trim();
 
           let foundUser = null;
           Object.keys(usersObj).forEach(key => {
             const u = usersObj[key];
-            if (u.email && u.email.toLowerCase().trim() === emailTarget && u.password && u.password.toString().trim() === passTarget) {
-              foundUser = { id: key, nama: u.nama, email: u.email, role: u.role };
+            const matchEmail = u.email && u.email.toLowerCase().trim() === inputTarget;
+            const matchNip = u.nip && u.nip.toString().toLowerCase().trim() === inputTarget;
+            if ((matchEmail || matchNip) && u.password && u.password.toString().trim() === passTarget) {
+              foundUser = { id: key, nama: u.nama, email: u.email, nip: u.nip || "", role: u.role };
             }
           });
 
@@ -3978,6 +3995,7 @@
           const key = payload.id || ref("users").push().key;
           await ref(`users/${key}`).update({
             nama: payload.nama,
+            nip: payload.nip || "",
             email: payload.email,
             role: payload.role,
             password: payload.password
@@ -6296,13 +6314,14 @@
       
       const id = document.getElementById('teacherId').value;
       const nama = document.getElementById('teacherNama').value;
+      const nip = document.getElementById('teacherNip') ? document.getElementById('teacherNip').value.trim() : "";
       const email = document.getElementById('teacherEmail').value;
       const password = document.getElementById('teacherPassword').value;
       const role = document.getElementById('teacherRole').value;
       
       showLoading(true, "Menyimpan akun guru...");
       try {
-        const payload = { nama, email, password, role };
+        const payload = { nama, nip, email, password, role };
         if (id) payload.id = id;
         
         await callApi("addTeacher", payload);
@@ -6320,6 +6339,7 @@
     function resetTeacherForm() {
       document.getElementById('formTeacher').reset();
       document.getElementById('teacherId').value = "";
+      if (document.getElementById('teacherNip')) document.getElementById('teacherNip').value = "";
       document.getElementById('btnCancelEditTeacher').style.display = "none";
     }
 
@@ -6330,6 +6350,7 @@
       
       document.getElementById('teacherId').value = item.id;
       document.getElementById('teacherNama').value = item.nama;
+      if (document.getElementById('teacherNip')) document.getElementById('teacherNip').value = item.nip || "";
       document.getElementById('teacherEmail').value = item.email;
       document.getElementById('teacherPassword').value = item.password;
       document.getElementById('teacherRole').value = item.role;
@@ -6369,7 +6390,6 @@
       list.forEach(item => {
         // Query beban mengajar guru ini dari master list
         const assignments = (appState.guruMasterList || []).filter(gm => {
-          // Cocokkan jika nama guru di master list diawali oleh nama guru di user list
           return gm.guru.toLowerCase().startsWith(item.nama.toLowerCase());
         });
         
@@ -6386,9 +6406,11 @@
           assignmentHtml += `</ul><div style="font-size:0.8rem; margin-top:0.35rem; color:var(--accent);"><strong>Total Beban: ${totalJp} JP / Pekan</strong></div>`;
         }
 
+        const nipDisplay = item.nip ? `<div style="font-size:0.75rem; color:var(--primary); font-family:monospace;">NIP: ${item.nip}</div>` : '';
+
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td style="font-weight:600; color:#cbd5e1;">${item.nama}</td>
+          <td style="font-weight:600; color:#cbd5e1;">${item.nama}${nipDisplay}</td>
           <td>${item.email}</td>
           <td><span class="badge badge-primary">${item.role}</span></td>
           <td style="font-family: monospace;">${item.password}</td>
