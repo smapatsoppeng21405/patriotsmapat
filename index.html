@@ -5676,6 +5676,7 @@
         appState.siswaGuruWaliList = data.siswaGuruWaliList || [];
         appState.jurnal7KIHList = data.jurnal7KIHList || [];
         appState.studentList = data.studentList || [];
+        appState.kelasMapelPilihanList = data.kelasMapelPilihanList || [];
         
         // Simpan data lokal sebagai cache
         localStorage.setItem(`cache_stats_${appState.user.role}`, JSON.stringify(data.stats));
@@ -8345,8 +8346,16 @@
       
       const students = appState.studentList || [];
       
-      // Filter siswa berdasarkan Tingkatan (X, XI, atau XII)
-      const filtered = students.filter(s => s.tingkatan === targetTingkat);
+      // Filter siswa berdasarkan Tingkatan (X, XI, atau XII) dengan fallback ke kelas jika tingkatan kosong
+      const filtered = students.filter(s => {
+        let tingkat = s.tingkatan;
+        if (!tingkat && s.kelas) {
+          if (s.kelas.startsWith("10")) tingkat = "X";
+          else if (s.kelas.startsWith("11")) tingkat = "XI";
+          else if (s.kelas.startsWith("12")) tingkat = "XII";
+        }
+        return tingkat === targetTingkat;
+      });
       
       // Sort alphabetically
       filtered.sort((a, b) => a.namaSiswa.localeCompare(b.namaSiswa));
@@ -8423,8 +8432,8 @@
       const list = appState.kelasMapelPilihanList || [];
       const myEmail = appState.user.email;
       
-      // Filter list berdasarkan email guru yang login
-      let myMapil = list.filter(item => item.guruEmail === myEmail);
+      // Filter list berdasarkan email guru yang login (case-insensitive)
+      let myMapil = list.filter(item => item.guruEmail && myEmail && item.guruEmail.toLowerCase().trim() === myEmail.toLowerCase().trim());
       
       // Filter berdasarkan dropdown filter rombel
       const filterVal = document.getElementById('filterMapilKelas').value;
