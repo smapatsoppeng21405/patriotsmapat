@@ -2047,75 +2047,7 @@
             </div>
           </div>
 
-          <!-- 3. Form Tambah Master Data Guru -->
-          <div class="card glass-effect" style="margin-bottom: 2rem;">
-            <div class="card-title">2. Alokasikan Tugas Mengajar Guru (Mata Pelajaran & JP)</div>
-            <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1.5rem; line-height:1.5;">
-              Tentukan mata pelajaran, kelas, dan jumlah JP mingguan guru. Akumulasi jam mengajar akan ter-update otomatis pada tabel registrasi akun guru di atas.
-            </p>
-            <form id="formGuruMaster" onsubmit="submitGuruMasterForm(event)">
-              <input type="hidden" id="guruMasterId">
-              <div class="form-grid">
-                <div class="form-group">
-                  <label for="guruMasterNama">Nama Guru</label>
-                  <select id="guruMasterNama" class="filter-control" style="padding: 0.85rem 1rem;" required>
-                    <option value="">Pilih Guru</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="guruMasterMapel">Mata Pelajaran</label>
-                  <input type="text" id="guruMasterMapel" class="form-control" style="padding-left: 1rem;" placeholder="E.g., Matematika, Fisika" required>
-                </div>
-              </div>
-              <div class="form-grid">
-                <div class="form-group">
-                  <label for="guruMasterKelas">Target Kelas</label>
-                  <select id="guruMasterKelas" class="filter-control" style="padding: 0.85rem 1rem;" required>
-                    <option value="">Pilih Kelas</option>
-                    <option value="10-A">10-A</option>
-                    <option value="10-B">10-B</option>
-                    <option value="11-A">11-A</option>
-                    <option value="11-B">11-B</option>
-                    <option value="12-A">12-A</option>
-                    <option value="12-B">12-B</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="guruMasterJP">Jumlah Jam Pelajaran (JP) Seminggu</label>
-                  <input type="number" id="guruMasterJP" class="form-control" style="padding-left: 1rem;" placeholder="E.g., 4" min="1" max="12" required>
-                </div>
-              </div>
-              <div style="display:flex; gap:1rem;">
-                <button type="submit" class="btn btn-primary" style="flex:1;">
-                  <i class="fa-solid fa-save"></i> Simpan Tugas Mengajar
-                </button>
-                <button type="button" class="btn btn-secondary" onclick="resetGuruMasterForm()" style="display:none;" id="btnCancelEditGuruMaster">
-                  Batal Edit
-                </button>
-              </div>
-            </form>
-          </div>
 
-          <!-- 4. Tabel Daftar Master Guru -->
-          <div class="card glass-effect" style="margin-bottom: 2rem;">
-            <div class="card-title">Daftar Master Tugas Mengajar Guru</div>
-            <div class="table-container">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>Nama Guru</th>
-                    <th>Mata Pelajaran</th>
-                    <th>Target Kelas</th>
-                    <th>Jumlah Jam (JP)</th>
-                    <th>Aksi</th>
-                  </tr>
-                </thead>
-                <tbody id="w-gurumaster-table-body">
-                  <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Belum ada data tugas mengajar.</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
 
           <!-- 5. Manajemen Siswa Guru Wali -->
           <div class="card glass-effect" style="margin-bottom: 2rem;">
@@ -4491,6 +4423,7 @@
       if (role === "Wakasek") {
         menuItems = [
           { text: "Ringkasan", pane: "pane-wakasek-ringkasan", icon: "fa-chart-pie" },
+          { text: "Data Utama Guru", pane: "pane-wakasek-gurumaster", icon: "fa-user-gear" },
           { text: "Data Utama Siswa", pane: "pane-wakasek-siswamaster", icon: "fa-users-gear" },
           { text: "Monitoring Jurnal", pane: "pane-wakasek-jurnal", icon: "fa-book-open" },
           { text: "Validasi Perangkat", pane: "pane-wakasek-perangkat", icon: "fa-file-shield" },
