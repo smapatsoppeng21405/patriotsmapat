@@ -2011,6 +2011,13 @@
                   </label>
                 </div>
               </div>
+              <div class="form-group" style="margin-bottom: 1.5rem; max-width: 350px;">
+                <label for="teacherWaliKelasClass" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-main);">Kelas Bimbingan Wali Kelas (Opsional)</label>
+                <select id="teacherWaliKelasClass" class="form-control" style="padding-left: 1rem; height: calc(2.5rem + 2px);">
+                  <option value="">Pilih Kelas</option>
+                </select>
+                <span style="font-size: 0.7rem; color: var(--text-muted);">Pilih kelas asuhan guru jika yang bersangkutan memiliki peran/jabatan Wali Kelas.</span>
+              </div>
               <div style="display:flex; gap:1rem;">
                 <button type="submit" class="btn btn-primary" style="flex:1;">
                   <i class="fa-solid fa-user-plus"></i> Simpan Akun Guru
@@ -2845,7 +2852,7 @@
                 </div>
                 <div class="form-group">
                   <label for="kondisiKelas">Kelas Bimbingan</label>
-                  <select id="kondisiKelas" class="filter-control" style="padding: 0.85rem 1rem;" required>
+                  <select id="kondisiKelas" class="filter-control" style="padding: 0.85rem 1rem;" required onchange="populateKondisiSiswaNames()">
                     <option value="">Pilih Kelas</option>
                     <option value="10-A">10-A</option>
                     <option value="10-B">10-B</option>
@@ -2860,7 +2867,9 @@
               <div class="form-grid">
                 <div class="form-group">
                   <label for="kondisiNamaSiswa">Nama Siswa</label>
-                  <input type="text" id="kondisiNamaSiswa" class="form-control" style="padding-left: 1rem;" placeholder="Nama Lengkap Siswa" required>
+                  <select id="kondisiNamaSiswa" class="filter-control" style="padding: 0.85rem 1rem;" required>
+                    <option value="">Pilih Siswa (Pilih Kelas Dulu)</option>
+                  </select>
                 </div>
                 <div class="form-group">
                   <label for="kondisiKehadiran">Kehadiran Siswa</label>
@@ -4468,7 +4477,7 @@
             const demoUsers = {
               "u_wakasek": { nama: "Sri Rahayu S.Pd.,M.Pd.", email: "wakasek@sekolah.com", role: "Wakasek", password: "wakasek123" },
               "u_guru": { nama: "Ahmad Fauzi, S.Pd.", email: "guru@sekolah.com", role: "Guru", password: "guru123" },
-              "u_walikelas": { nama: "Wali Kelas 10-A", email: "walikelas@sekolah.com", role: "Wali Kelas", password: "walikelas123" },
+              "u_walikelas": { nama: "Wali Kelas 10-A", email: "walikelas@sekolah.com", role: "Wali Kelas", password: "walikelas123", waliKelasClass: "10-A" },
               "u_guruwali": { nama: "Siti Rahma, S.Pd.", email: "guruwali@sekolah.com", role: "Guru Wali", password: "wali123" },
               "u_kepala": { nama: "H. Nurhalim, S.Pd., M.M.", email: "kepala@sekolah.com", role: "Kepala Sekolah", password: "kepala123" }
             };
@@ -5584,7 +5593,11 @@
         // Jurnal Monitoring khusus bimbingan
         renderWaliKelasJurnalTable();
         renderWaliKelasRekapAbsenTable();
+        renderWaliKelasKondisiSiswaTable();
         resetRekapAbsenForm();
+        
+        // Populate names of students in that class
+        populateKondisiSiswaNames();
       }
       else if (role === "Guru Wali") {
         // Stats
@@ -6153,7 +6166,11 @@
       if (!tbody) return;
       tbody.innerHTML = "";
       
-      const list = appState.rekapAbsenList || [];
+      let list = appState.rekapAbsenList || [];
+      if (appState.user && appState.user.role === "Wali Kelas" && appState.user.waliKelasClass) {
+        list = list.filter(item => item.kelas === appState.user.waliKelasClass);
+      }
+      
       if (list.length === 0) {
         tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Belum ada rekap absen bulanan.</td></tr>`;
         return;
@@ -6179,7 +6196,11 @@
       if (!tbody) return;
       tbody.innerHTML = "";
       
-      const list = appState.kondisiSiswaList || [];
+      let list = appState.kondisiSiswaList || [];
+      if (appState.user && appState.user.role === "Wali Kelas" && appState.user.waliKelasClass) {
+        list = list.filter(item => item.kelas === appState.user.waliKelasClass);
+      }
+      
       if (list.length === 0) {
         tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Belum ada catatan kondisi siswa.</td></tr>`;
         return;
@@ -6705,10 +6726,14 @@
     function populateClassDropdowns() {
       let classList = ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"];
       if (appState.settings && appState.settings.daftarKelas) {
+        let temp = [];
         if (Array.isArray(appState.settings.daftarKelas)) {
-          classList = appState.settings.daftarKelas;
+          temp = appState.settings.daftarKelas;
         } else if (typeof appState.settings.daftarKelas === "string") {
-          classList = appState.settings.daftarKelas.split(",").map(s => s.trim()).filter(Boolean);
+          temp = appState.settings.daftarKelas.split(",").map(s => s.trim()).filter(Boolean);
+        }
+        if (temp && temp.length > 0) {
+          classList = temp;
         }
       }
 
@@ -6716,7 +6741,8 @@
         'jurnalKelas', 'guruMasterKelas', 'jadwalKelas', 'laporanKelas', 'absenKelas',
         'nilaiKelas', 'kondisiKelas', 'studentMasterKelas', 'siswaGWKelas', 'w-filter-kelas',
         'w-filter-absen-kelas', 'w-filter-kondisi-kelas', 'rosterKelasSelect',
-        'ks-filter-kelas', 'ks-filter-absen-kelas', 'ks-filter-kondisi-kelas', 'filterStudentKelas'
+        'ks-filter-kelas', 'ks-filter-absen-kelas', 'ks-filter-kondisi-kelas', 'filterStudentKelas',
+        'teacherWaliKelasClass'
       ];
 
       dropdownIds.forEach(id => {
@@ -6724,18 +6750,28 @@
         if (!select) return;
         const currentVal = select.value;
         
+        let allowedClasses = classList;
+        // Jika user adalah Wali Kelas, batasi kelas input bimbingan (absen, kondisi, laporan) ke kelasnya sendiri
+        if (appState.user && appState.user.role === "Wali Kelas" && appState.user.waliKelasClass) {
+          if (['absenKelas', 'kondisiKelas', 'laporanKelas'].includes(id)) {
+            allowedClasses = [appState.user.waliKelasClass];
+          }
+        }
+
         const isFilter = id.startsWith('w-filter') || id.startsWith('ks-filter') || id.includes('filter');
         select.innerHTML = isFilter ? '<option value="">Semua Kelas</option>' : '<option value="">Pilih Kelas</option>';
 
-        classList.forEach(cls => {
+        allowedClasses.forEach(cls => {
           const opt = document.createElement('option');
           opt.value = cls;
           opt.textContent = cls;
           select.appendChild(opt);
         });
 
-        if (currentVal && classList.includes(currentVal)) {
+        if (currentVal && allowedClasses.includes(currentVal)) {
           select.value = currentVal;
+        } else if (allowedClasses.length === 1 && !isFilter) {
+          select.value = allowedClasses[0];
         }
       });
     }
@@ -7162,7 +7198,8 @@
        
        showLoading(true, "Menyimpan akun guru...");
        try {
-         const payload = { nama, nip, email, password, role };
+         const waliKelasClass = document.getElementById('teacherWaliKelasClass').value;
+         const payload = { nama, nip, email, password, role, waliKelasClass };
          if (id) payload.id = id;
          
          await callApi("addTeacher", payload);
@@ -7181,6 +7218,7 @@
        document.getElementById('formTeacher').reset();
        document.getElementById('teacherId').value = "";
        if (document.getElementById('teacherNip')) document.getElementById('teacherNip').value = "";
+       document.getElementById('teacherWaliKelasClass').value = "";
        document.querySelectorAll('input[name="teacherRoles"]').forEach(cb => cb.checked = false);
        document.getElementById('btnCancelEditTeacher').style.display = "none";
      }
@@ -7195,6 +7233,7 @@
        if (document.getElementById('teacherNip')) document.getElementById('teacherNip').value = item.nip || "";
        document.getElementById('teacherEmail').value = item.email;
        document.getElementById('teacherPassword').value = item.password;
+       document.getElementById('teacherWaliKelasClass').value = item.waliKelasClass || "";
        
        const roles = item.role ? item.role.split(',').map(r => r.trim()) : [];
        document.querySelectorAll('input[name="teacherRoles"]').forEach(cb => {
@@ -7260,7 +7299,10 @@
           <td>${item.email}</td>
           <td>
             ${(item.role || "").split(",").map(r => r.trim()).filter(Boolean).map(r => {
-              const displayRole = r === "Guru" ? "Guru Mata Pelajaran" : r;
+              let displayRole = r === "Guru" ? "Guru Mata Pelajaran" : r;
+              if (r === "Wali Kelas" && item.waliKelasClass) {
+                displayRole = `Wali Kelas (${item.waliKelasClass})`;
+              }
               let bgColor = "rgba(99, 102, 241, 0.15)";
               let textColor = "var(--primary)";
               if (r === "Wakasek") { bgColor = "rgba(236, 72, 153, 0.15)"; textColor = "#ec4899"; }
@@ -8497,7 +8539,8 @@
               nama: payload.nama,
               email: payload.email,
               role: payload.role,
-              password: payload.password
+              password: payload.password,
+              waliKelasClass: payload.waliKelasClass || ""
             };
             
             if (index !== -1) {
@@ -8777,7 +8820,7 @@
       const mockUsers = [
         { id: "USR001", nama: "Pak Budi (Wakasek)", email: "wakasek@sekolah.com", role: "Wakasek", password: "wakasek123" },
         { id: "USR002", nama: "Bu Siti (Guru Matematika)", email: "guru@sekolah.com", role: "Guru", password: "guru123" },
-        { id: "USR003", nama: "Pak Joko (Wali Kelas 10A)", email: "walikelas@sekolah.com", role: "Wali Kelas", password: "walikelas123" },
+        { id: "USR003", nama: "Pak Joko (Wali Kelas 10A)", email: "walikelas@sekolah.com", role: "Wali Kelas", password: "walikelas123", waliKelasClass: "10-A" },
         { id: "USR004", nama: "Ibu Rahma (Guru Wali)", email: "guruwali@sekolah.com", role: "Guru Wali", password: "wali123" },
         { id: "USR005", nama: "Drs. H. Mulyono (Kepala Sekolah)", email: "kepala@sekolah.com", role: "Kepala Sekolah", password: "kepala123" }
       ];
@@ -9128,6 +9171,26 @@
       });
       
       showToast("Berhasil memuat " + classStudents.length + " siswa kelas " + selectedClass + "!");
+    }
+
+    function populateKondisiSiswaNames() {
+      const kelas = document.getElementById('kondisiKelas').value;
+      const selectNama = document.getElementById('kondisiNamaSiswa');
+      if (!selectNama) return;
+      
+      selectNama.innerHTML = '<option value="">Pilih Siswa</option>';
+      
+      if (!kelas) return;
+      
+      const students = appState.studentList || [];
+      const classStudents = students.filter(s => s.kelas && s.kelas.toUpperCase() === kelas.toUpperCase());
+      
+      classStudents.sort((a, b) => a.namaSiswa.localeCompare(b.namaSiswa)).forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.namaSiswa;
+        opt.textContent = s.namaSiswa;
+        selectNama.appendChild(opt);
+      });
     }
 
     async function deleteSiswaGW(id) {

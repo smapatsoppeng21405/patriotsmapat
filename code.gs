@@ -16,7 +16,7 @@ function initSheets() {
   
   // Define sheets and headers
   var sheetsDef = {
-    "Users": ["ID", "Nama", "Email", "Role", "Password"],
+    "Users": ["ID", "Nama", "Email", "Role", "Password", "WaliKelasClass"],
     "JurnalMengajar": ["ID", "Tanggal", "Guru", "Kelas", "Materi", "Kehadiran", "Catatan", "Mode"],
     "PerangkatAjar": ["ID", "Nama_Guru", "Jenis_Dokumen", "Link_Drive", "Status", "Catatan"],
     "AnalisisNilai": ["ID", "Kelas", "Mapel", "Rata_Nilai", "Jumlah_Siswa_Remidial"],
@@ -266,7 +266,8 @@ function login(email, password) {
           id: data[i][0],
           nama: data[i][1],
           email: data[i][2],
-          role: r
+          role: r,
+          waliKelasClass: data[i][5] || ""
         });
       });
       
@@ -277,7 +278,8 @@ function login(email, password) {
           id: data[i][0],
           nama: data[i][1],
           email: data[i][2],
-          role: roleStr || "Guru"
+          role: roleStr || "Guru",
+          waliKelasClass: data[i][5] || ""
         };
       }
     }
@@ -542,7 +544,8 @@ function getDashboard(role, email, nama) {
         nama: row[1],
         email: row[2],
         role: row[3],
-        password: row[4]
+        password: row[4],
+        waliKelasClass: row[5] || ""
       });
     }
   }
@@ -1014,6 +1017,7 @@ function addTeacher(payload) {
   var email = payload.email;
   var role = payload.role || "Guru"; 
   var password = payload.password;
+  var waliKelasClass = payload.waliKelasClass || "";
   
   var data = sheet.getDataRange().getValues();
   var index = -1;
@@ -1030,9 +1034,10 @@ function addTeacher(payload) {
     sheet.getRange(index + 1, 3).setValue(email);
     sheet.getRange(index + 1, 4).setValue(role);
     sheet.getRange(index + 1, 5).setValue(password);
+    sheet.getRange(index + 1, 6).setValue(waliKelasClass);
   } else {
     // Tambah Baru
-    sheet.appendRow([id, nama, email, role, password]);
+    sheet.appendRow([id, nama, email, role, password, waliKelasClass]);
   }
   
   SpreadsheetApp.flush();
