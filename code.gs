@@ -27,7 +27,7 @@ function initSheets() {
     "RekapAbsen": ["ID", "Bulan", "Tahun", "WaliKelas", "Kelas", "NamaSiswa", "Hadir", "Sakit", "Izin", "Alpa"],
     "KondisiSiswa": ["ID", "Bulan", "Tahun", "WaliKelas", "Kelas", "NamaSiswa", "Kehadiran", "PrestasiAkademik", "PrestasiNonAkademik", "TujuanSetelahLulus"],
     "SiswaGuruWali": ["ID", "NIS", "NamaSiswa", "Kelas", "GuruWali"],
-    "Siswa": ["ID", "NIS", "NamaSiswa", "Kelas"],
+    "Siswa": ["ID", "NIS", "NamaSiswa", "Kelas", "Tingkatan"],
     "Jurnal7KIH": ["ID", "Tanggal", "NIS", "NamaSiswa", "BangunPagi", "Beribadah", "Berolahraga", "MakanSehat", "GemarBelajar", "Bermasyarakat", "TidurCepat"],
     "CatatanBimbingan": ["ID", "Tanggal", "GuruWali", "NamaSiswa", "CatatanPerkembangan"],
     "KelasMapelPilihan": ["ID", "GuruEmail", "NamaKelas", "Tingkatan", "NamaSiswa", "NIS"]
@@ -492,7 +492,8 @@ function getDashboard(role, email, nama) {
       id: row[0],
       nis: row[1],
       namaSiswa: row[2],
-      kelas: row[3]
+      kelas: row[3],
+      tingkatan: row[4] || ""
     });
   }
   
@@ -1098,13 +1099,14 @@ function addStudent(payload) {
   var sheet = ss.getSheetByName("Siswa");
   if (!sheet) {
     sheet = ss.insertSheet("Siswa");
-    sheet.appendRow(["ID", "NIS", "NamaSiswa", "Kelas"]);
+    sheet.appendRow(["ID", "NIS", "NamaSiswa", "Kelas", "Tingkatan"]);
   }
   
   var id = payload.id || ("SIS-" + new Date().getTime());
   var nis = payload.nis || "";
   var namaSiswa = payload.namaSiswa;
   var kelas = payload.kelas;
+  var tingkatan = payload.tingkatan || "";
   
   var data = sheet.getDataRange().getValues();
   var index = -1;
@@ -1119,8 +1121,9 @@ function addStudent(payload) {
     sheet.getRange(index + 1, 2).setValue(nis);
     sheet.getRange(index + 1, 3).setValue(namaSiswa);
     sheet.getRange(index + 1, 4).setValue(kelas);
+    sheet.getRange(index + 1, 5).setValue(tingkatan);
   } else {
-    sheet.appendRow([id, nis, namaSiswa, kelas]);
+    sheet.appendRow([id, nis, namaSiswa, kelas, tingkatan]);
   }
   
   SpreadsheetApp.flush();
@@ -1157,7 +1160,7 @@ function importStudents(payload) {
   var sheet = ss.getSheetByName("Siswa");
   if (!sheet) {
     sheet = ss.insertSheet("Siswa");
-    sheet.appendRow(["ID", "NIS", "NamaSiswa", "Kelas"]);
+    sheet.appendRow(["ID", "NIS", "NamaSiswa", "Kelas", "Tingkatan"]);
   }
   
   var list = payload.list || [];
@@ -1178,14 +1181,21 @@ function importStudents(payload) {
     var nis = item.nis ? item.nis.toString().trim() : "";
     var namaSiswa = item.namaSiswa || "";
     var kelas = item.kelas || "";
+    var tingkatan = item.tingkatan || "";
+    if (!tingkatan && kelas) {
+      if (kelas.startsWith("10")) tingkatan = "X";
+      else if (kelas.startsWith("11")) tingkatan = "XI";
+      else if (kelas.startsWith("12")) tingkatan = "XII";
+    }
     
     // Validasi duplikasi NIS: jika NIS sudah ada, update baris lama. Jika tidak, append baru
     if (nis && existingNisMap[nis]) {
       var rowNum = existingNisMap[nis];
       sheet.getRange(rowNum, 3).setValue(namaSiswa);
       sheet.getRange(rowNum, 4).setValue(kelas);
+      sheet.getRange(rowNum, 5).setValue(tingkatan);
     } else {
-      sheet.appendRow([id, nis, namaSiswa, kelas]);
+      sheet.appendRow([id, nis, namaSiswa, kelas, tingkatan]);
     }
   });
   

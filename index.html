@@ -2220,6 +2220,15 @@
                     <option value="">Pilih Kelas</option>
                   </select>
                 </div>
+                <div class="form-group">
+                  <label for="studentTingkatan">Tingkatan</label>
+                  <select id="studentTingkatan" class="form-control" required style="padding-left:1rem; height: calc(2.5rem + 2px);">
+                    <option value="">Pilih Tingkatan</option>
+                    <option value="X">X</option>
+                    <option value="XI">XI</option>
+                    <option value="XII">XII</option>
+                  </select>
+                </div>
               </div>
               <div style="display:flex; gap:1rem; margin-top: 1rem;">
                 <button type="submit" class="btn btn-primary" style="flex:1;">
@@ -2249,6 +2258,7 @@
                     <th>NIS</th>
                     <th>Nama Siswa</th>
                     <th>Kelas</th>
+                    <th>Tingkatan</th>
                     <th>Aksi</th>
                   </tr>
                 </thead>
@@ -2471,6 +2481,7 @@
                   <label for="mapilTingkatan">Tingkatan Rombel</label>
                   <select id="mapilTingkatan" class="form-control" style="padding-left:1rem; height:calc(2.5rem + 2px);" required onchange="populateMapilStudentNames()">
                     <option value="">Pilih Tingkatan</option>
+                    <option value="Kelas Mapil X">Kelas Mapil X</option>
                     <option value="Kelas Mapil XI">Kelas Mapil XI</option>
                     <option value="Kelas Mapil XII">Kelas Mapil XII</option>
                   </select>
@@ -2497,6 +2508,7 @@
                 <label for="filterMapilKelas" style="font-size:0.75rem; font-weight:600; color:var(--text-muted); text-transform:uppercase;">Filter Rombel</label>
                 <select id="filterMapilKelas" class="filter-control" style="padding: 0.65rem 1rem;" onchange="renderGuruMapilTable()">
                   <option value="">Semua Rombel Pilihan</option>
+                  <option value="Kelas Mapil X">Kelas Mapil X</option>
                   <option value="Kelas Mapil XI">Kelas Mapil XI</option>
                   <option value="Kelas Mapil XII">Kelas Mapil XII</option>
                 </select>
@@ -4910,7 +4922,8 @@
           await ref(`students/${key}`).update({
             nis: payload.nis || "",
             namaSiswa: payload.namaSiswa,
-            kelas: payload.kelas
+            kelas: payload.kelas,
+            tingkatan: payload.tingkatan || ""
           });
           return { success: true, id: key };
         }
@@ -4946,7 +4959,8 @@
             updates[`students/${key}`] = {
               nis: item.nis ? item.nis.toString().trim() : "",
               namaSiswa: item.namaSiswa,
-              kelas: item.kelas
+              kelas: item.kelas,
+              tingkatan: item.tingkatan || ""
             };
           }
           
@@ -5422,7 +5436,8 @@
           await db.collection("students").doc(id).set({
             nis: payload.nis || "",
             namaSiswa: payload.namaSiswa,
-            kelas: payload.kelas
+            kelas: payload.kelas,
+            tingkatan: payload.tingkatan || ""
           }, { merge: true });
           return { success: true, id: id };
         }
@@ -5458,7 +5473,8 @@
             batch.set(docRef, {
               nis: item.nis ? item.nis.toString().trim() : "",
               namaSiswa: item.namaSiswa,
-              kelas: item.kelas
+              kelas: item.kelas,
+              tingkatan: item.tingkatan || ""
             }, { merge: true });
           }
           await batch.commit();
@@ -6971,7 +6987,7 @@
         // Jika user adalah Guru, tambahkan kelas mapel pilihan ke list untuk pengisian jurnal
         if (appState.user && appState.user.role === "Guru") {
           if (id === 'jurnalKelas') {
-            allowedClasses.push("Kelas Mapil XI", "Kelas Mapil XII");
+            allowedClasses.push("Kelas Mapil X", "Kelas Mapil XI", "Kelas Mapil XII");
           }
         }
         // Jika user adalah Wali Kelas, batasi kelas input bimbingan (absen, kondisi, laporan) ke kelasnya sendiri
@@ -7559,10 +7575,11 @@
       const nis = document.getElementById('studentNis').value.trim();
       const namaSiswa = document.getElementById('studentNama').value.trim();
       const kelas = document.getElementById('studentMasterKelas').value;
+      const tingkatan = document.getElementById('studentTingkatan').value;
       
       showLoading(true, "Menyimpan data siswa...");
       try {
-        const payload = { nis, namaSiswa, kelas };
+        const payload = { nis, namaSiswa, kelas, tingkatan };
         if (id) payload.id = id;
         
         await callApi("addStudent", payload);
@@ -7590,6 +7607,7 @@
       document.getElementById('studentNis').value = item.nis || "";
       document.getElementById('studentNama').value = item.namaSiswa || "";
       document.getElementById('studentMasterKelas').value = item.kelas || "";
+      document.getElementById('studentTingkatan').value = item.tingkatan || "";
       
       document.getElementById('btnCancelEditStudent').style.display = "inline-block";
       document.getElementById('studentNis').focus();
@@ -7626,7 +7644,7 @@
       });
       
       if (filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Tidak ada data siswa yang cocok.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Tidak ada data siswa yang cocok.</td></tr>';
         return;
       }
       
@@ -7636,6 +7654,7 @@
           <td style="font-family: monospace; font-weight: 600; color: var(--primary);">${item.nis || "-"}</td>
           <td style="font-weight: 600; color: #cbd5e1;">${item.namaSiswa}</td>
           <td><span class="badge badge-success" style="background:rgba(16,185,129,0.08);">${item.kelas}</span></td>
+          <td><span class="badge badge-primary" style="background:rgba(99,102,241,0.08); color:var(--primary); font-weight:600;">${item.tingkatan || "-"}</span></td>
           <td>
             <button type="button" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-right: 0.25rem;" onclick="editStudent('${item.id}')">
               <i class="fa-solid fa-edit"></i> Edit
@@ -7667,11 +7686,11 @@
     }
 
     function generateStudentTemplateFile() {
-      const headers = [["NIS", "Nama Siswa", "Kelas"]];
+      const headers = [["NIS", "Nama Siswa", "Kelas", "Tingkatan"]];
       const sampleData = [
-        ["12345", "Ahmad Dani", "10-A"],
-        ["12346", "Budi Santoso", "10-A"],
-        ["12347", "Citra Lestari", "10-A"]
+        ["12345", "Ahmad Dani", "10-A", "X"],
+        ["12346", "Budi Santoso", "11-A", "XI"],
+        ["12347", "Citra Lestari", "12-A", "XII"]
       ];
       const data = headers.concat(sampleData);
       
@@ -7780,10 +7799,18 @@
               if (lines[i].trim() === '') continue;
               const cols = lines[i].split(/[,;]/);
               if (cols.length >= 2) {
+                let kelas = cols[2] ? cols[2].replace(/["']/g, "").trim() : "";
+                let tingkatan = cols[3] ? cols[3].replace(/["']/g, "").trim() : "";
+                if (!tingkatan && kelas) {
+                  if (kelas.startsWith("10")) tingkatan = "X";
+                  else if (kelas.startsWith("11")) tingkatan = "XI";
+                  else if (kelas.startsWith("12")) tingkatan = "XII";
+                }
                 parsedData.push({
                   nis: cols[0].replace(/["']/g, "").trim(),
                   namaSiswa: cols[1].replace(/["']/g, "").trim(),
-                  kelas: cols[2] ? cols[2].replace(/["']/g, "").trim() : ""
+                  kelas: kelas,
+                  tingkatan: tingkatan
                 });
               }
             }
@@ -7827,10 +7854,18 @@
         for (let i = 1; i < rows.length; i++) {
           const row = rows[i];
           if (!row || row.length === 0) continue;
+          let kelas = row[2] ? row[2].toString().trim() : "";
+          let tingkatan = row[3] ? row[3].toString().trim() : "";
+          if (!tingkatan && kelas) {
+            if (kelas.startsWith("10")) tingkatan = "X";
+            else if (kelas.startsWith("11")) tingkatan = "XI";
+            else if (kelas.startsWith("12")) tingkatan = "XII";
+          }
           parsedData.push({
             nis: row[0] ? row[0].toString().trim() : "",
             namaSiswa: row[1] ? row[1].toString().trim() : "",
-            kelas: row[2] ? row[2].toString().trim() : ""
+            kelas: kelas,
+            tingkatan: tingkatan
           });
         }
         submitStudentImport(parsedData);
@@ -8119,11 +8154,15 @@
       const tingkatan = selectTingkatan.value;
       if (!tingkatan) return;
       
-      const levelPrefix = tingkatan === "Kelas Mapil XI" ? "11" : "12";
+      let targetTingkat = "";
+      if (tingkatan === "Kelas Mapil X") targetTingkat = "X";
+      else if (tingkatan === "Kelas Mapil XI") targetTingkat = "XI";
+      else if (tingkatan === "Kelas Mapil XII") targetTingkat = "XII";
+      
       const students = appState.studentList || [];
       
-      // Filter siswa berdasarkan kelas yang berawalan 11 atau 12
-      const filtered = students.filter(s => s.kelas && s.kelas.startsWith(levelPrefix));
+      // Filter siswa berdasarkan Tingkatan (X, XI, atau XII)
+      const filtered = students.filter(s => s.tingkatan === targetTingkat);
       
       // Sort alphabetically
       filtered.sort((a, b) => a.namaSiswa.localeCompare(b.namaSiswa));
@@ -8157,7 +8196,7 @@
         const payload = {
           guruEmail: appState.user.email,
           namaKelas: tingkatan,
-          tingkatan: tingkatan === "Kelas Mapil XI" ? "XI" : "XII",
+          tingkatan: tingkatan === "Kelas Mapil X" ? "X" : (tingkatan === "Kelas Mapil XI" ? "XI" : "XII"),
           namaSiswa: namaSiswa,
           nis: nis
         };
@@ -8927,7 +8966,8 @@
               id: id,
               nis: payload.nis || "",
               namaSiswa: payload.namaSiswa,
-              kelas: payload.kelas
+              kelas: payload.kelas,
+              tingkatan: payload.tingkatan || ""
             };
             
             if (index !== -1) {
@@ -8994,7 +9034,8 @@
                 id: index !== -1 ? students[index].id : id,
                 nis: item.nis ? item.nis.toString().trim() : "",
                 namaSiswa: item.namaSiswa,
-                kelas: item.kelas
+                kelas: item.kelas,
+                tingkatan: item.tingkatan || ""
               };
               
               if (index !== -1) {
