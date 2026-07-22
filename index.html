@@ -2457,6 +2457,71 @@
           </div>
         </div>
 
+        <!-- GURU: KELAS MAPEL PILIHAN SAYA -->
+        <div id="pane-guru-kelasmapil" class="view-pane">
+          <div class="card glass-effect" style="max-width: 700px; margin: 0 auto 2rem;">
+            <div class="card-title"><i class="fa-solid fa-users-between-lines" style="color:var(--primary); margin-right:0.5rem;"></i>Kelola Kelas Mapel Pilihan</div>
+            <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1.5rem;">
+              Tambahkan siswa dari kelas umum XI dan XII ke dalam rombongan belajar mata pelajaran pilihan Anda.
+            </p>
+            
+            <form id="formKelasMapil" onsubmit="submitKelasMapilForm(event)">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="mapilTingkatan">Tingkatan Rombel</label>
+                  <select id="mapilTingkatan" class="form-control" style="padding-left:1rem; height:calc(2.5rem + 2px);" required onchange="populateMapilStudentNames()">
+                    <option value="">Pilih Tingkatan</option>
+                    <option value="Kelas Mapil XI">Kelas Mapil XI</option>
+                    <option value="Kelas Mapil XII">Kelas Mapil XII</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="mapilNamaSiswa">Nama Siswa</label>
+                  <select id="mapilNamaSiswa" class="form-control" style="padding-left:1rem; height:calc(2.5rem + 2px);" required>
+                    <option value="">Pilih Siswa (Pilih Tingkatan Dulu)</option>
+                  </select>
+                </div>
+              </div>
+              
+              <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+                <i class="fa-solid fa-plus"></i> Masukkan Siswa ke Kelas Pilihan
+              </button>
+            </form>
+          </div>
+
+          <div class="card glass-effect">
+            <div class="card-title">Daftar Roster Kelas Mapel Pilihan Saya</div>
+            
+            <div style="display:flex; gap:1rem; margin-bottom:1.5rem; flex-wrap:wrap;">
+              <div style="flex:1; min-width:200px;">
+                <label for="filterMapilKelas" style="font-size:0.75rem; font-weight:600; color:var(--text-muted); text-transform:uppercase;">Filter Rombel</label>
+                <select id="filterMapilKelas" class="filter-control" style="padding: 0.65rem 1rem;" onchange="renderGuruMapilTable()">
+                  <option value="">Semua Rombel Pilihan</option>
+                  <option value="Kelas Mapil XI">Kelas Mapil XI</option>
+                  <option value="Kelas Mapil XII">Kelas Mapil XII</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>No</th>
+                    <th>Nama Rombel Pilihan</th>
+                    <th>Nama Siswa</th>
+                    <th>NIS</th>
+                    <th style="width:120px; text-align:center;">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="guru-mapil-table-body">
+                  <!-- Diisi dinamis -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
         <!-- GURU: RIWAYAT DAN STATUS -->
         <div id="pane-guru-riwayat" class="view-pane">
           <div class="card glass-effect" style="margin-bottom: 2rem;">
@@ -4097,6 +4162,15 @@
     }
 
     function getStudentsForClass(className) {
+      if (className && className.toUpperCase().startsWith("KELAS MAPIL")) {
+        const kmpList = appState.kelasMapelPilihanList || [];
+        const myMapil = kmpList.filter(k => 
+          k.guruEmail === appState.user.email && 
+          k.namaKelas.toUpperCase() === className.toUpperCase()
+        );
+        return myMapil.map(k => k.namaSiswa).filter(Boolean);
+      }
+
       let names = [];
       const students = appState.studentList || [];
       students.forEach(s => {
@@ -4610,6 +4684,7 @@
           const j7Obj = root.jurnal7kih || {};
           const cbObj = root.catatanbimbingan || {};
           const sObj = root.students || {};
+          const kmpObj = root.kelasmapelpilihan || {};
 
           let settings = { hariBelajar: 5, daftarKelas: ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"] };
           if (root.settings) {
@@ -4637,28 +4712,30 @@
           const sgwRaw = Object.keys(sgwObj).map(k => ({ id: k, ...sgwObj[k] }));
           const j7kihRaw = Object.keys(j7Obj).map(k => ({ id: k, ...j7Obj[k] }));
           const cbRaw = Object.keys(cbObj).map(k => ({ id: k, ...cbObj[k] }));
-          const sRaw = Object.keys(sObj).map(k => ({ id: k, ...sObj[k] }));
+           const sRaw = Object.keys(sObj).map(k => ({ id: k, ...sObj[k] }));
+           const kmpRaw = Object.keys(kmpObj).map(k => ({ id: k, ...kmpObj[k] }));
 
-          const teachers = users;
+           const teachers = users;
 
-          let result = {
-            role: role,
-            stats: {},
-            jurnalList: [...jRaw],
-            perangkatList: [...pRaw],
-            nilaiList: [...nRaw],
-            jadwalList: [...jdRaw],
-            laporanWaliList: [...lpRaw],
-            guruMasterList: [...gmRaw],
-            settings: settings,
-            teacherList: teachers,
-            rekapAbsenList: [...raRaw],
-            kondisiSiswaList: [...ksRaw],
-            siswaGuruWaliList: [...sgwRaw],
-            jurnal7KIHList: [...j7kihRaw],
-            catatanBimbinganList: [...cbRaw],
-            studentList: [...sRaw]
-          };
+           let result = {
+             role: role,
+             stats: {},
+             jurnalList: [...jRaw],
+             perangkatList: [...pRaw],
+             nilaiList: [...nRaw],
+             jadwalList: [...jdRaw],
+             laporanWaliList: [...lpRaw],
+             guruMasterList: [...gmRaw],
+             settings: settings,
+             teacherList: teachers,
+             rekapAbsenList: [...raRaw],
+             kondisiSiswaList: [...ksRaw],
+             siswaGuruWaliList: [...sgwRaw],
+             jurnal7KIHList: [...j7kihRaw],
+             catatanBimbinganList: [...cbRaw],
+             studentList: [...sRaw],
+             kelasMapelPilihanList: [...kmpRaw]
+           };
 
           if (role === "Wakasek") {
             const pending = pRaw.filter(p => p.status === "Pending").length;
@@ -4839,6 +4916,23 @@
 
         else if (action === "deleteStudent") {
           await ref(`students/${payload.id}`).remove();
+          return { success: true };
+        }
+
+        else if (action === "addSiswaMapelPilihan") {
+          const key = payload.id || ref("kelasmapelpilihan").push().key;
+          await ref(`kelasmapelpilihan/${key}`).update({
+            guruEmail: payload.guruEmail || "",
+            namaKelas: payload.namaKelas || "",
+            tingkatan: payload.tingkatan || "",
+            namaSiswa: payload.namaSiswa || "",
+            nis: payload.nis || ""
+          });
+          return { success: true, id: key };
+        }
+
+        else if (action === "deleteSiswaMapelPilihan") {
+          await ref(`kelasmapelpilihan/${payload.id}`).remove();
           return { success: true };
         }
 
@@ -5087,7 +5181,7 @@
 
           const [
             jSnap, pSnap, nSnap, jdSnap, lpSnap, gmSnap,
-            uSnap, raSnap, ksSnap, sgwSnap, j7Snap, cbSnap, sSnap, setSnap
+            uSnap, raSnap, ksSnap, sgwSnap, j7Snap, cbSnap, sSnap, kmpSnap, setSnap
           ] = await Promise.all([
             db.collection("jurnals").get(),
             db.collection("perangkats").get(),
@@ -5102,6 +5196,7 @@
             db.collection("jurnal7kih").get(),
             db.collection("catatanbimbingan").get(),
             db.collection("students").get(),
+            db.collection("kelasmapelpilihan").get(),
             db.collection("settings").doc("main").get()
           ]);
 
@@ -5118,6 +5213,7 @@
           const j7kihRaw = j7Snap.docs.map(d => ({ id: d.id, ...d.data() }));
           const cbRaw = cbSnap.docs.map(d => ({ id: d.id, ...d.data() }));
           const sRaw = sSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+          const kmpRaw = kmpSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
           let settings = { hariBelajar: 5, daftarKelas: ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"] };
           if (setSnap.exists) {
@@ -5151,7 +5247,8 @@
             siswaGuruWaliList: [...sgwRaw],
             jurnal7KIHList: [...j7kihRaw],
             catatanBimbinganList: [...cbRaw],
-            studentList: [...sRaw]
+            studentList: [...sRaw],
+            kelasMapelPilihanList: [...kmpRaw]
           };
 
           if (role === "Wakasek") {
@@ -5331,6 +5428,23 @@
 
         else if (action === "deleteStudent") {
           await db.collection("students").doc(payload.id).delete();
+          return { success: true };
+        }
+
+        else if (action === "addSiswaMapelPilihan") {
+          const docId = payload.id ? db.collection("kelasmapelpilihan").doc(payload.id).id : db.collection("kelasmapelpilihan").doc().id;
+          await db.collection("kelasmapelpilihan").doc(docId).set({
+            guruEmail: payload.guruEmail || "",
+            namaKelas: payload.namaKelas || "",
+            tingkatan: payload.tingkatan || "",
+            namaSiswa: payload.namaSiswa || "",
+            nis: payload.nis || ""
+          }, { merge: true });
+          return { success: true, id: docId };
+        }
+
+        else if (action === "deleteSiswaMapelPilihan") {
+          await db.collection("kelasmapelpilihan").doc(payload.id).delete();
           return { success: true };
         }
 
@@ -5566,6 +5680,7 @@
         localStorage.setItem(`cache_siswagw_${appState.user.role}`, JSON.stringify(data.siswaGuruWaliList || []));
         localStorage.setItem(`cache_jurnal7kih_${appState.user.role}`, JSON.stringify(data.jurnal7KIHList || []));
         localStorage.setItem(`cache_students_${appState.user.role}`, JSON.stringify(data.studentList || []));
+        localStorage.setItem(`cache_kelas_mapel_pilihan_${appState.user.role}`, JSON.stringify(data.kelasMapelPilihanList || []));
         
         // Render Views
         renderDashboardData();
@@ -5594,6 +5709,7 @@
       appState.siswaGuruWaliList = JSON.parse(localStorage.getItem(`cache_siswagw_${appState.user.role}`)) || [];
       appState.jurnal7KIHList = JSON.parse(localStorage.getItem(`cache_jurnal7kih_${appState.user.role}`)) || [];
       appState.studentList = JSON.parse(localStorage.getItem(`cache_students_${appState.user.role}`)) || [];
+      appState.kelasMapelPilihanList = JSON.parse(localStorage.getItem(`cache_kelas_mapel_pilihan_${appState.user.role}`)) || [];
       
       renderDashboardData();
     }
@@ -5662,9 +5778,10 @@
         document.getElementById('g-stat-disetujui').textContent = appState.stats.disetujuiPerangkatGuru || 0;
         document.getElementById('g-stat-pending').textContent = appState.stats.pendingPerangkatGuru || 0;
         
-        // Riwayat, Status & Jadwal tables
+        // Riwayat, Status, Jadwal & Kelas Mapel Pilihan tables
         renderGuruHistoryTables();
         renderGuruJadwalTable();
+        renderGuruMapilTable();
         
         // Start background alarm checks for teaching schedules
         startScheduleAlarmMonitoring();
@@ -6849,7 +6966,13 @@
         if (!select) return;
         const currentVal = select.value;
         
-        let allowedClasses = classList;
+        let allowedClasses = [...classList];
+        // Jika user adalah Guru, tambahkan kelas mapel pilihan ke list untuk pengisian jurnal
+        if (appState.user && appState.user.role === "Guru") {
+          if (id === 'jurnalKelas') {
+            allowedClasses.push("Kelas Mapil XI", "Kelas Mapil XII");
+          }
+        }
         // Jika user adalah Wali Kelas, batasi kelas input bimbingan (absen, kondisi, laporan) ke kelasnya sendiri
         if (appState.user && appState.user.role === "Wali Kelas" && appState.user.waliKelasClass) {
           if (['absenKelas', 'kondisiKelas', 'laporanKelas'].includes(id)) {
@@ -7985,6 +8108,134 @@
       });
     }
 
+    // ===== KELAS MAPEL PILIHAN SAYA (GURU MAPEL) =====
+    function populateMapilStudentNames() {
+      const selectTingkatan = document.getElementById('mapilTingkatan');
+      const selectSiswa = document.getElementById('mapilNamaSiswa');
+      if (!selectTingkatan || !selectSiswa) return;
+      
+      selectSiswa.innerHTML = '<option value="">Pilih Siswa (Pilih Tingkatan Dulu)</option>';
+      const tingkatan = selectTingkatan.value;
+      if (!tingkatan) return;
+      
+      const levelPrefix = tingkatan === "Kelas Mapil XI" ? "11" : "12";
+      const students = appState.studentList || [];
+      
+      // Filter siswa berdasarkan kelas yang berawalan 11 atau 12
+      const filtered = students.filter(s => s.kelas && s.kelas.startsWith(levelPrefix));
+      
+      // Sort alphabetically
+      filtered.sort((a, b) => a.namaSiswa.localeCompare(b.namaSiswa));
+      
+      selectSiswa.innerHTML = '<option value="">-- Pilih Nama Siswa --</option>';
+      filtered.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.namaSiswa;
+        opt.textContent = `${s.namaSiswa} (Kelas ${s.kelas})`;
+        opt.dataset.nis = s.nis || "";
+        selectSiswa.appendChild(opt);
+      });
+    }
+
+    async function submitKelasMapilForm(e) {
+      e.preventDefault();
+      
+      const tingkatan = document.getElementById('mapilTingkatan').value;
+      const selectSiswa = document.getElementById('mapilNamaSiswa');
+      const namaSiswa = selectSiswa.value;
+      const selectedOpt = selectSiswa.options[selectSiswa.selectedIndex];
+      const nis = selectedOpt ? (selectedOpt.dataset.nis || "") : "";
+      
+      if (!tingkatan || !namaSiswa) {
+        showToast("Lengkapi semua field form!", "warning");
+        return;
+      }
+      
+      showLoading(true, "Menambahkan siswa ke kelas mapel pilihan...");
+      try {
+        const payload = {
+          guruEmail: appState.user.email,
+          namaKelas: tingkatan,
+          tingkatan: tingkatan === "Kelas Mapil XI" ? "XI" : "XII",
+          namaSiswa: namaSiswa,
+          nis: nis
+        };
+        
+        await callApi("addSiswaMapelPilihan", payload);
+        showToast("Siswa berhasil ditambahkan!");
+        
+        // Reset siswa select
+        document.getElementById('mapilNamaSiswa').value = "";
+        
+        await loadDashboardData();
+      } catch (err) {
+        showToast("Gagal menyimpan data: " + err.message, "danger");
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    async function deleteSiswaMapil(id, namaSiswa) {
+      const confirmed = await showCustomConfirm("Hapus Siswa", `Keluarkan ${namaSiswa} dari rombel pilihan Anda?`, "Keluarkan", true);
+      if (!confirmed) return;
+      
+      showLoading(true, "Mengeluarkan siswa...");
+      try {
+        await callApi("deleteSiswaMapelPilihan", { id });
+        showToast("Siswa berhasil dikeluarkan!");
+        await loadDashboardData();
+      } catch (err) {
+        showToast("Gagal mengeluarkan siswa: " + err.message, "danger");
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    function renderGuruMapilTable() {
+      const tbody = document.getElementById('guru-mapil-table-body');
+      if (!tbody) return;
+      tbody.innerHTML = "";
+      
+      const list = appState.kelasMapelPilihanList || [];
+      const myEmail = appState.user.email;
+      
+      // Filter list berdasarkan email guru yang login
+      let myMapil = list.filter(item => item.guruEmail === myEmail);
+      
+      // Filter berdasarkan dropdown filter rombel
+      const filterVal = document.getElementById('filterMapilKelas').value;
+      if (filterVal) {
+        myMapil = myMapil.filter(item => item.namaKelas === filterVal);
+      }
+      
+      if (myMapil.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Belum ada roster siswa bimbingan mapel pilihan Anda.</td></tr>`;
+        return;
+      }
+      
+      // Sort berdasarkan nama kelas lalu nama siswa
+      myMapil.sort((a, b) => {
+        if (a.namaKelas !== b.namaKelas) return a.namaKelas.localeCompare(b.namaKelas);
+        return a.namaSiswa.localeCompare(b.namaSiswa);
+      });
+      
+      myMapil.forEach((item, idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${idx + 1}</td>
+          <td><span class="badge badge-primary">${item.namaKelas}</span></td>
+          <td style="font-weight:600; color:#cbd5e1;">${item.namaSiswa}</td>
+          <td style="font-family:monospace; font-size:0.85rem;">${item.nis || '-'}</td>
+          <td style="text-align:center;">
+            <button type="button" class="btn btn-danger" onclick="deleteSiswaMapil('${item.id}', '${item.namaSiswa}')" style="padding:0.25rem 0.5rem; font-size:0.75rem;">
+              <i class="fa-solid fa-user-minus"></i> Keluarkan
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
     // Render Laporan Wali Kelas Sendiri
     function renderWaliKelasLaporanTable() {
       const tbody = document.getElementById('wk-laporan-table-body');
@@ -8325,6 +8576,7 @@
              const j7kihRaw = JSON.parse(localStorage.getItem('db_jurnal7kih')) || [];
              const cbRaw = JSON.parse(localStorage.getItem('db_catatanbimbingan')) || [];
              const sRaw = JSON.parse(localStorage.getItem('db_students')) || [];
+             const kmpRaw = JSON.parse(localStorage.getItem('db_kelas_mapel_pilihan')) || [];
              
              const teachers = users;
  
@@ -8344,7 +8596,8 @@
                siswaGuruWaliList: [...sgwRaw],
                jurnal7KIHList: [...j7kihRaw],
                catatanBimbinganList: [...cbRaw],
-               studentList: [...sRaw]
+               studentList: [...sRaw],
+               kelasMapelPilihanList: [...kmpRaw]
              };
             
             if (role === "Wakasek") {
@@ -8696,6 +8949,37 @@
             } else {
               reject(new Error("Siswa tidak ditemukan di database mockup."));
             }
+          }
+
+          else if (action === "addSiswaMapelPilihan") {
+            const kmpRaw = JSON.parse(localStorage.getItem('db_kelas_mapel_pilihan')) || [];
+            const id = payload.id || "KMP-" + new Date().getTime();
+            const index = kmpRaw.findIndex(k => k.id === id);
+            
+            const newKmp = {
+              id: id,
+              guruEmail: payload.guruEmail || "",
+              namaKelas: payload.namaKelas || "",
+              tingkatan: payload.tingkatan || "",
+              namaSiswa: payload.namaSiswa || "",
+              nis: payload.nis || ""
+            };
+            
+            if (index !== -1) {
+              kmpRaw[index] = newKmp;
+            } else {
+              kmpRaw.push(newKmp);
+            }
+            
+            localStorage.setItem('db_kelas_mapel_pilihan', JSON.stringify(kmpRaw));
+            resolve({ success: true, id: id });
+          }
+
+          else if (action === "deleteSiswaMapelPilihan") {
+            const kmpRaw = JSON.parse(localStorage.getItem('db_kelas_mapel_pilihan')) || [];
+            const updated = kmpRaw.filter(k => k.id !== payload.id);
+            localStorage.setItem('db_kelas_mapel_pilihan', JSON.stringify(updated));
+            resolve({ success: true });
           }
 
           else if (action === "importStudents") {

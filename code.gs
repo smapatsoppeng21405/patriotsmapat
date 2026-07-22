@@ -29,7 +29,8 @@ function initSheets() {
     "SiswaGuruWali": ["ID", "NIS", "NamaSiswa", "Kelas", "GuruWali"],
     "Siswa": ["ID", "NIS", "NamaSiswa", "Kelas"],
     "Jurnal7KIH": ["ID", "Tanggal", "NIS", "NamaSiswa", "BangunPagi", "Beribadah", "Berolahraga", "MakanSehat", "GemarBelajar", "Bermasyarakat", "TidurCepat"],
-    "CatatanBimbingan": ["ID", "Tanggal", "GuruWali", "NamaSiswa", "CatatanPerkembangan"]
+    "CatatanBimbingan": ["ID", "Tanggal", "GuruWali", "NamaSiswa", "CatatanPerkembangan"],
+    "KelasMapelPilihan": ["ID", "GuruEmail", "NamaKelas", "Tingkatan", "NamaSiswa", "NIS"]
   };
   
   for (var name in sheetsDef) {
@@ -233,6 +234,14 @@ function doPost(e) {
         
       case "deleteCatatanBimbingan":
         response = { status: "success", data: deleteCatatanBimbingan(payload.id) };
+        break;
+        
+      case "addSiswaMapelPilihan":
+        response = { status: "success", data: addSiswaMapelPilihan(payload) };
+        break;
+        
+      case "deleteSiswaMapelPilihan":
+        response = { status: "success", data: deleteSiswaMapelPilihan(payload) };
         break;
         
       default:
@@ -511,6 +520,22 @@ function getDashboard(role, email, nama) {
       mapel: row[2],
       kelas: row[3],
       jumlahJam: parseInt(row[4]) || 0
+    });
+  }
+
+  // Format KelasMapelPilihan list
+  var sheetMapelPil = ss.getSheetByName("KelasMapelPilihan");
+  var mapelPilRaw = sheetMapelPil ? sheetMapelPil.getDataRange().getValues() : [["ID", "GuruEmail", "NamaKelas", "Tingkatan", "NamaSiswa", "NIS"]];
+  result.kelasMapelPilihanList = [];
+  for (var i = 1; i < mapelPilRaw.length; i++) {
+    var row = mapelPilRaw[i];
+    result.kelasMapelPilihanList.push({
+      id: row[0],
+      guruEmail: row[1],
+      namaKelas: row[2],
+      tingkatan: row[3],
+      namaSiswa: row[4],
+      nis: row[5]
     });
   }
 
@@ -1452,4 +1477,43 @@ function deleteCatatanBimbingan(id) {
     }
   }
   throw new Error("Catatan perkembangan tidak ditemukan.");
+}
+
+// 20. Tambah Siswa Mapel Pilihan (Guru)
+function addSiswaMapelPilihan(payload) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("KelasMapelPilihan");
+  if (!sheet) {
+    sheet = ss.insertSheet("KelasMapelPilihan");
+    sheet.appendRow(["ID", "GuruEmail", "NamaKelas", "Tingkatan", "NamaSiswa", "NIS"]);
+  }
+  
+  var id = payload.id || ("KMP-" + new Date().getTime());
+  var guruEmail = payload.guruEmail;
+  var namaKelas = payload.namaKelas;
+  var tingkatan = payload.tingkatan;
+  var namaSiswa = payload.namaSiswa;
+  var nis = payload.nis || "";
+  
+  sheet.appendRow([id, guruEmail, namaKelas, tingkatan, namaSiswa, nis]);
+  SpreadsheetApp.flush();
+  return { success: true, id: id };
+}
+
+// 21. Hapus Siswa Mapel Pilihan (Guru)
+function deleteSiswaMapelPilihan(payload) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("KelasMapelPilihan");
+  if (!sheet) throw new Error("Sheet KelasMapelPilihan tidak ditemukan.");
+  
+  var id = payload.id;
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0].toString() === id.toString()) {
+      sheet.deleteRow(i + 1);
+      SpreadsheetApp.flush();
+      return { success: true };
+    }
+  }
+  throw new Error("Siswa mapel pilihan tidak ditemukan.");
 }
