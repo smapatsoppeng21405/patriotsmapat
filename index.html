@@ -1036,6 +1036,15 @@
       .roster-cell-empty {
         color: #666 !important;
       }
+      .role-checkbox-card:hover {
+        border-color: var(--primary) !important;
+        background: var(--primary-glow) !important;
+      }
+      .role-checkbox-card:has(input:checked) {
+        border-color: var(--primary) !important;
+        background: var(--primary-glow) !important;
+        box-shadow: 0 0 12px rgba(99, 102, 241, 0.2);
+      }
     }
   </style>
 </head>
@@ -1053,6 +1062,21 @@
   <!-- ==================== 1. VIEW LOGIN ==================== -->
   <div class="auth-container" id="authView">
     <div class="auth-card glass-effect" id="loginCard">
+      <!-- ROLE SELECTION OVERLAY -->
+      <div id="roleSelectionOverlay" style="display: none; position: absolute; inset: 0; background: var(--bg-card); z-index: 20; padding: 2.5rem; flex-direction: column; align-items: center; justify-content: center; text-align: center; border-radius: 1.5rem;">
+        <div style="width: 60px; height: 60px; border-radius: 50%; background: var(--primary-glow); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1rem;">
+          <i class="fa-solid fa-users-gear"></i>
+        </div>
+        <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-main);">Pilih Peran Masuk</h3>
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem; line-height: 1.4;">Akun Anda terdaftar memiliki beberapa peran. Pilih peran untuk sesi ini:</p>
+        <div id="roleSelectionButtons" style="display: flex; flex-direction: column; gap: 0.75rem; width: 100%; max-height: 250px; overflow-y: auto; padding-right: 0.25rem; margin-bottom: 1.5rem;">
+          <!-- Injected dynamically -->
+        </div>
+        <button type="button" class="btn" style="background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid var(--border-color); width: 100%;" onclick="cancelRoleSelection()">
+          <i class="fa-solid fa-arrow-left"></i> Kembali
+        </button>
+      </div>
+
       <div style="position: absolute; top: 1.25rem; right: 1.25rem; z-index: 10;">
         <button type="button" class="btn btn-secondary" onclick="toggleAppTheme()" title="Ubah Tema Terang / Gelap" style="padding: 0.4rem 0.75rem; font-size: 0.8rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 0.5rem;">
           <i class="fa-solid fa-sun" style="color: #f59e0b;"></i> <span class="authThemeText">Terang</span>
@@ -1300,9 +1324,17 @@
 
       <div class="sidebar-profile">
         <div class="profile-avatar" id="userAvatar">U</div>
-        <div class="profile-info">
-          <div class="profile-name" id="userName">User Name</div>
-          <div class="profile-role" id="userRoleBadge">Guru</div>
+        <div class="profile-info" style="position: relative; overflow: visible; flex: 1;">
+          <div class="profile-name" id="userName" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px; font-weight: 600;">User Name</div>
+          <div style="display: flex; align-items: center; gap: 0.35rem; margin-top: 0.15rem;">
+            <span class="profile-role" id="userRoleBadge" style="font-size: 0.75rem; padding: 0.15rem 0.45rem; background: var(--primary-glow); color: var(--primary); border-radius: 0.35rem; font-weight: 500;">Guru</span>
+            <span id="roleSwitcherContainer" style="display: none; position: relative;">
+              <i class="fa-solid fa-arrows-rotate" onclick="toggleSidebarRoleSwitcher(event)" style="cursor: pointer; font-size: 0.75rem; color: var(--primary); background: rgba(99, 102, 241, 0.15); padding: 0.25rem; border-radius: 0.25rem; transition: var(--transition);" onmouseover="this.style.background='var(--primary)'; this.style.color='white';" onmouseout="this.style.background='rgba(99, 102, 241, 0.15)'; this.style.color='var(--primary)';" title="Ganti Peran Sesi"></i>
+              <div id="sidebarRoleDropdown" class="glass-effect" style="display: none; position: absolute; left: 0; top: 130%; z-index: 100; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 0.5rem; box-shadow: var(--shadow-lg); width: 140px; padding: 0.4rem; flex-direction: column; gap: 0.25rem;">
+                <!-- Dinamis diisi role alternatif -->
+              </div>
+            </span>
+          </div>
         </div>
       </div>
 
@@ -1570,7 +1602,7 @@
                   </select>
                 </div>
                 <div class="form-group">
-                  <label for="jadwalGuru">Nama Guru Pengampu</label>
+                  <label for="jadwalGuru">Nama Guru Mata Pelajaran</label>
                   <select id="jadwalGuru" class="filter-control" style="padding: 0.85rem 1rem;" required>
                     <option value="">Pilih Guru</option>
                     <!-- Terisi dinamis oleh JS dari daftar user Guru -->
@@ -1945,15 +1977,45 @@
                 </div>
               </div>
               <div class="form-group" style="margin-bottom: 1.5rem;">
-                <label for="teacherRole">Role Sesi & Jabatan</label>
-                  <select id="teacherRole" class="filter-control" style="padding: 0.85rem 1rem;" required>
-                    <option value="Wakasek">Wakasek Kurikulum</option>
-                    <option value="Kepala Sekolah">Kepala Sekolah</option>
-                    <option value="Guru">Guru Pengampu</option>
-                    <option value="Wali Kelas">Wali Kelas</option>
-                    <option value="Guru Wali">Guru Wali</option>
-                  </select>
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-main);">Pilih Peran & Jabatan Guru (Bisa lebih dari satu)</label>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem;">
+                  <label class="role-checkbox-card" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border-radius: 0.5rem; border: 1px solid var(--border-color); background: rgba(255, 255, 255, 0.02); cursor: pointer; transition: var(--transition);">
+                    <input type="checkbox" name="teacherRoles" value="Guru" style="width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer;">
+                    <div style="display: flex; flex-direction: column;">
+                      <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-main);">Guru Mata Pelajaran</span>
+                      <span style="font-size: 0.7rem; color: var(--text-muted);">Mengajar KBM</span>
+                    </div>
+                  </label>
+                  <label class="role-checkbox-card" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border-radius: 0.5rem; border: 1px solid var(--border-color); background: rgba(255, 255, 255, 0.02); cursor: pointer; transition: var(--transition);">
+                    <input type="checkbox" name="teacherRoles" value="Wali Kelas" style="width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer;">
+                    <div style="display: flex; flex-direction: column;">
+                      <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-main);">Wali Kelas</span>
+                      <span style="font-size: 0.7rem; color: var(--text-muted);">Pengasuh Kelas</span>
+                    </div>
+                  </label>
+                  <label class="role-checkbox-card" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border-radius: 0.5rem; border: 1px solid var(--border-color); background: rgba(255, 255, 255, 0.02); cursor: pointer; transition: var(--transition);">
+                    <input type="checkbox" name="teacherRoles" value="Guru Wali" style="width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer;">
+                    <div style="display: flex; flex-direction: column;">
+                      <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-main);">Guru Wali</span>
+                      <span style="font-size: 0.7rem; color: var(--text-muted);">Bimbingan 7KIH</span>
+                    </div>
+                  </label>
+                  <label class="role-checkbox-card" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border-radius: 0.5rem; border: 1px solid var(--border-color); background: rgba(255, 255, 255, 0.02); cursor: pointer; transition: var(--transition);">
+                    <input type="checkbox" name="teacherRoles" value="Wakasek" style="width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer;">
+                    <div style="display: flex; flex-direction: column;">
+                      <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-main);">Wakasek Kurikulum</span>
+                      <span style="font-size: 0.7rem; color: var(--text-muted);">Pengelola Akademik</span>
+                    </div>
+                  </label>
+                  <label class="role-checkbox-card" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border-radius: 0.5rem; border: 1px solid var(--border-color); background: rgba(255, 255, 255, 0.02); cursor: pointer; transition: var(--transition);">
+                    <input type="checkbox" name="teacherRoles" value="Kepala Sekolah" style="width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer;">
+                    <div style="display: flex; flex-direction: column;">
+                      <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-main);">Kepala Sekolah</span>
+                      <span style="font-size: 0.7rem; color: var(--text-muted);">Pimpinan Sekolah</span>
+                    </div>
+                  </label>
                 </div>
+              </div>
               <div style="display:flex; gap:1rem;">
                 <button type="submit" class="btn btn-primary" style="flex:1;">
                   <i class="fa-solid fa-user-plus"></i> Simpan Akun Guru
@@ -2083,7 +2145,7 @@
                   </select>
                 </div>
                 <div class="form-group">
-                  <label for="siswaGWGuruWali">Guru Wali Pengampu</label>
+                  <label for="siswaGWGuruWali">Guru Wali</label>
                   <select id="siswaGWGuruWali" class="filter-control" style="padding: 0.85rem 1rem;" required>
                     <option value="">Pilih Guru Wali</option>
                   </select>
@@ -2257,7 +2319,12 @@
               <div class="form-grid">
                 <div class="form-group">
                   <label for="jurnalKehadiran">Kehadiran Siswa</label>
-                  <input type="text" id="jurnalKehadiran" class="form-control" style="padding-left: 1rem;" placeholder="Hadir: 32, Sakit: 1, Alfa: 0" required>
+                  <div style="display:flex; gap:0.5rem;">
+                    <input type="text" id="jurnalKehadiran" class="form-control" style="padding-left: 1rem; flex:1;" placeholder="Hadir: 32, Sakit: 1, Alfa: 0" required>
+                    <button type="button" class="btn btn-secondary" onclick="openAbsentStudentsModal()" style="padding:0 0.85rem; font-size:0.85rem;" title="Pilih Siswa Tidak Hadir">
+                      <i class="fa-solid fa-user-xmark" style="color:var(--danger);"></i> Pilih
+                    </button>
+                  </div>
                 </div>
                 <div class="form-group">
                   <label for="jurnalMode">Mode Pembelajaran</label>
@@ -3283,7 +3350,7 @@
         <input type="hidden" id="modalRosterTargetClass">
 
         <div class="form-group">
-          <label for="modalRosterAssignmentSelect">Tugas Mengajar Guru Pengampu</label>
+          <label for="modalRosterAssignmentSelect">Tugas Mengajar Guru Mata Pelajaran</label>
           <select id="modalRosterAssignmentSelect" class="form-control" style="padding-left: 1rem;">
             <!-- Terisi dinamis dengan tugas guru kelas bersangkutan dari GuruMaster -->
           </select>
@@ -3310,6 +3377,48 @@
       <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
         <button id="customConfirmCancelBtn" type="button" class="btn" style="background: rgba(255,255,255,0.05); color: var(--text-main); border: 1px solid var(--border-color);">Batal</button>
         <button id="customConfirmOkBtn" type="button" class="btn btn-danger">Ya, Lanjutkan</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ==================== MODAL PILIH SISWA TIDAK HADIR ==================== -->
+  <div class="modal-overlay" id="absentStudentsModal" style="display:none; z-index: 9999;">
+    <div class="modal-box glass-effect" style="max-width: 500px; max-height: 85vh; display: flex; flex-direction: column; padding: 1.5rem;">
+      <div class="modal-header" style="margin-bottom: 1rem;">
+        <h3 style="font-size: 1.2rem; font-weight: 700; color: var(--text-main);"><i class="fa-solid fa-user-xmark" style="color: var(--danger); margin-right: 0.5rem;"></i>Absensi Kehadiran Siswa</h3>
+        <button type="button" class="modal-close" onclick="closeAbsentStudentsModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="overflow-y: auto; flex: 1; padding-right: 0.25rem;">
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1.25rem;">
+          Pilih status kehadiran siswa untuk Kelas <strong id="absentTargetClass" style="color: var(--primary);">-</strong>. Siswa yang tidak ditandai otomatis dianggap <strong>Hadir</strong>.
+        </p>
+        
+        <!-- Input Tambah Siswa Sementara / Manual -->
+        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); padding: 0.85rem; border-radius: 0.6rem; margin-bottom: 1.25rem;">
+          <label style="display:block; font-size:0.75rem; font-weight:600; color:var(--text-muted); text-transform:uppercase; margin-bottom:0.45rem;">Tambah Nama Siswa Sementara</label>
+          <div style="display:flex; gap:0.5rem;">
+            <input type="text" id="absentManualNameInput" class="form-control" style="padding: 0.5rem 0.75rem; font-size:0.85rem; border-radius:0.4rem; flex:1;" placeholder="Ketik nama siswa...">
+            <button type="button" class="btn btn-primary" onclick="addTemporaryAbsentStudent()" style="padding:0.5rem 0.85rem; font-size:0.85rem; border-radius: 0.4rem;"><i class="fa-solid fa-plus"></i></button>
+          </div>
+        </div>
+
+        <!-- Wadah List Siswa -->
+        <div id="absentStudentsContainer" style="display:flex; flex-direction:column; gap:0.6rem; margin-bottom:1rem;">
+          <!-- Diisi dinamis via JS -->
+        </div>
+      </div>
+      <div class="modal-footer" style="border-top:1px solid var(--border-color); padding-top:1rem; display:flex; flex-direction:column; gap:0.85rem;">
+        <div style="display:flex; justify-content:space-between; font-size:0.9rem; font-weight:600;">
+          <span>Hadir: <span id="absentCountHadir" style="color:var(--success);">0</span></span>
+          <span>Sakit: <span id="absentCountSakit" style="color:var(--warning);">0</span></span>
+          <span>Izin: <span id="absentCountIzin" style="color:var(--primary);">0</span></span>
+          <span>Alpa: <span id="absentCountAlpa" style="color:var(--danger);">0</span></span>
+        </div>
+        <div style="display:flex; gap:1rem;">
+          <button type="button" class="btn btn-secondary" onclick="closeAbsentStudentsModal()" style="flex:1;">Batal</button>
+          <button type="button" class="btn btn-success" onclick="applyAbsentStudentsSelection()" style="flex:1;">Terapkan</button>
+        </div>
       </div>
     </div>
   </div>
@@ -3627,6 +3736,15 @@
       });
     }
 
+    // Helper to format role name for display (translating "Guru" to "Guru Mata Pelajaran")
+    function formatRoleDisplay(roleStr) {
+      if (!roleStr) return "";
+      return roleStr.split(",")
+        .map(r => r.trim())
+        .map(r => r === "Guru" ? "Guru Mata Pelajaran" : r)
+        .join(", ");
+    }
+
     // LOADING OVERLAY CONTROLLER
     function showLoading(show = true, text = "Memuat data...") {
       const overlay = document.getElementById('loadingOverlay');
@@ -3651,6 +3769,8 @@
       document.getElementById('loginPassword').value = password;
     }
 
+    let currentLoginProfiles = [];
+
     // LOGIN PROCESS
     async function handleLogin(e) {
       e.preventDefault();
@@ -3661,16 +3781,125 @@
       
       try {
         const response = await callApi("login", { email, password });
-        appState.user = response;
-        localStorage.setItem('si_kurikulum_user', JSON.stringify(response));
         
-        showToast(`Selamat datang kembali, ${response.nama}!`);
-        setupSessionUI();
+        if (response.multiple && response.profiles.length > 1) {
+          currentLoginProfiles = response.profiles;
+          showRoleChoiceOverlay(response.profiles);
+        } else {
+          const profile = response.multiple ? response.profiles[0] : response;
+          completeUserLogin(profile, response.multiple ? response.profiles : [profile]);
+        }
       } catch (err) {
         showToast(err.message || "Gagal masuk. Hubungi kurikulum.", "danger");
       } finally {
         showLoading(false);
       }
+    }
+
+    function showRoleChoiceOverlay(profiles) {
+      const container = document.getElementById('roleSelectionButtons');
+      container.innerHTML = "";
+      
+      profiles.forEach((p, idx) => {
+        const btn = document.createElement('button');
+        btn.type = "button";
+        btn.className = "btn";
+        btn.style.cssText = "width: 100%; display: flex; align-items: center; gap: 0.75rem; padding: 0.85rem 1.25rem; font-size: 0.95rem; font-weight: 600; border: 1px solid var(--border-color); text-align: left; background: rgba(99, 102, 241, 0.05); color: var(--text-main); border-radius: 0.5rem; transition: var(--transition); cursor: pointer;";
+        btn.onmouseover = () => {
+          btn.style.background = "var(--primary-glow)";
+          btn.style.borderColor = "var(--primary)";
+        };
+        btn.onmouseout = () => {
+          btn.style.background = "rgba(99, 102, 241, 0.05)";
+          btn.style.borderColor = "var(--border-color)";
+        };
+        btn.onclick = () => selectRoleProfile(idx);
+        
+        let iconHtml = '<i class="fa-solid fa-graduation-cap"></i>';
+        if (p.role === "Wakasek") iconHtml = '<i class="fa-solid fa-user-shield" style="color:var(--accent);"></i>';
+        else if (p.role === "Kepala Sekolah") iconHtml = '<i class="fa-solid fa-crown" style="color:#f59e0b;"></i>';
+        else if (p.role === "Wali Kelas") iconHtml = '<i class="fa-solid fa-chalkboard-user" style="color:var(--success);"></i>';
+        else if (p.role === "Guru Wali") iconHtml = '<i class="fa-solid fa-heart" style="color:var(--danger);"></i>';
+        
+        btn.innerHTML = `
+          <div style="width: 2.2rem; height: 2.2rem; border-radius: 50%; background: var(--bg-body); display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0;">
+            ${iconHtml}
+          </div>
+          <div>
+            <div style="font-size: 0.9rem; font-weight: 700; color: var(--text-main);">${formatRoleDisplay(p.role)}</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal;">Masuk sebagai ${formatRoleDisplay(p.role)}</div>
+          </div>
+        `;
+        container.appendChild(btn);
+      });
+      
+      document.getElementById('roleSelectionOverlay').style.display = "flex";
+    }
+
+    function selectRoleProfile(idx) {
+      const selected = currentLoginProfiles[idx];
+      document.getElementById('roleSelectionOverlay').style.display = "none";
+      completeUserLogin(selected, currentLoginProfiles);
+    }
+
+    function cancelRoleSelection() {
+      document.getElementById('roleSelectionOverlay').style.display = "none";
+    }
+
+    function completeUserLogin(profile, allProfiles) {
+      const finalUser = { ...profile, allProfiles: allProfiles || [profile] };
+      appState.user = finalUser;
+      localStorage.setItem('si_kurikulum_user', JSON.stringify(finalUser));
+      
+      showToast(`Selamat datang kembali, ${profile.nama} (${formatRoleDisplay(profile.role)})!`);
+      setupSessionUI();
+    }
+
+    // ROLE SWITCHER SIDEBAR
+    function toggleSidebarRoleSwitcher(e) {
+      if (e) e.stopPropagation();
+      const dropdown = document.getElementById('sidebarRoleDropdown');
+      if (dropdown.style.display === "flex") {
+        dropdown.style.display = "none";
+      } else {
+        dropdown.style.display = "flex";
+        renderSidebarRoleDropdown();
+      }
+    }
+
+    function renderSidebarRoleDropdown() {
+      const dropdown = document.getElementById('sidebarRoleDropdown');
+      dropdown.innerHTML = "";
+      
+      if (!appState.user || !appState.user.allProfiles) return;
+      
+      const currentRole = appState.user.role;
+      const otherProfiles = appState.user.allProfiles.filter(p => p.role !== currentRole);
+      
+      if (otherProfiles.length === 0) {
+        dropdown.innerHTML = `<span style="font-size:0.75rem; color:var(--text-muted); text-align:center; padding:0.25rem;">Tidak ada peran lain</span>`;
+        return;
+      }
+      
+      otherProfiles.forEach(p => {
+        const item = document.createElement('div');
+        item.style.cssText = "font-size: 0.8rem; font-weight: 600; padding: 0.45rem 0.6rem; border-radius: 0.35rem; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; color: var(--text-main); transition: var(--transition);";
+        item.onmouseover = () => { item.style.background = "var(--primary-glow)"; };
+        item.onmouseout = () => { item.style.background = "transparent"; };
+        item.onclick = () => {
+          dropdown.style.display = "none";
+          completeUserLogin(p, appState.user.allProfiles);
+        };
+        
+        let iconHtml = '<i class="fa-solid fa-graduation-cap" style="font-size:0.7rem;"></i>';
+        if (p.role === "Wakasek") iconHtml = '<i class="fa-solid fa-user-shield" style="font-size:0.7rem; color:var(--accent);"></i>';
+        else if (p.role === "Kepala Sekolah") iconHtml = '<i class="fa-solid fa-crown" style="font-size:0.7rem; color:#f59e0b;"></i>';
+        else if (p.role === "Wali Kelas") iconHtml = '<i class="fa-solid fa-chalkboard-user" style="font-size:0.7rem; color:var(--success);"></i>';
+        else if (p.role === "Guru Wali") iconHtml = '<i class="fa-solid fa-heart" style="font-size:0.7rem; color:var(--danger);"></i>';
+        
+        item.innerHTML = `${iconHtml} <span>${formatRoleDisplay(p.role)}</span>`;
+        dropdown.appendChild(item);
+      });
     }
 
     // ==================== TEMA TERANG / GELAP SWITCHER ====================
@@ -3712,13 +3941,226 @@
     // Inisialisasi Tema
     initAppTheme();
 
+    let temporaryAbsentStudents = [];
+
+    // ABSENT STUDENTS SELECTOR MODAL
+    function openAbsentStudentsModal() {
+      const classSelect = document.getElementById('jurnalKelas');
+      const targetClass = classSelect.value;
+      
+      if (!targetClass) {
+        showToast("Silakan pilih kelas KBM terlebih dahulu!", "warning");
+        return;
+      }
+      
+      document.getElementById('absentTargetClass').textContent = targetClass;
+      document.getElementById('absentManualNameInput').value = "";
+      
+      const studentNames = getStudentsForClass(targetClass);
+      
+      const container = document.getElementById('absentStudentsContainer');
+      container.innerHTML = "";
+      
+      if (studentNames.length === 0 && temporaryAbsentStudents.filter(s => s.kelas === targetClass).length === 0) {
+        container.innerHTML = `<div id="noStudentsNotice" style="text-align:center; padding:1.5rem; color:var(--text-muted); font-size:0.85rem; font-style:italic;">
+          Belum ada data siswa terdaftar untuk kelas ${targetClass}. Anda bisa menambahkan nama siswa secara manual di atas.
+        </div>`;
+      }
+      
+      studentNames.forEach(name => renderAbsentStudentRow(name, "Hadir"));
+      
+      temporaryAbsentStudents.filter(s => s.kelas === targetClass).forEach(s => {
+        renderAbsentStudentRow(s.nama, s.status);
+      });
+      
+      updateAbsentCounts();
+      document.getElementById('absentStudentsModal').style.display = "flex";
+    }
+
+    function closeAbsentStudentsModal() {
+      document.getElementById('absentStudentsModal').style.display = "none";
+    }
+
+    function getStudentsForClass(className) {
+      let names = [];
+      if (appState.siswaGuruWaliList) {
+        appState.siswaGuruWaliList.forEach(s => {
+          if (s.kelas && s.kelas.toUpperCase() === className.toUpperCase()) {
+            if (s.namaSiswa && !names.includes(s.namaSiswa)) names.push(s.namaSiswa);
+          }
+        });
+      }
+      
+      if (names.length === 0 && appState.rekapAbsenList) {
+        appState.rekapAbsenList.forEach(ra => {
+          if (ra.kelas && ra.kelas.toUpperCase() === className.toUpperCase()) {
+            if (ra.namaSiswa && !names.includes(ra.namaSiswa)) names.push(ra.namaSiswa);
+          }
+        });
+      }
+      
+      return names;
+    }
+
+    function renderAbsentStudentRow(name, status = "Hadir") {
+      const container = document.getElementById('absentStudentsContainer');
+      
+      const notice = document.getElementById('noStudentsNotice');
+      if (notice) notice.remove();
+      
+      const exists = Array.from(container.querySelectorAll('.absent-student-row')).some(row => 
+        row.querySelector('.student-name').textContent === name
+      );
+      if (exists) return;
+      
+      const row = document.createElement('div');
+      row.className = "absent-student-row";
+      row.style.cssText = "display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.01); border:1px solid var(--border-color); padding:0.5rem 0.75rem; border-radius:0.4rem; transition:var(--transition);";
+      
+      row.innerHTML = `
+        <span class="student-name" style="font-size:0.85rem; font-weight:600; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:200px;">${name}</span>
+        <div style="display:flex; gap:0.25rem;">
+          <button type="button" class="btn btn-status btn-hadir" onclick="setStudentAbsentStatus(this, 'Hadir')" style="padding:0.25rem 0.5rem; font-size:0.75rem; font-weight:bold; border-radius:0.25rem; border:1px solid var(--border-color); background:transparent; color:var(--text-muted); cursor:pointer;">H</button>
+          <button type="button" class="btn btn-status btn-sakit" onclick="setStudentAbsentStatus(this, 'Sakit')" style="padding:0.25rem 0.5rem; font-size:0.75rem; font-weight:bold; border-radius:0.25rem; border:1px solid var(--border-color); background:transparent; color:var(--text-muted); cursor:pointer;">S</button>
+          <button type="button" class="btn btn-status btn-izin" onclick="setStudentAbsentStatus(this, 'Izin')" style="padding:0.25rem 0.5rem; font-size:0.75rem; font-weight:bold; border-radius:0.25rem; border:1px solid var(--border-color); background:transparent; color:var(--text-muted); cursor:pointer;">I</button>
+          <button type="button" class="btn btn-status btn-alpa" onclick="setStudentAbsentStatus(this, 'Alpa')" style="padding:0.25rem 0.5rem; font-size:0.75rem; font-weight:bold; border-radius:0.25rem; border:1px solid var(--border-color); background:transparent; color:var(--text-muted); cursor:pointer;">A</button>
+        </div>
+      `;
+      
+      container.appendChild(row);
+      
+      const btn = row.querySelector(`.btn-${status.toLowerCase()}`);
+      if (btn) setStudentAbsentStatus(btn, status, false);
+    }
+
+    function setStudentAbsentStatus(btn, status, triggerUpdate = true) {
+      const row = btn.closest('.absent-student-row');
+      const buttons = row.querySelectorAll('.btn-status');
+      
+      buttons.forEach(b => {
+        b.style.background = "transparent";
+        b.style.borderColor = "var(--border-color)";
+        b.style.color = "var(--text-muted)";
+      });
+      
+      row.dataset.status = status;
+      
+      if (status === "Hadir") {
+        btn.style.background = "rgba(16,185,129,0.15)";
+        btn.style.borderColor = "var(--success)";
+        btn.style.color = "var(--success)";
+      } else if (status === "Sakit") {
+        btn.style.background = "rgba(245,158,11,0.15)";
+        btn.style.borderColor = "var(--warning)";
+        btn.style.color = "var(--warning)";
+      } else if (status === "Izin") {
+        btn.style.background = "rgba(99,102,241,0.15)";
+        btn.style.borderColor = "var(--primary)";
+        btn.style.color = "var(--primary)";
+      } else if (status === "Alpa") {
+        btn.style.background = "rgba(244,63,94,0.15)";
+        btn.style.borderColor = "var(--danger)";
+        btn.style.color = "var(--danger)";
+      }
+      
+      if (triggerUpdate) {
+        const name = row.querySelector('.student-name').textContent;
+        const targetClass = document.getElementById('jurnalKelas').value;
+        const idx = temporaryAbsentStudents.findIndex(s => s.nama === name && s.kelas === targetClass);
+        if (idx !== -1) {
+          temporaryAbsentStudents[idx].status = status;
+        } else {
+          temporaryAbsentStudents.push({ nama: name, kelas: targetClass, status: status });
+        }
+        updateAbsentCounts();
+      }
+    }
+
+    function addTemporaryAbsentStudent() {
+      const input = document.getElementById('absentManualNameInput');
+      const name = input.value.trim();
+      const targetClass = document.getElementById('jurnalKelas').value;
+      
+      if (!name) return;
+      
+      const container = document.getElementById('absentStudentsContainer');
+      const exists = Array.from(container.querySelectorAll('.absent-student-row')).some(row => 
+        row.querySelector('.student-name').textContent.toLowerCase() === name.toLowerCase()
+      );
+      if (exists) {
+        showToast("Siswa sudah ada dalam daftar!", "warning");
+        return;
+      }
+      
+      temporaryAbsentStudents.push({ nama: name, kelas: targetClass, status: "Hadir" });
+      renderAbsentStudentRow(name, "Hadir");
+      updateAbsentCounts();
+      input.value = "";
+    }
+
+    function updateAbsentCounts() {
+      const rows = document.querySelectorAll('#absentStudentsContainer .absent-student-row');
+      let hadir = 0, sakit = 0, izin = 0, alpa = 0;
+      
+      rows.forEach(row => {
+        const status = row.dataset.status || "Hadir";
+        if (status === "Hadir") hadir++;
+        else if (status === "Sakit") sakit++;
+        else if (status === "Izin") izin++;
+        else if (status === "Alpa") alpa++;
+      });
+      
+      if (rows.length === 0) {
+        hadir = 36;
+      }
+      
+      document.getElementById('absentCountHadir').textContent = hadir;
+      document.getElementById('absentCountSakit').textContent = sakit;
+      document.getElementById('absentCountIzin').textContent = izin;
+      document.getElementById('absentCountAlpa').textContent = alpa;
+    }
+
+    function applyAbsentStudentsSelection() {
+      const rows = document.querySelectorAll('#absentStudentsContainer .absent-student-row');
+      
+      let totalSiswa = rows.length || 36;
+      let sakitNames = [];
+      let izinNames = [];
+      let alpaNames = [];
+      
+      rows.forEach(row => {
+        const name = row.querySelector('.student-name').textContent;
+        const status = row.dataset.status || "Hadir";
+        
+        if (status === "Sakit") sakitNames.push(name);
+        else if (status === "Izin") izinNames.push(name);
+        else if (status === "Alpa") alpaNames.push(name);
+      });
+      
+      const totalTidakHadir = sakitNames.length + izinNames.length + alpaNames.length;
+      const totalHadir = totalSiswa - totalTidakHadir;
+      
+      let val = `Hadir: ${totalHadir}, Sakit: ${sakitNames.length}`;
+      if (sakitNames.length > 0) val += ` (${sakitNames.join(", ")})`;
+      
+      val += `, Izin: ${izinNames.length}`;
+      if (izinNames.length > 0) val += ` (${izinNames.join(", ")})`;
+      
+      val += `, Alfa: ${alpaNames.length}`;
+      if (alpaNames.length > 0) val += ` (${alpaNames.join(", ")})`;
+      
+      document.getElementById('jurnalKehadiran').value = val;
+      closeAbsentStudentsModal();
+      showToast("Data absensi kehadiran berhasil diterapkan!");
+    }
+
     // SETUP SESSION INTERFACES
     function setupSessionUI() {
       showAuthView(false);
       
       // Update Profile UI sidebar
       document.getElementById('userName').textContent = appState.user.nama;
-      document.getElementById('userRoleBadge').textContent = appState.user.role;
+      document.getElementById('userRoleBadge').textContent = formatRoleDisplay(appState.user.role);
       document.getElementById('userAvatar').textContent = appState.user.nama.charAt(0).toUpperCase();
       
       // Buat Menu Navigasi Sesuai Role
@@ -3959,17 +4401,26 @@
           const inputTarget = payload.email.toLowerCase().trim();
           const passTarget = payload.password.toString().trim();
 
-          let foundUser = null;
+          let foundUsers = [];
           Object.keys(usersObj).forEach(key => {
             const u = usersObj[key];
             const matchEmail = u.email && u.email.toLowerCase().trim() === inputTarget;
             const matchNip = u.nip && u.nip.toString().toLowerCase().trim() === inputTarget;
             if ((matchEmail || matchNip) && u.password && u.password.toString().trim() === passTarget) {
-              foundUser = { id: key, nama: u.nama, email: u.email, nip: u.nip || "", role: u.role };
+              const rolesList = u.role ? u.role.split(",").map(r => r.trim()).filter(Boolean) : [];
+              if (rolesList.length > 1) {
+                rolesList.forEach(r => {
+                  foundUsers.push({ id: key, nama: u.nama, email: u.email, nip: u.nip || "", role: r });
+                });
+              } else {
+                foundUsers.push({ id: key, nama: u.nama, email: u.email, nip: u.nip || "", role: u.role || "Guru" });
+              }
             }
           });
 
-          if (foundUser) return foundUser;
+          if (foundUsers.length > 0) {
+            return { multiple: true, profiles: foundUsers };
+          }
           throw new Error("Email atau password salah.");
         }
 
@@ -3993,7 +4444,20 @@
           const sgwObj = root.siswagw || {};
           const j7Obj = root.jurnal7kih || {};
           const cbObj = root.catatanbimbingan || {};
-          const settings = root.settings || { hariBelajar: 5, daftarKelas: ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"] };
+
+          let settings = { hariBelajar: 5, daftarKelas: ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"] };
+          if (root.settings) {
+            if (root.settings.hari_belajar) settings.hariBelajar = parseInt(root.settings.hari_belajar) || 5;
+            else if (root.settings.hariBelajar) settings.hariBelajar = parseInt(root.settings.hariBelajar) || 5;
+            
+            if (root.settings.daftar_kelas) {
+              settings.daftarKelas = typeof root.settings.daftar_kelas === "string" 
+                ? root.settings.daftar_kelas.split(",").map(s => s.trim()).filter(Boolean)
+                : root.settings.daftar_kelas;
+            } else if (root.settings.daftarKelas) {
+              settings.daftarKelas = root.settings.daftarKelas;
+            }
+          }
 
           const jRaw = Object.keys(jObj).map(k => ({ id: k, ...jObj[k] }));
           const pRaw = Object.keys(pObj).map(k => ({ id: k, ...pObj[k] }));
@@ -4008,7 +4472,7 @@
           const j7kihRaw = Object.keys(j7Obj).map(k => ({ id: k, ...j7Obj[k] }));
           const cbRaw = Object.keys(cbObj).map(k => ({ id: k, ...cbObj[k] }));
 
-           const teachers = users;
+          const teachers = users;
 
           let result = {
             role: role,
@@ -4377,15 +4841,24 @@
             throw new Error("Email tidak terdaftar di sistem Firebase.");
           }
           
-          let foundUser = null;
+          let foundUsers = [];
           snapshot.forEach(doc => {
             const data = doc.data();
             if (data.password && data.password.toString().trim() === payload.password.toString().trim()) {
-              foundUser = { id: doc.id, nama: data.nama, email: data.email, role: data.role };
+              const rolesList = data.role ? data.role.split(",").map(r => r.trim()).filter(Boolean) : [];
+              if (rolesList.length > 1) {
+                rolesList.forEach(r => {
+                  foundUsers.push({ id: doc.id, nama: data.nama, email: data.email, role: r });
+                });
+              } else {
+                foundUsers.push({ id: doc.id, nama: data.nama, email: data.email, role: data.role || "Guru" });
+              }
             }
           });
           
-          if (foundUser) return foundUser;
+          if (foundUsers.length > 0) {
+            return { multiple: true, profiles: foundUsers };
+          }
           throw new Error("Password salah.");
         }
 
@@ -4426,7 +4899,20 @@
           const j7kihRaw = j7Snap.docs.map(d => ({ id: d.id, ...d.data() }));
           const cbRaw = cbSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-          const settings = setSnap.exists ? setSnap.data() : { hariBelajar: 5, daftarKelas: ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"] };
+          let settings = { hariBelajar: 5, daftarKelas: ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"] };
+          if (setSnap.exists) {
+            const data = setSnap.data();
+            if (data.hari_belajar) settings.hariBelajar = parseInt(data.hari_belajar) || 5;
+            else if (data.hariBelajar) settings.hariBelajar = parseInt(data.hariBelajar) || 5;
+            
+            if (data.daftar_kelas) {
+              settings.daftarKelas = typeof data.daftar_kelas === "string" 
+                ? data.daftar_kelas.split(",").map(s => s.trim()).filter(Boolean)
+                : data.daftar_kelas;
+            } else if (data.daftarKelas) {
+              settings.daftarKelas = data.daftarKelas;
+            }
+          }
           const teachers = users;
 
           let result = {
@@ -6495,56 +6981,67 @@
       }
     }
 
-    // Submit Form Tambah / Edit Guru
-    async function submitTeacherForm(e) {
-      e.preventDefault();
-      
-      const id = document.getElementById('teacherId').value;
-      const nama = document.getElementById('teacherNama').value;
-      const nip = document.getElementById('teacherNip') ? document.getElementById('teacherNip').value.trim() : "";
-      const email = document.getElementById('teacherEmail').value;
-      const password = document.getElementById('teacherPassword').value;
-      const role = document.getElementById('teacherRole').value;
-      
-      showLoading(true, "Menyimpan akun guru...");
-      try {
-        const payload = { nama, nip, email, password, role };
-        if (id) payload.id = id;
-        
-        await callApi("addTeacher", payload);
-        showToast("Akun guru berhasil disimpan!");
-        resetTeacherForm();
-        await loadDashboardData();
-      } catch (err) {
-        showToast("Gagal menyimpan akun: " + err.message, "danger");
-      } finally {
-        showLoading(false);
-      }
-    }
-
-    // Reset Form Guru
-    function resetTeacherForm() {
-      document.getElementById('formTeacher').reset();
-      document.getElementById('teacherId').value = "";
-      if (document.getElementById('teacherNip')) document.getElementById('teacherNip').value = "";
-      document.getElementById('btnCancelEditTeacher').style.display = "none";
-    }
-
-    // Edit Akun Guru
-    function editTeacher(id) {
-      const item = appState.teacherList.find(t => t.id === id);
-      if (!item) return;
-      
-      document.getElementById('teacherId').value = item.id;
-      document.getElementById('teacherNama').value = item.nama;
-      if (document.getElementById('teacherNip')) document.getElementById('teacherNip').value = item.nip || "";
-      document.getElementById('teacherEmail').value = item.email;
-      document.getElementById('teacherPassword').value = item.password;
-      document.getElementById('teacherRole').value = item.role;
-      
-      document.getElementById('btnCancelEditTeacher').style.display = "inline-block";
-      document.getElementById('teacherNama').focus();
-    }
+     // Submit Form Tambah / Edit Guru
+     async function submitTeacherForm(e) {
+       e.preventDefault();
+       
+       const id = document.getElementById('teacherId').value;
+       const nama = document.getElementById('teacherNama').value;
+       const nip = document.getElementById('teacherNip') ? document.getElementById('teacherNip').value.trim() : "";
+       const email = document.getElementById('teacherEmail').value;
+       const password = document.getElementById('teacherPassword').value;
+       
+       const checkedRoles = document.querySelectorAll('input[name="teacherRoles"]:checked');
+       if (checkedRoles.length === 0) {
+         showToast("Pilih minimal satu peran untuk guru ini!", "warning");
+         return;
+       }
+       const role = Array.from(checkedRoles).map(cb => cb.value).join(", ");
+       
+       showLoading(true, "Menyimpan akun guru...");
+       try {
+         const payload = { nama, nip, email, password, role };
+         if (id) payload.id = id;
+         
+         await callApi("addTeacher", payload);
+         showToast("Akun guru berhasil disimpan!");
+         resetTeacherForm();
+         await loadDashboardData();
+       } catch (err) {
+         showToast("Gagal menyimpan akun: " + err.message, "danger");
+       } finally {
+         showLoading(false);
+       }
+     }
+ 
+     // Reset Form Guru
+     function resetTeacherForm() {
+       document.getElementById('formTeacher').reset();
+       document.getElementById('teacherId').value = "";
+       if (document.getElementById('teacherNip')) document.getElementById('teacherNip').value = "";
+       document.querySelectorAll('input[name="teacherRoles"]').forEach(cb => cb.checked = false);
+       document.getElementById('btnCancelEditTeacher').style.display = "none";
+     }
+ 
+     // Edit Akun Guru
+     function editTeacher(id) {
+       const item = appState.teacherList.find(t => t.id === id);
+       if (!item) return;
+       
+       document.getElementById('teacherId').value = item.id;
+       document.getElementById('teacherNama').value = item.nama;
+       if (document.getElementById('teacherNip')) document.getElementById('teacherNip').value = item.nip || "";
+       document.getElementById('teacherEmail').value = item.email;
+       document.getElementById('teacherPassword').value = item.password;
+       
+       const roles = item.role ? item.role.split(',').map(r => r.trim()) : [];
+       document.querySelectorAll('input[name="teacherRoles"]').forEach(cb => {
+         cb.checked = roles.includes(cb.value);
+       });
+       
+       document.getElementById('btnCancelEditTeacher').style.display = "inline-block";
+       document.getElementById('teacherNama').focus();
+     }
 
     // Hapus Akun Guru
     async function deleteTeacher(id) {
@@ -6599,7 +7096,19 @@
         tr.innerHTML = `
           <td style="font-weight:600; color:#cbd5e1;">${item.nama}${nipDisplay}</td>
           <td>${item.email}</td>
-          <td><span class="badge badge-primary">${item.role}</span></td>
+          <td>
+            ${(item.role || "").split(",").map(r => r.trim()).filter(Boolean).map(r => {
+              const displayRole = r === "Guru" ? "Guru Mata Pelajaran" : r;
+              let bgColor = "rgba(99, 102, 241, 0.15)";
+              let textColor = "var(--primary)";
+              if (r === "Wakasek") { bgColor = "rgba(236, 72, 153, 0.15)"; textColor = "#ec4899"; }
+              else if (r === "Kepala Sekolah") { bgColor = "rgba(245, 158, 11, 0.15)"; textColor = "#f59e0b"; }
+              else if (r === "Wali Kelas") { bgColor = "rgba(16, 185, 129, 0.15)"; textColor = "var(--success)"; }
+              else if (r === "Guru Wali") { bgColor = "rgba(239, 68, 68, 0.15)"; textColor = "var(--danger)"; }
+              
+              return `<span class="badge" style="background: ${bgColor}; color: ${textColor}; border: 1px solid rgba(255,255,255,0.05); margin-right: 0.25rem; margin-bottom: 0.25rem; display: inline-block; padding: 0.25rem 0.5rem; border-radius: 0.35rem; font-size: 0.75rem; font-weight: 600;">${displayRole}</span>`;
+            }).join("")}
+          </td>
           <td style="font-family: monospace;">${item.password}</td>
           <td>${assignmentHtml}</td>
           <td>
@@ -7053,11 +7562,28 @@
           }
           
           if (action === "login") {
-            const users = JSON.parse(localStorage.getItem('db_users'));
-            const user = users.find(u => u.email === payload.email && u.password === payload.password);
+            const users = JSON.parse(localStorage.getItem('db_users')) || [];
+            const inputTarget = payload.email.toLowerCase().trim();
+            const passTarget = payload.password.toString().trim();
             
-            if (user) {
-              resolve({ id: user.id, nama: user.nama, email: user.email, role: user.role });
+            let foundUsers = [];
+            users.forEach(u => {
+              const matchEmail = u.email && u.email.toLowerCase().trim() === inputTarget;
+              const matchNip = u.nip && u.nip.toString().toLowerCase().trim() === inputTarget;
+              if ((matchEmail || matchNip) && u.password && u.password.toString().trim() === passTarget) {
+                const rolesList = u.role ? u.role.split(",").map(r => r.trim()).filter(Boolean) : [];
+                if (rolesList.length > 1) {
+                  rolesList.forEach(r => {
+                    foundUsers.push({ id: u.id, nama: u.nama, email: u.email, role: r });
+                  });
+                } else {
+                  foundUsers.push({ id: u.id, nama: u.nama, email: u.email, role: u.role || "Guru" });
+                }
+              }
+            });
+            
+            if (foundUsers.length > 0) {
+              resolve({ multiple: true, profiles: foundUsers });
             } else {
               reject(new Error("Email atau password tidak terdaftar di sistem."));
             }
@@ -7074,9 +7600,20 @@
             const jdRaw = JSON.parse(localStorage.getItem('db_jadwals')) || [];
             const lpRaw = JSON.parse(localStorage.getItem('db_laporans')) || [];
             const gmRaw = JSON.parse(localStorage.getItem('db_gurumasters')) || [];
-            const settings = JSON.parse(localStorage.getItem('db_settings')) || { hariBelajar: 5, daftarKelas: ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"] };
-            if (!settings.daftarKelas) {
-              settings.daftarKelas = ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"];
+            
+            const dbSettings = JSON.parse(localStorage.getItem('db_settings')) || { hariBelajar: 5, daftarKelas: ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"] };
+            let settings = { hariBelajar: 5, daftarKelas: ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"] };
+            if (dbSettings) {
+              if (dbSettings.hari_belajar) settings.hariBelajar = parseInt(dbSettings.hari_belajar) || 5;
+              else if (dbSettings.hariBelajar) settings.hariBelajar = parseInt(dbSettings.hariBelajar) || 5;
+              
+              if (dbSettings.daftar_kelas) {
+                settings.daftarKelas = typeof dbSettings.daftar_kelas === "string" 
+                  ? dbSettings.daftar_kelas.split(",").map(s => s.trim()).filter(Boolean)
+                  : dbSettings.daftar_kelas;
+              } else if (dbSettings.daftarKelas) {
+                settings.daftarKelas = dbSettings.daftarKelas;
+              }
             }
              const users = JSON.parse(localStorage.getItem('db_users')) || [];
              const raRaw = JSON.parse(localStorage.getItem('db_rekap_absen')) || [];
@@ -7782,7 +8319,7 @@
       if (!selectGW) return;
       selectGW.innerHTML = '<option value="">Pilih Guru Wali</option>';
       
-      const listGW = appState.teacherList.filter(u => u.role === "Guru Wali");
+      const listGW = appState.teacherList.filter(u => u.role && u.role.split(',').map(r => r.trim()).includes("Guru Wali"));
       listGW.forEach(gw => {
         const opt = document.createElement('option');
         opt.value = gw.nama;
