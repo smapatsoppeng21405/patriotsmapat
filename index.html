@@ -4971,7 +4971,10 @@
               jenisDokumen: payload.jenisDokumen,
               catatan: payload.catatan || ""
             };
-            if (linkDrive) {
+            if (payload.fileBase64) {
+              updateData.fileBase64 = payload.fileBase64;
+              updateData.fileName = payload.fileName;
+              updateData.fileMimeType = payload.fileMimeType;
               updateData.linkDrive = linkDrive;
             }
             await dbRef.update(updateData);
@@ -4983,7 +4986,10 @@
               jenisDokumen: payload.jenisDokumen,
               linkDrive: linkDrive || "https://drive.google.com/uc?export=download&id=mock-file-placeholder",
               status: "Pending",
-              catatan: payload.catatan || ""
+              catatan: payload.catatan || "",
+              fileBase64: payload.fileBase64 || "",
+              fileName: payload.fileName || "",
+              fileMimeType: payload.fileMimeType || ""
             };
             await newRef.set(data);
             return { success: true, id: newRef.key, linkDrive: data.linkDrive };
@@ -4995,7 +5001,16 @@
           return { success: true };
         }
         else if (action === "downloadPerangkatFile") {
-          return { base64: "UEsFBgAAAAAAAAAAAAAAAAAAAAAAAA==", fileName: payload.fileName || "mock_perangkat.zip", mimeType: "application/zip" };
+          const snapshot = await ref(`perangkats/${payload.id}`).once("value");
+          const item = snapshot.val();
+          if (item && item.fileBase64) {
+            return {
+              base64: item.fileBase64,
+              fileName: item.fileName || "perangkat_ajar.zip",
+              mimeType: item.fileMimeType || "application/zip"
+            };
+          }
+          return { base64: "UEsFBgAAAAAAAAAAAAAAAAAAAAAAAA==", fileName: "mock_perangkat.zip", mimeType: "application/zip" };
         }
         else if (action === "updatePerangkatStatus") {
           await ref(`perangkats/${payload.id}`).update({
@@ -5531,7 +5546,10 @@
               jenisDokumen: payload.jenisDokumen,
               catatan: payload.catatan || ""
             };
-            if (linkDrive) {
+            if (payload.fileBase64) {
+              updateData.fileBase64 = payload.fileBase64;
+              updateData.fileName = payload.fileName;
+              updateData.fileMimeType = payload.fileMimeType;
               updateData.linkDrive = linkDrive;
             }
             await docRef.update(updateData);
@@ -5543,7 +5561,10 @@
               jenisDokumen: payload.jenisDokumen,
               linkDrive: linkDrive || "https://drive.google.com/uc?export=download&id=mock-file-placeholder",
               status: "Pending",
-              catatan: payload.catatan || ""
+              catatan: payload.catatan || "",
+              fileBase64: payload.fileBase64 || "",
+              fileName: payload.fileName || "",
+              fileMimeType: payload.fileMimeType || ""
             };
             await docRef.set(data);
             return { success: true, id: docRef.id, linkDrive: data.linkDrive };
@@ -5555,7 +5576,18 @@
           return { success: true };
         }
         else if (action === "downloadPerangkatFile") {
-          return { base64: "UEsFBgAAAAAAAAAAAAAAAAAAAAAAAA==", fileName: payload.fileName || "mock_perangkat.zip", mimeType: "application/zip" };
+          const doc = await db.collection("perangkats").doc(payload.id).get();
+          if (doc.exists) {
+            const item = doc.data();
+            if (item && item.fileBase64) {
+              return {
+                base64: item.fileBase64,
+                fileName: item.fileName || "perangkat_ajar.zip",
+                mimeType: item.fileMimeType || "application/zip"
+              };
+            }
+          }
+          return { base64: "UEsFBgAAAAAAAAAAAAAAAAAAAAAAAA==", fileName: "mock_perangkat.zip", mimeType: "application/zip" };
         }
         else if (action === "updatePerangkatStatus") {
           await db.collection("perangkats").doc(payload.id).update({
@@ -9276,7 +9308,10 @@
               if (idx !== -1) {
                 pRaw[idx].namaGuru = payload.namaGuru;
                 pRaw[idx].jenisDokumen = payload.jenisDokumen;
-                if (linkDrive) {
+                if (payload.fileBase64) {
+                  pRaw[idx].fileBase64 = payload.fileBase64;
+                  pRaw[idx].fileName = payload.fileName;
+                  pRaw[idx].fileMimeType = payload.fileMimeType;
                   pRaw[idx].linkDrive = linkDrive;
                 }
                 pRaw[idx].catatan = payload.catatan;
@@ -9290,7 +9325,10 @@
                 jenisDokumen: payload.jenisDokumen,
                 linkDrive: linkDrive || "https://drive.google.com/uc?export=download&id=mock-file-placeholder",
                 status: "Pending",
-                catatan: payload.catatan
+                catatan: payload.catatan,
+                fileBase64: payload.fileBase64 || "",
+                fileName: payload.fileName || "",
+                fileMimeType: payload.fileMimeType || ""
               };
               pRaw.unshift(newPerangkat);
               localStorage.setItem('db_perangkats', JSON.stringify(pRaw));
@@ -9306,7 +9344,17 @@
           }
           
           else if (action === "downloadPerangkatFile") {
-            resolve({ base64: "UEsFBgAAAAAAAAAAAAAAAAAAAAAAAA==", fileName: payload.fileName || "mock_perangkat.zip", mimeType: "application/zip" });
+            const pRaw = JSON.parse(localStorage.getItem('db_perangkats')) || [];
+            const item = pRaw.find(p => p.id === payload.id);
+            if (item && item.fileBase64) {
+              resolve({
+                base64: item.fileBase64,
+                fileName: item.fileName || "perangkat_ajar.zip",
+                mimeType: item.fileMimeType || "application/zip"
+              });
+            } else {
+              resolve({ base64: "UEsFBgAAAAAAAAAAAAAAAAAAAAAAAA==", fileName: "mock_perangkat.zip", mimeType: "application/zip" });
+            }
           }
           
           else if (action === "updatePerangkatStatus") {
