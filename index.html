@@ -3558,22 +3558,7 @@
           </div>
         </div>
 
-        <!-- Fasilitas Penggabungan Kelas (Kelas Mapel) -->
-        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); padding: 0.85rem; border-radius: 0.6rem; margin-bottom: 1.25rem;">
-          <label style="display:block; font-size:0.75rem; font-weight:600; color:var(--text-muted); text-transform:uppercase; margin-bottom:0.45rem;">Fasilitas Kelas Mapel (Gabungan / Pilihan)</label>
-          <div style="display:flex; flex-direction:column; gap:0.5rem;">
-            <div style="display:flex; gap:0.5rem;">
-              <select id="absentLoadClassSelect" class="form-control" style="padding: 0.5rem; font-size:0.85rem; border-radius:0.4rem; flex:1; height: calc(2.2rem + 2px);">
-                <option value="">Muat Siswa dari Kelas Lain...</option>
-              </select>
-              <button type="button" class="btn btn-primary" onclick="appendStudentsFromClassSelection()" style="padding:0.5rem 0.85rem; font-size:0.85rem; border-radius: 0.4rem; font-weight: 600; min-height: calc(2.2rem + 2px); display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-cloud-arrow-down"></i> Muat</button>
-            </div>
-            <div style="display:flex; gap:0.5rem; justify-content:space-between; flex-wrap:wrap; margin-top:0.25rem;">
-              <button type="button" class="btn btn-secondary" onclick="appendAllLevelStudents(11)" style="flex:1; padding:0.4rem 0.5rem; font-size:0.75rem; font-weight:bold; border: 1px solid var(--primary); color: var(--primary); background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.35rem;"><i class="fa-solid fa-plus-minus"></i> Gabung Kelas XI</button>
-              <button type="button" class="btn btn-secondary" onclick="appendAllLevelStudents(12)" style="flex:1; padding:0.4rem 0.5rem; font-size:0.75rem; font-weight:bold; border: 1px solid var(--primary); color: var(--primary); background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.35rem;"><i class="fa-solid fa-plus-minus"></i> Gabung Kelas XII</button>
-            </div>
-          </div>
-        </div>
+
 
         <!-- Wadah List Siswa -->
         <div id="absentStudentsContainer" style="display:flex; flex-direction:column; gap:0.6rem; margin-bottom:1rem;">
@@ -4128,18 +4113,7 @@
       document.getElementById('absentTargetClass').textContent = targetClass;
       document.getElementById('absentManualNameInput').value = "";
       
-      // Populate class merger dropdown inside modal
-      const selectLoad = document.getElementById('absentLoadClassSelect');
-      if (selectLoad) {
-        selectLoad.innerHTML = '<option value="">Muat Siswa dari Kelas Lain...</option>';
-        const classes = appState.settings.daftarKelas || ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"];
-        classes.forEach(c => {
-          const opt = document.createElement('option');
-          opt.value = c;
-          opt.textContent = c;
-          selectLoad.appendChild(opt);
-        });
-      }
+
       
       const studentNames = getStudentsForClass(targetClass);
       
@@ -4203,46 +4177,7 @@
       return names;
     }
 
-    function appendStudentsFromClassSelection() {
-      const select = document.getElementById('absentLoadClassSelect');
-      const className = select.value;
-      if (!className) {
-        showToast("Pilih kelas terlebih dahulu!", "warning");
-        return;
-      }
-      
-      const studentNames = getStudentsForClass(className);
-      if (studentNames.length === 0) {
-        showToast(`Tidak ada data siswa untuk kelas ${className}`, "warning");
-        return;
-      }
-      
-      studentNames.forEach(name => renderAbsentStudentRow(name, "Hadir"));
-      updateAbsentCounts();
-      showToast(`Berhasil menambahkan siswa dari kelas ${className}`);
-    }
 
-    function appendAllLevelStudents(level) {
-      const classes = appState.settings.daftarKelas || ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"];
-      let count = 0;
-      
-      classes.forEach(c => {
-        if (c.startsWith(level.toString())) {
-          const studentNames = getStudentsForClass(c);
-          studentNames.forEach(name => {
-            renderAbsentStudentRow(name, "Hadir");
-            count++;
-          });
-        }
-      });
-      
-      updateAbsentCounts();
-      if (count > 0) {
-        showToast(`Berhasil menggabungkan ${count} siswa kelas ${level}!`);
-      } else {
-        showToast(`Tidak ditemukan data siswa untuk kelas level ${level}`, "warning");
-      }
-    }
 
     function renderAbsentStudentRow(name, status = "Hadir") {
       const container = document.getElementById('absentStudentsContainer');
