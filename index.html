@@ -5453,6 +5453,7 @@
         appState.teacherList = data.teacherList || [];
         appState.siswaGuruWaliList = data.siswaGuruWaliList || [];
         appState.jurnal7KIHList = data.jurnal7KIHList || [];
+        appState.studentList = data.studentList || [];
         
         // Simpan data lokal sebagai cache
         localStorage.setItem(`cache_stats_${appState.user.role}`, JSON.stringify(data.stats));
@@ -5467,6 +5468,7 @@
         localStorage.setItem(`cache_teachers_${appState.user.role}`, JSON.stringify(data.teacherList || []));
         localStorage.setItem(`cache_siswagw_${appState.user.role}`, JSON.stringify(data.siswaGuruWaliList || []));
         localStorage.setItem(`cache_jurnal7kih_${appState.user.role}`, JSON.stringify(data.jurnal7KIHList || []));
+        localStorage.setItem(`cache_students_${appState.user.role}`, JSON.stringify(data.studentList || []));
         
         // Render Views
         renderDashboardData();
@@ -5494,6 +5496,7 @@
       appState.teacherList = JSON.parse(localStorage.getItem(`cache_teachers_${appState.user.role}`)) || [];
       appState.siswaGuruWaliList = JSON.parse(localStorage.getItem(`cache_siswagw_${appState.user.role}`)) || [];
       appState.jurnal7KIHList = JSON.parse(localStorage.getItem(`cache_jurnal7kih_${appState.user.role}`)) || [];
+      appState.studentList = JSON.parse(localStorage.getItem(`cache_students_${appState.user.role}`)) || [];
       
       renderDashboardData();
     }
@@ -6689,9 +6692,14 @@
     }
 
     function populateClassDropdowns() {
-      const classList = appState.settings && appState.settings.daftarKelas && appState.settings.daftarKelas.length > 0
-        ? appState.settings.daftarKelas
-        : ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"];
+      let classList = ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"];
+      if (appState.settings && appState.settings.daftarKelas) {
+        if (Array.isArray(appState.settings.daftarKelas)) {
+          classList = appState.settings.daftarKelas;
+        } else if (typeof appState.settings.daftarKelas === "string") {
+          classList = appState.settings.daftarKelas.split(",").map(s => s.trim()).filter(Boolean);
+        }
+      }
 
       const dropdownIds = [
         'jurnalKelas', 'guruMasterKelas', 'jadwalKelas', 'laporanKelas', 'absenKelas',
