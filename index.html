@@ -4994,7 +4994,9 @@
           await ref(`perangkats/${id}`).remove();
           return { success: true };
         }
-
+        else if (action === "downloadPerangkatFile") {
+          return { base64: "UEsFBgAAAAAAAAAAAAAAAAAAAAAAAA==", fileName: payload.fileName || "mock_perangkat.zip", mimeType: "application/zip" };
+        }
         else if (action === "updatePerangkatStatus") {
           await ref(`perangkats/${payload.id}`).update({
             status: payload.status,
@@ -5552,7 +5554,9 @@
           await db.collection("perangkats").doc(id).delete();
           return { success: true };
         }
-
+        else if (action === "downloadPerangkatFile") {
+          return { base64: "UEsFBgAAAAAAAAAAAAAAAAAAAAAAAA==", fileName: payload.fileName || "mock_perangkat.zip", mimeType: "application/zip" };
+        }
         else if (action === "updatePerangkatStatus") {
           await db.collection("perangkats").doc(payload.id).update({
             status: payload.status,
@@ -5962,9 +5966,9 @@
           <td style="font-weight: 600;">${item.namaGuru}</td>
           <td style="color:#cbd5e1;">${fileNameDisplay}</td>
           <td>
-            <a href="${item.linkDrive}" download class="btn btn-primary" style="padding: 0.35rem 0.75rem; font-size: 0.75rem; font-weight:600; display: inline-flex; align-items: center; gap: 0.35rem;">
+            <button type="button" class="btn btn-primary" onclick="downloadFileDirectly('${item.id}', '${fileNameDisplay}')" style="padding: 0.35rem 0.75rem; font-size: 0.75rem; font-weight:600; display: inline-flex; align-items: center; gap: 0.35rem;">
               <i class="fa-solid fa-download"></i> Unduh File
-            </a>
+            </button>
           </td>
           <td>${statusBadge}</td>
           <td style="color: var(--text-muted); font-size: 0.85rem; max-width: 180px;">${item.catatan || '-'}</td>
@@ -6189,29 +6193,49 @@
 
       // Perangkat Table
       const ptBody = document.getElementById('g-perangkat-table-body');
-      ptBody.innerHTML = "";
-      
-      if (appState.perangkatList.length === 0) {
-        ptBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">Belum ada ajuan perangkat ajar.</td></tr>`;
-      } else {
-        appState.perangkatList.forEach(item => {
-          const tr = document.createElement('tr');
-          
-          let statusBadge = `<span class="badge badge-warning"><i class="fa-solid fa-hourglass-start"></i> Pending</span>`;
-          if (item.status === "Disetujui") {
-            statusBadge = `<span class="badge badge-success"><i class="fa-solid fa-circle-check"></i> Disetujui</span>`;
-          } else if (item.status === "Ditolak / Revisi" || item.status === "Ditolak") {
-            statusBadge = `<span class="badge badge-danger"><i class="fa-solid fa-circle-xmark"></i> Revisi</span>`;
-          }
-          
-          tr.innerHTML = `
-            <td style="font-weight:600;">${item.jenisDokumen}</td>
-            <td><a href="${item.linkDrive}" target="_blank" style="color:var(--primary); text-decoration:none;"><i class="fa-solid fa-link"></i> Buka Drive</a></td>
-            <td>${statusBadge}</td>
-            <td style="color:var(--text-muted); font-size:0.85rem;">${item.catatan || '-'}</td>
-          `;
-          ptBody.appendChild(tr);
-        });
+      if (ptBody) {
+        ptBody.innerHTML = "";
+        
+        if (appState.perangkatList.length === 0) {
+          ptBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">Belum ada ajuan perangkat ajar.</td></tr>`;
+        } else {
+          appState.perangkatList.forEach(item => {
+            const tr = document.createElement('tr');
+            
+            let statusBadge = `<span class="badge badge-warning"><i class="fa-solid fa-hourglass-start"></i> Pending</span>`;
+            if (item.status === "Disetujui") {
+              statusBadge = `<span class="badge badge-success"><i class="fa-solid fa-circle-check"></i> Disetujui</span>`;
+            } else if (item.status === "Ditolak / Revisi" || item.status === "Ditolak") {
+              statusBadge = `<span class="badge badge-danger"><i class="fa-solid fa-circle-xmark"></i> Revisi</span>`;
+            }
+            
+            let fileNameDisplay = "Bundel Perangkat (ZIP/RAR)";
+            if (item.catatan && item.catatan.includes("Nama File: ")) {
+              const filePart = item.catatan.split("Nama File: ")[1];
+              fileNameDisplay = filePart ? filePart.split("\n")[0] : fileNameDisplay;
+            }
+            
+            tr.innerHTML = `
+              <td style="font-weight:600; color:#cbd5e1;">${fileNameDisplay}</td>
+              <td>
+                <button type="button" class="btn btn-primary" onclick="downloadFileDirectly('${item.id}', '${fileNameDisplay}')" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 600;">
+                  <i class="fa-solid fa-download"></i> Unduh File
+                </button>
+              </td>
+              <td>${statusBadge}</td>
+              <td style="color:var(--text-muted); font-size:0.85rem;">${item.catatan || '-'}</td>
+              <td>
+                <button type="button" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-right: 0.25rem;" onclick="editPerangkat('${item.id}')">
+                  <i class="fa-solid fa-edit"></i> Edit
+                </button>
+                <button type="button" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; color: var(--danger);" onclick="deletePerangkat('${item.id}')">
+                  <i class="fa-solid fa-trash"></i> Hapus
+                </button>
+              </td>
+            `;
+            ptBody.appendChild(tr);
+          });
+        }
       }
     }
 
@@ -6429,6 +6453,37 @@
         await loadDashboardData();
       } catch (err) {
         showToast("Gagal menghapus perangkat: " + err.message, "danger");
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    async function downloadFileDirectly(id, defaultFileName) {
+      showLoading(true, "Mengunduh berkas perangkat ajar...");
+      try {
+        const res = await callApi("downloadPerangkatFile", { id });
+        
+        // Konversi base64 ke blob
+        const byteCharacters = atob(res.base64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: res.mimeType || 'application/octet-stream' });
+        
+        // Triger unduh di browser
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = res.fileName || defaultFileName || "perangkat_ajar.zip";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+        
+        showToast("Unduhan berhasil dimulai.");
+      } catch (err) {
+        showToast("Gagal mengunduh berkas: " + err.message, "danger");
       } finally {
         showLoading(false);
       }
@@ -9250,6 +9305,10 @@
             resolve({ success: true });
           }
           
+          else if (action === "downloadPerangkatFile") {
+            resolve({ base64: "UEsFBgAAAAAAAAAAAAAAAAAAAAAAAA==", fileName: payload.fileName || "mock_perangkat.zip", mimeType: "application/zip" });
+          }
+          
           else if (action === "updatePerangkatStatus") {
             const pRaw = JSON.parse(localStorage.getItem('db_perangkats')) || [];
             const index = pRaw.findIndex(p => p.id === payload.id);
@@ -10360,7 +10419,7 @@
         tr.innerHTML = `
           <td style="font-weight: 600;">${item.namaGuru}</td>
           <td style="color: #cbd5e1;">${fileNameDisplay}</td>
-          <td><a href="${item.linkDrive}" download class="btn btn-primary" style="padding:0.3rem 0.6rem; font-size:0.8rem; font-weight:600;"><i class="fa-solid fa-download" style="margin-right:0.3rem;"></i> Unduh Berkas</a></td>
+          <td><button type="button" class="btn btn-primary" onclick="downloadFileDirectly('${item.id}', '${fileNameDisplay}')" style="padding:0.3rem 0.6rem; font-size:0.8rem; font-weight:600;"><i class="fa-solid fa-download" style="margin-right:0.3rem;"></i> Unduh Berkas</button></td>
           <td><span class="badge badge-${badgeColor}">${item.status}</span></td>
           <td style="color: var(--text-muted); font-size: 0.85rem;">${item.catatan || '-'}</td>
         `;

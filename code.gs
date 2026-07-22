@@ -874,6 +874,48 @@ function deletePerangkat(payload) {
   throw new Error("Perangkat tidak ditemukan.");
 }
 
+// Ekstrak File ID dari Tautan Google Drive
+function getFileIdFromUrl(url) {
+  var id = "";
+  if (url.indexOf("id=") > -1) {
+    id = url.split("id=")[1].split("&")[0];
+  } else if (url.indexOf("/d/") > -1) {
+    id = url.split("/d/")[1].split("/")[0];
+  }
+  return id;
+}
+
+// Download berkas Perangkat Ajar langsung ke perangkat
+function downloadPerangkatFile(payload) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("PerangkatAjar");
+  var data = sheet.getDataRange().getValues();
+  var id = payload.id;
+  
+  var url = "";
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0].toString() === id.toString()) {
+      url = data[i][3].toString();
+      break;
+    }
+  }
+  
+  if (!url) throw new Error("File tidak ditemukan.");
+  
+  var fileId = getFileIdFromUrl(url);
+  if (!fileId) throw new Error("Tautan file tidak valid.");
+  
+  var file = DriveApp.getFileById(fileId);
+  var blob = file.getBlob();
+  var base64 = Utilities.base64Encode(blob.getBytes());
+  
+  return {
+    base64: base64,
+    fileName: file.getName(),
+    mimeType: blob.getContentType()
+  };
+}
+
 // 6. Validasi/Pembaruan Status Perangkat Ajar oleh Wakasek
 function updatePerangkatStatus(id, status, catatan) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
