@@ -1411,6 +1411,16 @@
                 <i class="fa-solid fa-chart-simple"></i>
               </div>
             </div>
+
+            <div class="stat-card glass-effect">
+              <div class="stat-info">
+                <h3>Siswa Terdaftar</h3>
+                <div class="stat-number" id="w-stat-siswa">0</div>
+              </div>
+              <div class="stat-icon" style="background: rgba(236, 72, 153, 0.1); color: #ec4899;">
+                <i class="fa-solid fa-graduation-cap"></i>
+              </div>
+            </div>
           </div>
 
           <div class="charts-row">
@@ -2198,8 +2208,8 @@
                   <input type="text" id="studentNama" class="form-control" placeholder="E.g., Ahmad Dani" required style="padding-left:1rem;">
                 </div>
                 <div class="form-group">
-                  <label for="studentKelas">Kelas</label>
-                  <select id="studentKelas" class="form-control" required style="padding-left:1rem; height: calc(2.5rem + 2px);">
+                  <label for="studentMasterKelas">Kelas</label>
+                  <select id="studentMasterKelas" class="form-control" required style="padding-left:1rem; height: calc(2.5rem + 2px);">
                     <option value="">Pilih Kelas</option>
                   </select>
                 </div>
@@ -5514,6 +5524,7 @@
         document.getElementById('w-stat-jurnal').textContent = appState.stats.totalJurnal || 0;
         document.getElementById('w-stat-perangkat').textContent = appState.stats.pendingPerangkat || 0;
         document.getElementById('w-stat-nilai').textContent = appState.stats.avgNilaiSekolah || "0.0";
+        document.getElementById('w-stat-siswa').textContent = (appState.studentList || []).length;
         
         // Jurnal Monitoring
         renderWakasekJurnalTable(appState.jurnalList);
@@ -6703,7 +6714,7 @@
 
       const dropdownIds = [
         'jurnalKelas', 'guruMasterKelas', 'jadwalKelas', 'laporanKelas', 'absenKelas',
-        'nilaiKelas', 'kondisiKelas', 'studentKelas', 'siswaGWKelas', 'w-filter-kelas',
+        'nilaiKelas', 'kondisiKelas', 'studentMasterKelas', 'siswaGWKelas', 'w-filter-kelas',
         'w-filter-absen-kelas', 'w-filter-kondisi-kelas', 'rosterKelasSelect',
         'ks-filter-kelas', 'ks-filter-absen-kelas', 'ks-filter-kondisi-kelas', 'filterStudentKelas'
       ];
@@ -7282,7 +7293,7 @@
       const id = document.getElementById('studentId').value;
       const nis = document.getElementById('studentNis').value.trim();
       const namaSiswa = document.getElementById('studentNama').value.trim();
-      const kelas = document.getElementById('studentKelas').value;
+      const kelas = document.getElementById('studentMasterKelas').value;
       
       showLoading(true, "Menyimpan data siswa...");
       try {
@@ -7313,7 +7324,7 @@
       document.getElementById('studentId').value = item.id;
       document.getElementById('studentNis').value = item.nis || "";
       document.getElementById('studentNama').value = item.namaSiswa || "";
-      document.getElementById('studentKelas').value = item.kelas || "";
+      document.getElementById('studentMasterKelas').value = item.kelas || "";
       
       document.getElementById('btnCancelEditStudent').style.display = "inline-block";
       document.getElementById('studentNis').focus();
