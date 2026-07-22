@@ -1933,6 +1933,9 @@
               <button type="button" class="btn btn-secondary" onclick="document.getElementById('teacherExcelImportInput').click()" style="padding: 0.5rem 1rem; font-size: 0.85rem; background-color: var(--border-color); border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 0.5rem;">
                 <i class="fa-solid fa-file-import" style="color: var(--success);"></i> Impor Guru dari Excel / CSV
               </button>
+              <button type="button" class="btn btn-secondary" onclick="downloadTeacherTemplate()" style="padding: 0.5rem 1rem; font-size: 0.85rem; background-color: rgba(99, 102, 241, 0.08); border: 1px solid var(--primary); display: flex; align-items: center; gap: 0.5rem; color: var(--primary);">
+                <i class="fa-solid fa-file-arrow-down"></i> Unduh Template Excel
+              </button>
               <span style="font-size: 0.75rem; color: var(--text-muted);">(Format Kolom: Nama, Email, Role, Password)</span>
             </div>
             
@@ -2176,6 +2179,9 @@
               <input type="file" id="studentExcelImportInput" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleStudentExcelImport(event)">
               <button type="button" class="btn btn-secondary" onclick="document.getElementById('studentExcelImportInput').click()" style="padding: 0.5rem 1rem; font-size: 0.85rem; background-color: var(--border-color); border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 0.5rem;">
                 <i class="fa-solid fa-file-import" style="color: var(--success);"></i> Impor Siswa dari Excel / CSV
+              </button>
+              <button type="button" class="btn btn-secondary" onclick="downloadStudentTemplate()" style="padding: 0.5rem 1rem; font-size: 0.85rem; background-color: rgba(99, 102, 241, 0.08); border: 1px solid var(--primary); display: flex; align-items: center; gap: 0.5rem; color: var(--primary);">
+                <i class="fa-solid fa-file-arrow-down"></i> Unduh Template Excel
               </button>
               <span style="font-size: 0.75rem; color: var(--text-muted);">(Format Kolom: NIS, Nama, Kelas)</span>
             </div>
@@ -5537,6 +5543,9 @@
           selectHari.value = appState.settings.hariBelajar || 5;
         }
         
+        // Auto-migrate/sync existing student entries to the master table
+        syncSiswaMasterFromExistingData();
+
         // Visualisasi Chart
         renderWakasekCharts();
       } 
@@ -7357,6 +7366,121 @@
     }
 
     // ---------------- EXCEL BULK IMPORTS FUNCTIONS ----------------
+    // ---------------- EXCEL TEMPLATE DOWNLOAD FUNCTIONS ----------------
+    function downloadStudentTemplate() {
+      if (typeof XLSX === 'undefined') {
+        showLoading(true, "Memuat library Excel...");
+        const script = document.createElement('script');
+        script.src = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+        script.onload = () => {
+          showLoading(false);
+          generateStudentTemplateFile();
+        };
+        document.head.appendChild(script);
+      } else {
+        generateStudentTemplateFile();
+      }
+    }
+
+    function generateStudentTemplateFile() {
+      const headers = [["NIS", "Nama Siswa", "Kelas"]];
+      const sampleData = [
+        ["12345", "Ahmad Dani", "10-A"],
+        ["12346", "Budi Santoso", "10-A"],
+        ["12347", "Citra Lestari", "10-A"]
+      ];
+      const data = headers.concat(sampleData);
+      
+      const worksheet = XLSX.utils.aoa_to_sheet(data);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Template Siswa");
+      
+      XLSX.writeFile(workbook, "template_impor_siswa.xlsx");
+      showToast("Template Excel Siswa berhasil diunduh!", "success");
+    }
+
+    function downloadTeacherTemplate() {
+      if (typeof XLSX === 'undefined') {
+        showLoading(true, "Memuat library Excel...");
+        const script = document.createElement('script');
+        script.src = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+        script.onload = () => {
+          showLoading(false);
+          generateTeacherTemplateFile();
+        };
+        document.head.appendChild(script);
+      } else {
+        generateTeacherTemplateFile();
+      }
+    }
+
+    function generateTeacherTemplateFile() {
+      const headers = [["Nama Lengkap", "Email", "Role", "Password"]];
+      const sampleData = [
+        ["Ahmad Dahlan", "dahlan@sekolah.com", "Guru", "guru123"],
+        ["Siti Khadijah", "siti@sekolah.com", "Guru, Wali Kelas", "guru123"],
+        ["Mulyadi", "mulyadi@sekolah.com", "Wakasek", "admin123"]
+      ];
+      const data = headers.concat(sampleData);
+      
+      const worksheet = XLSX.utils.aoa_to_sheet(data);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Template Guru");
+      
+      XLSX.writeFile(workbook, "template_impor_guru.xlsx");
+      showToast("Template Excel Guru berhasil diunduh!", "success");
+    }
+
+    // ---------------- DATABASE STUDENT MIGRATION/SEEDER ----------------
+    async function syncSiswaMasterFromExistingData() {
+      const currentStudents = appState.studentList || [];
+      if (currentStudents.length > 3) return; // Jika sudah ada data, jangan overwrite
+      
+      const uniqueMap = {};
+      
+      // Ambil data siswa yang sudah diinput sebelumnya di bimbingan Guru Wali
+      const sgwList = appState.siswaGuruWaliList || [];
+      sgwList.forEach(item => {
+        if (item.namaSiswa) {
+          const key = item.namaSiswa.trim().toLowerCase();
+          uniqueMap[key] = {
+            nis: item.nis || "",
+            namaSiswa: item.namaSiswa.trim(),
+            kelas: item.kelas || ""
+          };
+        }
+      });
+      
+      // Ambil data siswa yang sudah diinput sebelumnya di rekap absen Wali Kelas
+      const raList = appState.rekapAbsenList || [];
+      raList.forEach(item => {
+        if (item.namaSiswa) {
+          const key = item.namaSiswa.trim().toLowerCase();
+          if (!uniqueMap[key]) {
+            uniqueMap[key] = {
+              nis: "",
+              namaSiswa: item.namaSiswa.trim(),
+              kelas: item.kelas || ""
+            };
+          } else if (item.kelas && !uniqueMap[key].kelas) {
+            uniqueMap[key].kelas = item.kelas;
+          }
+        }
+      });
+      
+      const listToImport = Object.values(uniqueMap);
+      if (listToImport.length === 0) return;
+      
+      console.log("Migrasi data siswa dari entri lama terdeteksi:", listToImport);
+      try {
+        await callApi("importStudents", { list: listToImport });
+        appState.studentList = listToImport;
+        renderStudentTable();
+      } catch (e) {
+        console.error("Gagal migrasi otomatis data siswa:", e);
+      }
+    }
+
     function handleStudentExcelImport(e) {
       const file = e.target.files[0];
       if (!file) return;
