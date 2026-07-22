@@ -2211,8 +2211,8 @@
                   <input type="text" id="studentNis" class="form-control" placeholder="E.g., 12345" required style="padding-left:1rem;">
                 </div>
                 <div class="form-group">
-                  <label for="studentNama">Nama Lengkap Siswa</label>
-                  <input type="text" id="studentNama" class="form-control" placeholder="E.g., Ahmad Dani" required style="padding-left:1rem;">
+                  <label for="studentMasterNama">Nama Lengkap Siswa</label>
+                  <input type="text" id="studentMasterNama" class="form-control" placeholder="E.g., Ahmad Dani" required style="padding-left:1rem;">
                 </div>
                 <div class="form-group">
                   <label for="studentMasterKelas">Kelas</label>
@@ -2255,6 +2255,8 @@
               <table class="data-table">
                 <thead>
                   <tr>
+                    <th><input type="checkbox" id="selectAllStudents" onchange="toggleSelectAllStudents(this)"></th>
+                    <th>No</th>
                     <th>NIS</th>
                     <th>Nama Siswa</th>
                     <th>Kelas</th>
@@ -4929,7 +4931,10 @@
         }
 
         else if (action === "deleteStudent") {
-          await ref(`students/${payload.id}`).remove();
+          const ids = payload.ids || [payload.id];
+          for (const id of ids) {
+            await ref(`students/${id}`).remove();
+          }
           return { success: true };
         }
 
@@ -5443,7 +5448,12 @@
         }
 
         else if (action === "deleteStudent") {
-          await db.collection("students").doc(payload.id).delete();
+          const ids = payload.ids || [payload.id];
+          const batch = db.batch();
+          for (const id of ids) {
+            batch.delete(db.collection("students").doc(id));
+          }
+          await batch.commit();
           return { success: true };
         }
 
@@ -7573,7 +7583,7 @@
       
       const id = document.getElementById('studentId').value;
       const nis = document.getElementById('studentNis').value.trim();
-      const namaSiswa = document.getElementById('studentNama').value.trim();
+      const namaSiswa = document.getElementById('studentMasterNama').value.trim();
       const kelas = document.getElementById('studentMasterKelas').value;
       const tingkatan = document.getElementById('studentTingkatan').value;
       
@@ -7605,7 +7615,7 @@
       
       document.getElementById('studentId').value = item.id;
       document.getElementById('studentNis').value = item.nis || "";
-      document.getElementById('studentNama').value = item.namaSiswa || "";
+      document.getElementById('studentMasterNama').value = item.namaSiswa || "";
       document.getElementById('studentMasterKelas').value = item.kelas || "";
       document.getElementById('studentTingkatan').value = item.tingkatan || "";
       
@@ -7633,6 +7643,12 @@
       if (!tbody) return;
       tbody.innerHTML = "";
       
+      // Reset status bulk delete
+      const selectAllHeader = document.getElementById('selectAllStudents');
+      if (selectAllHeader) selectAllHeader.checked = false;
+      const bulkDeleteContainer = document.getElementById('bulkDeleteContainer');
+      if (bulkDeleteContainer) bulkDeleteContainer.style.display = "none";
+      
       const search = document.getElementById('searchStudentInput').value.toLowerCase().trim();
       const classFilter = document.getElementById('filterStudentKelas').value;
       
@@ -7644,13 +7660,15 @@
       });
       
       if (filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Tidak ada data siswa yang cocok.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Tidak ada data siswa yang cocok.</td></tr>';
         return;
       }
       
-      filtered.forEach(item => {
+      filtered.forEach((item, idx) => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
+          <td><input type="checkbox" class="student-select-chk" value="${item.id}" onchange="updateBulkDeleteButton()"></td>
+          <td>${idx + 1}</td>
           <td style="font-family: monospace; font-weight: 600; color: var(--primary);">${item.nis || "-"}</td>
           <td style="font-weight: 600; color: #cbd5e1;">${item.namaSiswa}</td>
           <td><span class="badge badge-success" style="background:rgba(16,185,129,0.08);">${item.kelas}</span></td>
@@ -7666,6 +7684,65 @@
         `;
         tbody.appendChild(tr);
       });
+    }
+
+    function toggleSelectAllStudents(headerCheckbox) {
+      const checkboxes = document.querySelectorAll('.student-select-chk');
+      checkboxes.forEach(chk => {
+        chk.checked = headerCheckbox.checked;
+      });
+      updateBulkDeleteButton();
+    }
+
+    function updateBulkDeleteButton() {
+      const checkboxes = document.querySelectorAll('.student-select-chk');
+      const checkedBoxes = Array.from(checkboxes).filter(chk => chk.checked);
+      const container = document.getElementById('bulkDeleteContainer');
+      const countSpan = document.getElementById('bulkDeleteCount');
+      const selectAllHeader = document.getElementById('selectAllStudents');
+      
+      if (checkedBoxes.length > 0) {
+        container.style.display = "flex";
+        countSpan.textContent = `${checkedBoxes.length} siswa terpilih`;
+        if (selectAllHeader) selectAllHeader.checked = (checkedBoxes.length === checkboxes.length);
+      } else {
+        container.style.display = "none";
+        if (selectAllHeader) selectAllHeader.checked = false;
+      }
+    }
+
+    async function deleteSelectedStudents() {
+      const checkboxes = document.querySelectorAll('.student-select-chk');
+      const checkedBoxes = Array.from(checkboxes).filter(chk => chk.checked);
+      if (checkedBoxes.length === 0) return;
+      
+      const confirmed = await showCustomConfirm(
+        "Hapus Terpilih", 
+        `Apakah Anda yakin ingin menghapus ${checkedBoxes.length} siswa terpilih sekaligus?`, 
+        "Hapus", 
+        true
+      );
+      if (!confirmed) return;
+      
+      const ids = checkedBoxes.map(chk => chk.value);
+      
+      showLoading(true, `Menghapus ${ids.length} siswa...`);
+      try {
+        await callApi("deleteStudent", { ids });
+        showToast(`Berhasil menghapus ${ids.length} siswa.`);
+        
+        // Reset select all checkbox
+        const selectAllHeader = document.getElementById('selectAllStudents');
+        if (selectAllHeader) selectAllHeader.checked = false;
+        
+        document.getElementById('bulkDeleteContainer').style.display = "none";
+        
+        await loadDashboardData();
+      } catch (err) {
+        showToast("Gagal menghapus siswa: " + err.message, "danger");
+      } finally {
+        showLoading(false);
+      }
     }
 
     // ---------------- EXCEL BULK IMPORTS FUNCTIONS ----------------
@@ -8982,14 +9059,10 @@
 
           else if (action === "deleteStudent") {
             const students = JSON.parse(localStorage.getItem('db_students')) || [];
-            const index = students.findIndex(s => s.id === payload.id);
-            if (index !== -1) {
-              students.splice(index, 1);
-              localStorage.setItem('db_students', JSON.stringify(students));
-              resolve({ success: true });
-            } else {
-              reject(new Error("Siswa tidak ditemukan di database mockup."));
-            }
+            const ids = payload.ids || [payload.id];
+            const updated = students.filter(s => !ids.includes(s.id));
+            localStorage.setItem('db_students', JSON.stringify(updated));
+            resolve({ success: true });
           }
 
           else if (action === "addSiswaMapelPilihan") {

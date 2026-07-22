@@ -1130,28 +1130,33 @@ function addStudent(payload) {
   return { success: true, id: id };
 }
 
-// Hapus Data Siswa
-function deleteStudent(id) {
+// Hapus Data Siswa (Mendukung ID Tunggal maupun Massal)
+function deleteStudent(payload) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName("Siswa");
   if (!sheet) throw new Error("Sheet Siswa tidak ditemukan.");
   
+  var ids = [];
+  if (payload && payload.ids) {
+    ids = payload.ids;
+  } else if (payload && payload.id) {
+    ids = [payload.id];
+  } else {
+    ids = [payload];
+  }
+  
   var data = sheet.getDataRange().getValues();
-  var index = -1;
-  for (var i = 1; i < data.length; i++) {
-    if (data[i][0] === id) {
-      index = i;
-      break;
+  var count = 0;
+  // Hapus baris dari bawah ke atas agar indeks baris tidak bergeser
+  for (var i = data.length - 1; i >= 1; i--) {
+    if (ids.indexOf(data[i][0].toString()) !== -1) {
+      sheet.deleteRow(i + 1);
+      count++;
     }
   }
   
-  if (index !== -1) {
-    sheet.deleteRow(index + 1);
-    SpreadsheetApp.flush();
-    return { success: true };
-  } else {
-    throw new Error("Siswa tidak ditemukan.");
-  }
+  SpreadsheetApp.flush();
+  return { success: true, count: count };
 }
 
 // Impor Siswa Massal dari Excel
