@@ -2251,6 +2251,13 @@
               </div>
             </div>
 
+            <div id="bulkDeleteContainer" style="display: none; align-items: center; justify-content: space-between; margin-bottom: 1rem; padding: 0.75rem 1rem; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 6px;">
+              <span id="bulkDeleteCount" style="font-size: 0.85rem; font-weight: 600; color: #f87171;">0 siswa terpilih</span>
+              <button type="button" class="btn btn-danger" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="deleteSelectedStudents()">
+                <i class="fa-solid fa-trash-can"></i> Hapus Semua Terpilih
+              </button>
+            </div>
+
             <div class="table-container">
               <table class="data-table">
                 <thead>
@@ -2581,6 +2588,50 @@
         <!-- GURU: JADWAL MENGAJAR SAYA -->
         <div id="pane-guru-jadwal" class="view-pane">
           <div class="card glass-effect" style="margin-bottom: 2rem;">
+            <div class="card-title">Tambah / Edit Jadwal Mengajar</div>
+            <form id="formGuruJadwal" onsubmit="submitGuruJadwalForm(event)">
+              <input type="hidden" id="guruJadwalId">
+              <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                <div class="form-group">
+                  <label for="guruJadwalHari">Hari</label>
+                  <select id="guruJadwalHari" class="form-control" required style="padding-left:1rem; height: calc(2.5rem + 2px);">
+                    <option value="">Pilih Hari</option>
+                    <option value="Senin">Senin</option>
+                    <option value="Selasa">Selasa</option>
+                    <option value="Rabu">Rabu</option>
+                    <option value="Kamis">Kamis</option>
+                    <option value="Jumat">Jumat</option>
+                    <option value="Sabtu">Sabtu</option>
+                    <option value="Ahad">Ahad</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="guruJadwalMulai">Jam Mulai (WITA)</label>
+                  <input type="time" id="guruJadwalMulai" class="form-control" required style="padding-left:1rem; height: calc(2.5rem + 2px);">
+                </div>
+                <div class="form-group">
+                  <label for="guruJadwalSelesai">Jam Selesai (WITA)</label>
+                  <input type="time" id="guruJadwalSelesai" class="form-control" required style="padding-left:1rem; height: calc(2.5rem + 2px);">
+                </div>
+                <div class="form-group">
+                  <label for="guruJadwalKelas">Kelas</label>
+                  <select id="guruJadwalKelas" class="form-control" required style="padding-left:1rem; height: calc(2.5rem + 2px);">
+                    <option value="">Pilih Kelas</option>
+                  </select>
+                </div>
+              </div>
+              <div style="display:flex; gap:1rem; margin-top: 1rem;">
+                <button type="submit" class="btn btn-primary" style="flex:1;">
+                  <i class="fa-solid fa-floppy-disk"></i> Simpan Jadwal
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="resetGuruJadwalForm()" style="display:none;" id="btnCancelEditGuruJadwal">
+                  Batal Edit
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <div class="card glass-effect" style="margin-bottom: 2rem;">
             <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
               <span>⏰ Jadwal Mengajar Saya</span>
               <button class="btn btn-secondary" style="padding: 0.4rem 0.85rem; font-size: 0.8rem;" onclick="requestNotificationPermission()">
@@ -2592,14 +2643,13 @@
                 <thead>
                   <tr>
                     <th>Hari</th>
-                    <th>Jam Ke</th>
-                    <th>Waktu KBM</th>
+                    <th>Waktu Mengajar (WITA)</th>
                     <th>Kelas</th>
-                    <th>Mata Pelajaran</th>
+                    <th>Aksi</th>
                   </tr>
                 </thead>
                 <tbody id="g-jadwal-table-body">
-                  <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Belum ada jadwal mengajar.</td></tr>
+                  <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Belum ada jadwal mengajar.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -4441,7 +4491,6 @@
       if (role === "Wakasek") {
         menuItems = [
           { text: "Ringkasan", pane: "pane-wakasek-ringkasan", icon: "fa-chart-pie" },
-          { text: "Data Utama Guru", pane: "pane-wakasek-gurumaster", icon: "fa-user-gear" },
           { text: "Data Utama Siswa", pane: "pane-wakasek-siswamaster", icon: "fa-users-gear" },
           { text: "Monitoring Jurnal", pane: "pane-wakasek-jurnal", icon: "fa-book-open" },
           { text: "Validasi Perangkat", pane: "pane-wakasek-perangkat", icon: "fa-file-shield" },
@@ -6985,7 +7034,7 @@
         'nilaiKelas', 'kondisiKelas', 'studentMasterKelas', 'siswaGWKelas', 'w-filter-kelas',
         'w-filter-absen-kelas', 'w-filter-kondisi-kelas', 'rosterKelasSelect',
         'ks-filter-kelas', 'ks-filter-absen-kelas', 'ks-filter-kondisi-kelas', 'filterStudentKelas',
-        'teacherWaliKelasClass'
+        'teacherWaliKelasClass', 'guruJadwalKelas'
       ];
 
       dropdownIds.forEach(id => {
@@ -8194,31 +8243,125 @@
       
       const list = appState.guruJadwalList || [];
       if (list.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Belum ada jadwal mengajar terdaftar untuk Anda.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Belum ada jadwal mengajar terdaftar untuk Anda.</td></tr>';
         return;
       }
       
-      const dayOrder = { "Senin": 1, "Selasa": 2, "Rabu": 3, "Kamis": 4, "Jumat": 5 };
+      const dayOrder = { "Senin": 1, "Selasa": 2, "Rabu": 3, "Kamis": 4, "Jumat": 5, "Sabtu": 6, "Ahad": 7 };
       const sorted = [...list].sort((a, b) => {
         if (dayOrder[a.hari] !== dayOrder[b.hari]) {
-          return dayOrder[a.hari] - dayOrder[b.hari];
+          return (dayOrder[a.hari] || 99) - (dayOrder[b.hari] || 99);
         }
-        return parseInt(a.jamKe) - parseInt(b.jamKe);
+        return (a.jamKe || "").localeCompare(b.jamKe || "");
       });
       
       sorted.forEach(item => {
         const tr = document.createElement('tr');
-        const timeSlot = CLASS_HOURS.find(h => h.jam === item.jamKe.toString()) || { start: "", end: "" };
+        
+        let timeDisplay = "";
+        if (item.jamKe && item.jamKe.includes("-")) {
+          timeDisplay = item.jamKe + " WITA";
+        } else {
+          const timeSlot = CLASS_HOURS.find(h => h.jam === item.jamKe.toString()) || { start: "", end: "" };
+          timeDisplay = `${timeSlot.start} - ${timeSlot.end} WITA`;
+        }
         
         tr.innerHTML = `
           <td><span class="badge badge-primary">${item.hari}</span></td>
-          <td><strong>Jam Ke-${item.jamKe}</strong></td>
-          <td style="color:#cbd5e1; font-weight: 600;">${timeSlot.start} - ${timeSlot.end} WIB</td>
+          <td style="color:#cbd5e1; font-weight: 600;">${timeDisplay}</td>
           <td><span class="badge badge-success" style="background:rgba(16,185,129,0.08);">${item.kelas}</span></td>
-          <td style="font-weight: 600;">${item.mapel}</td>
+          <td>
+            <button type="button" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-right: 0.25rem;" onclick="editGuruJadwal('${item.id}')">
+              <i class="fa-solid fa-edit"></i> Edit
+            </button>
+            <button type="button" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; color: var(--danger);" onclick="deleteGuruJadwal('${item.id}')">
+              <i class="fa-solid fa-trash"></i> Hapus
+            </button>
+          </td>
         `;
         tbody.appendChild(tr);
       });
+    }
+
+    async function submitGuruJadwalForm(e) {
+      e.preventDefault();
+      
+      const id = document.getElementById('guruJadwalId').value;
+      const hari = document.getElementById('guruJadwalHari').value;
+      const mulai = document.getElementById('guruJadwalMulai').value;
+      const selesai = document.getElementById('guruJadwalSelesai').value;
+      const kelas = document.getElementById('guruJadwalKelas').value;
+      
+      if (!hari || !mulai || !selesai || !kelas) {
+        showToast("Mohon lengkapi semua data jadwal!", "warning");
+        return;
+      }
+      
+      const waktuMengajar = `${mulai}-${selesai}`;
+      
+      showLoading(true, "Menyimpan jadwal mengajar...");
+      try {
+        const payload = {
+          hari: hari,
+          jamKe: waktuMengajar,
+          kelas: kelas,
+          guru: appState.user.nama,
+          mapel: ""
+        };
+        if (id) payload.id = id;
+        
+        await callApi("addJadwal", payload);
+        showToast("Jadwal mengajar berhasil disimpan!");
+        resetGuruJadwalForm();
+        await loadDashboardData();
+      } catch (err) {
+        showToast("Gagal menyimpan jadwal: " + err.message, "danger");
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    function editGuruJadwal(id) {
+      const item = appState.guruJadwalList.find(j => j.id === id);
+      if (!item) return;
+      
+      document.getElementById('guruJadwalId').value = item.id;
+      document.getElementById('guruJadwalHari').value = item.hari;
+      
+      if (item.jamKe && item.jamKe.includes("-")) {
+        const parts = item.jamKe.split("-").map(p => p.trim());
+        document.getElementById('guruJadwalMulai').value = parts[0];
+        document.getElementById('guruJadwalSelesai').value = parts[1];
+      } else {
+        const timeSlot = CLASS_HOURS.find(h => h.jam === item.jamKe.toString()) || { start: "07:00", end: "07:45" };
+        document.getElementById('guruJadwalMulai').value = timeSlot.start;
+        document.getElementById('guruJadwalSelesai').value = timeSlot.end;
+      }
+      
+      document.getElementById('guruJadwalKelas').value = item.kelas;
+      document.getElementById('btnCancelEditGuruJadwal').style.display = "inline-block";
+    }
+
+    function resetGuruJadwalForm() {
+      document.getElementById('formGuruJadwal').reset();
+      document.getElementById('guruJadwalId').value = "";
+      document.getElementById('btnCancelEditGuruJadwal').style.display = "none";
+    }
+
+    async function deleteGuruJadwal(id) {
+      const confirmed = await showCustomConfirm("Hapus Jadwal", "Apakah Anda yakin ingin menghapus jadwal mengajar ini?", "Hapus", true);
+      if (!confirmed) return;
+      
+      showLoading(true, "Menghapus jadwal mengajar...");
+      try {
+        await callApi("deleteJadwal", { id });
+        showToast("Jadwal mengajar berhasil dihapus.");
+        await loadDashboardData();
+      } catch (err) {
+        showToast("Gagal menghapus jadwal: " + err.message, "danger");
+      } finally {
+        showLoading(false);
+      }
     }
 
     // ===== KELAS MAPEL PILIHAN SAYA (GURU MAPEL) =====
@@ -8447,44 +8590,60 @@
       if (!appState.user || appState.user.role !== "Guru" || !appState.guruJadwalList) return;
       
       const now = new Date();
+      // Konversi waktu perangkat guru ke WITA (Asia/Makassar)
+      const witaTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Makassar" }));
       
       // Mapping hari Indonesia
       const indDays = ["Ahad", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
-      const currentDay = indDays[now.getDay()];
+      const currentDay = indDays[witaTime.getDay()];
       
       // Format jam saat ini "HH:MM"
-      const currentHours = now.getHours().toString().padStart(2, '0');
-      const currentMinutes = now.getMinutes().toString().padStart(2, '0');
+      const currentHours = witaTime.getHours().toString().padStart(2, '0');
+      const currentMinutes = witaTime.getMinutes().toString().padStart(2, '0');
       const currentTimeStr = `${currentHours}:${currentMinutes}`;
       
       const list = appState.guruJadwalList;
       
       list.forEach(item => {
-        const timeSlot = CLASS_HOURS.find(h => h.jam === item.jamKe.toString());
-        if (!timeSlot) return;
+        let startTimeStr = "";
+        let endTimeStr = "";
+        
+        if (item.jamKe && item.jamKe.includes("-")) {
+          const parts = item.jamKe.split("-").map(p => p.trim());
+          startTimeStr = parts[0];
+          endTimeStr = parts[1];
+        } else {
+          const timeSlot = CLASS_HOURS.find(h => h.jam === item.jamKe.toString());
+          if (timeSlot) {
+            startTimeStr = timeSlot.start;
+            endTimeStr = timeSlot.end;
+          }
+        }
+        
+        if (!startTimeStr || !endTimeStr) return;
         
         // Alarm Mulai Mengajar
-        if (item.hari === currentDay && timeSlot.start === currentTimeStr) {
-          const keyStart = `${item.id}_start_${now.toDateString()}`;
+        if (item.hari === currentDay && startTimeStr === currentTimeStr) {
+          const keyStart = `${item.id}_start_${witaTime.toDateString()}`;
           if (!notifiedSlots[keyStart]) {
             notifiedSlots[keyStart] = true;
             triggerSystemNotification(
               "⏰ Waktunya Mengajar!", 
-              `Hari ini Jam Ke-${item.jamKe} dimulai. Kelas: ${item.kelas}, Mapel: ${item.mapel}.`,
+              `Hari ini kelas ${item.kelas} dimulai (${startTimeStr} WITA).`,
               () => { switchPane("pane-guru-jadwal"); }
             );
           }
         }
         
         // Alarm Selesai Mengajar & Pemicu Jurnal
-        if (item.hari === currentDay && timeSlot.end === currentTimeStr) {
-          const keyEnd = `${item.id}_end_${now.toDateString()}`;
+        if (item.hari === currentDay && endTimeStr === currentTimeStr) {
+          const keyEnd = `${item.id}_end_${witaTime.toDateString()}`;
           if (!notifiedSlots[keyEnd]) {
             notifiedSlots[keyEnd] = true;
             triggerSystemNotification(
               "🔔 KBM Selesai! Isi Jurnal Mengajar", 
-              `Kelas ${item.kelas} (${item.mapel}) telah selesai. Klik di sini untuk isi jurnal mengajar sekarang.`,
-              () => { triggerJurnalAutofill(item.kelas, item.mapel); }
+              `Kelas ${item.kelas} telah selesai (${endTimeStr} WITA). Klik di sini untuk isi jurnal mengajar.`,
+              () => { triggerJurnalAutofill(item.kelas, item.mapel || "Mata Pelajaran"); }
             );
           }
         }

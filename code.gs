@@ -846,42 +846,35 @@ function addAnalisisNilai(payload) {
   return { id: id, success: true };
 }
 
-// 8. Menambah Jadwal Mengajar dengan VALIDASI ANTI TABRAKAN
+// 8. Menambah/Mengubah Jadwal Mengajar Guru
 function addJadwal(payload) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName("Jadwal");
   var data = sheet.getDataRange().getValues();
   
+  var id = payload.id || "";
   var hari = payload.hari.trim();
-  var jamKe = payload.jamKe.toString().trim();
+  var jamKe = payload.jamKe.toString().trim(); // Memuat waktu mengajar (misal: 08:00-09:30)
   var kelas = payload.kelas.trim();
   var guru = payload.guru.trim();
-  var mapel = payload.mapel.trim();
+  var mapel = payload.mapel ? payload.mapel.trim() : "";
   
-  // Looping validasi baris jadwal terdaftar
-  for (var i = 1; i < data.length; i++) {
-    var dbHari = data[i][1].toString().trim();
-    var dbJamKe = data[i][2].toString().trim();
-    var dbKelas = data[i][3].toString().trim();
-    var dbGuru = data[i][4].toString().trim();
-    var dbMapel = data[i][5].toString().trim();
-    
-    // Syarat 1: Hari & Jam sama, Guru sama (GURU TABRAKAN MENGAJAR DI DUA KELAS)
-    if (dbHari === hari && dbJamKe === jamKe && dbGuru === guru) {
-      throw new Error("Tabrakan Jadwal Guru! " + guru + " sudah mengajar di kelas " + dbKelas + " pada " + hari + " Jam Ke-" + jamKe);
-    }
-    
-    // Syarat 2: Hari & Jam sama, Kelas sama (KELAS TABRAKAN DIISI DUA GURU)
-    if (dbHari === hari && dbJamKe === jamKe && dbKelas === kelas) {
-      throw new Error("Tabrakan Jadwal Kelas! Kelas " + kelas + " sudah diisi oleh " + dbGuru + " (" + dbMapel + ") pada " + hari + " Jam Ke-" + jamKe);
+  // Jika ID dikirim, update baris jadwal yang ada
+  if (id) {
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0].toString() === id.toString()) {
+        sheet.getRange(i + 1, 2, 1, 5).setValues([[hari, jamKe, kelas, guru, mapel]]);
+        SpreadsheetApp.flush();
+        return { id: id, success: true };
+      }
     }
   }
   
-  var id = "SCH-" + new Date().getTime() + "-" + Math.floor(Math.random() * 1000);
-  sheet.appendRow([id, hari, jamKe, kelas, guru, mapel]);
+  var newId = "SCH-" + new Date().getTime() + "-" + Math.floor(Math.random() * 1000);
+  sheet.appendRow([newId, hari, jamKe, kelas, guru, mapel]);
   SpreadsheetApp.flush();
   
-  return { id: id, success: true };
+  return { id: newId, success: true };
 }
 
 // 9. Menghapus Jadwal Mengajar
