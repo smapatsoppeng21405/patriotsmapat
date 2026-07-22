@@ -810,12 +810,13 @@ function syncOfflineJurnal(jurnalList) {
 function addPerangkat(payload) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName("PerangkatAjar");
+  var data = sheet.getDataRange().getValues();
   
-  var id = "PR-" + new Date().getTime() + "-" + Math.floor(Math.random() * 1000);
+  var id = payload.id || "";
   var namaGuru = payload.namaGuru || payload.currentUserName;
   var jenisDokumen = payload.jenisDokumen || "";
   var linkDrive = payload.linkDrive || "";
-  var status = "Pending";
+  var status = payload.status || "Pending";
   var catatan = payload.catatan || "";
   
   // Proses unggah berkas langsung ke Google Drive jika tersedia data Base64
@@ -830,17 +831,47 @@ function addPerangkat(payload) {
       // Atur hak akses agar siapa saja yang memiliki link bisa membuka berkas
       file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
       
-      // Ambil tautan unduhan/tinjauan berkas
-      linkDrive = file.getUrl();
+      // Ambil tautan unduhan langsung berkas
+      linkDrive = "https://drive.google.com/uc?export=download&id=" + file.getId();
     } catch (e) {
       linkDrive = "Gagal Unggah: " + e.toString();
     }
   }
   
-  sheet.appendRow([id, namaGuru, jenisDokumen, linkDrive, status, catatan]);
+  // Jika ID dikirim, lakukan update baris
+  if (id) {
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0].toString() === id.toString()) {
+        var finalLink = linkDrive || data[i][3].toString();
+        sheet.getRange(i + 1, 2, 1, 5).setValues([[namaGuru, jenisDokumen, finalLink, status, catatan]]);
+        SpreadsheetApp.flush();
+        return { id: id, success: true, linkDrive: finalLink };
+      }
+    }
+  }
+  
+  var newId = "PR-" + new Date().getTime() + "-" + Math.floor(Math.random() * 1000);
+  sheet.appendRow([newId, namaGuru, jenisDokumen, linkDrive, status, catatan]);
   SpreadsheetApp.flush();
   
-  return { id: id, success: true, linkDrive: linkDrive };
+  return { id: newId, success: true, linkDrive: linkDrive };
+}
+
+// Menghapus berkas Perangkat Ajar
+function deletePerangkat(payload) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("PerangkatAjar");
+  var data = sheet.getDataRange().getValues();
+  var id = payload.id;
+  
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0].toString() === id.toString()) {
+      sheet.deleteRow(i + 1);
+      SpreadsheetApp.flush();
+      return { success: true };
+    }
+  }
+  throw new Error("Perangkat tidak ditemukan.");
 }
 
 // 6. Validasi/Pembaruan Status Perangkat Ajar oleh Wakasek

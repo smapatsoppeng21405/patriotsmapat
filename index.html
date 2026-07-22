@@ -1502,8 +1502,8 @@
                 <thead>
                   <tr>
                     <th>Nama Guru</th>
-                    <th>Jenis Dokumen</th>
-                    <th>Link Dokumen</th>
+                    <th>Nama Berkas</th>
+                    <th>Unduh Perangkat</th>
                     <th>Status</th>
                     <th>Catatan Kurikulum</th>
                     <th>Aksi</th>
@@ -2012,11 +2012,11 @@
                 </div>
               </div>
               <div class="form-group" style="margin-bottom: 1.5rem; max-width: 350px;">
-                <label for="teacherWaliKelasClass" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-main);">Kelas Bimbingan Wali Kelas (Opsional)</label>
+                <label for="teacherWaliKelasClass" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-main);">Kelas Bimbingan Wali Kelas</label>
                 <select id="teacherWaliKelasClass" class="form-control" style="padding-left: 1rem; height: calc(2.5rem + 2px);">
                   <option value="">Pilih Kelas</option>
                 </select>
-                <span style="font-size: 0.7rem; color: var(--text-muted);">Pilih kelas asuhan guru jika yang bersangkutan memiliki peran/jabatan Wali Kelas.</span>
+                <span style="font-size: 0.7rem; color: var(--text-muted);">Pilih kelas bimbingan guru (Wajib diisi jika peran Wali Kelas dipilih).</span>
               </div>
               <div style="display:flex; gap:1rem;">
                 <button type="submit" class="btn btn-primary" style="flex:1;">
@@ -2390,15 +2390,17 @@
         <!-- GURU: UNGGAH PERANGKAT AJAR -->
         <div id="pane-guru-unggahperangkat" class="view-pane">
           <div class="card glass-effect" style="max-width: 600px; margin: 0 auto;">
-            <div class="card-title">Unggah Perangkat Ajar Baru</div>
+            <div class="card-title" id="titleFormPerangkat">Unggah Perangkat Ajar Baru</div>
             
             <form id="formPerangkat" onsubmit="submitPerangkatForm(event)">
+              <input type="hidden" id="perangkatId">
               <!-- Jenis Dokumen disederhanakan karena diupload sekaligus sebagai ZIP/RAR -->
               <input type="hidden" id="perangkatJenis" value="Bundel Perangkat Ajar (ZIP/RAR)">
 
               <div class="form-group">
                 <label for="perangkatFile">Pilih File Bundel Perangkat Ajar (ZIP, RAR, WinRAR)</label>
-                <input type="file" id="perangkatFile" class="form-control" style="padding: 0.75rem 1rem;" accept=".zip,.rar" required>
+                <input type="file" id="perangkatFile" class="form-control" style="padding: 0.75rem 1rem;" accept=".zip,.rar">
+                <div id="perangkatFileInfo" style="font-size: 0.85rem; color: var(--accent); margin-top: 0.5rem; display: none; font-weight: 600;"></div>
                 <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.35rem;">
                   <i class="fa-solid fa-circle-info"></i> Silakan kompres Modul Ajar, Prota, Promes, ATP, KKTP, dll. menjadi satu berkas ZIP atau RAR.
                 </p>
@@ -2409,9 +2411,14 @@
                 <textarea id="perangkatCatatan" class="form-control" style="padding-left: 1rem;" placeholder="Catatan tentang daftar berkas, revisi, atau materi pendukung..."></textarea>
               </div>
 
-              <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
-                <i class="fa-solid fa-cloud-arrow-up"></i> Ajukan Bundel Perangkat Ajar
-              </button>
+              <div style="display:flex; gap:1rem; margin-top: 1rem;">
+                <button type="submit" class="btn btn-primary" style="flex:1;" id="btnSubmitPerangkat">
+                  <i class="fa-solid fa-cloud-arrow-up"></i> Ajukan Bundel Perangkat Ajar
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="resetPerangkatForm()" style="display:none;" id="btnCancelEditPerangkat">
+                  Batal Edit
+                </button>
+              </div>
             </form>
           </div>
         </div>
@@ -2512,14 +2519,15 @@
               <table class="data-table">
                 <thead>
                   <tr>
-                    <th>Jenis Dokumen</th>
-                    <th>Link Drive</th>
+                    <th>Nama Berkas</th>
+                    <th>Dokumen Perangkat</th>
                     <th>Status Validasi</th>
                     <th>Catatan Kurikulum</th>
+                    <th>Aksi</th>
                   </tr>
                 </thead>
                 <tbody id="g-perangkat-table-body">
-                  <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Belum ada data.</td></tr>
+                  <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Belum ada data.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -3228,8 +3236,8 @@
                 <thead>
                   <tr>
                     <th>Nama Guru</th>
-                    <th>Jenis Dokumen</th>
-                    <th>Link Dokumen</th>
+                    <th>Nama Berkas</th>
+                    <th>Unduh Berkas</th>
                     <th>Status</th>
                     <th>Catatan Kurikulum</th>
                   </tr>
@@ -4954,16 +4962,37 @@
         }
 
         else if (action === "addPerangkat") {
-          const newRef = ref("perangkats").push();
-          const data = {
-            namaGuru: payload.namaGuru,
-            jenisDokumen: payload.jenisDokumen,
-            linkDrive: payload.fileName ? `https://drive.google.com/mock-file-id?name=${encodeURIComponent(payload.fileName)}` : "https://drive.google.com/mock-file-placeholder",
-            status: "Pending",
-            catatan: payload.catatan || ""
-          };
-          await newRef.set(data);
-          return { success: true, id: newRef.key, linkDrive: data.linkDrive };
+          const id = payload.id || "";
+          const linkDrive = payload.fileName ? `https://drive.google.com/uc?export=download&id=mock-file-id-${Date.now()}` : "";
+          if (id) {
+            const dbRef = ref(`perangkats/${id}`);
+            const updateData = {
+              namaGuru: payload.namaGuru,
+              jenisDokumen: payload.jenisDokumen,
+              catatan: payload.catatan || ""
+            };
+            if (linkDrive) {
+              updateData.linkDrive = linkDrive;
+            }
+            await dbRef.update(updateData);
+            return { success: true, id: id };
+          } else {
+            const newRef = ref("perangkats").push();
+            const data = {
+              namaGuru: payload.namaGuru,
+              jenisDokumen: payload.jenisDokumen,
+              linkDrive: linkDrive || "https://drive.google.com/uc?export=download&id=mock-file-placeholder",
+              status: "Pending",
+              catatan: payload.catatan || ""
+            };
+            await newRef.set(data);
+            return { success: true, id: newRef.key, linkDrive: data.linkDrive };
+          }
+        }
+        else if (action === "deletePerangkat") {
+          const id = payload.id;
+          await ref(`perangkats/${id}`).remove();
+          return { success: true };
         }
 
         else if (action === "updatePerangkatStatus") {
@@ -5491,16 +5520,37 @@
         }
 
         else if (action === "addPerangkat") {
-          const docRef = db.collection("perangkats").doc();
-          const data = {
-            namaGuru: payload.namaGuru,
-            jenisDokumen: payload.jenisDokumen,
-            linkDrive: payload.fileName ? `https://drive.google.com/mock-file-id?name=${encodeURIComponent(payload.fileName)}` : "https://drive.google.com/mock-file-placeholder",
-            status: "Pending",
-            catatan: payload.catatan || ""
-          };
-          await docRef.set(data);
-          return { success: true, id: docRef.id, linkDrive: data.linkDrive };
+          const id = payload.id || "";
+          const linkDrive = payload.fileName ? `https://drive.google.com/uc?export=download&id=mock-file-id-${Date.now()}` : "";
+          if (id) {
+            const docRef = db.collection("perangkats").doc(id);
+            const updateData = {
+              namaGuru: payload.namaGuru,
+              jenisDokumen: payload.jenisDokumen,
+              catatan: payload.catatan || ""
+            };
+            if (linkDrive) {
+              updateData.linkDrive = linkDrive;
+            }
+            await docRef.update(updateData);
+            return { success: true, id: id };
+          } else {
+            const docRef = db.collection("perangkats").doc();
+            const data = {
+              namaGuru: payload.namaGuru,
+              jenisDokumen: payload.jenisDokumen,
+              linkDrive: linkDrive || "https://drive.google.com/uc?export=download&id=mock-file-placeholder",
+              status: "Pending",
+              catatan: payload.catatan || ""
+            };
+            await docRef.set(data);
+            return { success: true, id: docRef.id, linkDrive: data.linkDrive };
+          }
+        }
+        else if (action === "deletePerangkat") {
+          const id = payload.id;
+          await db.collection("perangkats").doc(id).delete();
+          return { success: true };
         }
 
         else if (action === "updatePerangkatStatus") {
@@ -5902,12 +5952,18 @@
           statusBadge = `<span class="badge badge-danger"><i class="fa-solid fa-circle-xmark"></i> Revisi</span>`;
         }
         
+        let fileNameDisplay = "Bundel Perangkat (ZIP/RAR)";
+        if (item.catatan && item.catatan.includes("Nama File: ")) {
+          const filePart = item.catatan.split("Nama File: ")[1];
+          fileNameDisplay = filePart ? filePart.split("\n")[0] : fileNameDisplay;
+        }
+        
         tr.innerHTML = `
           <td style="font-weight: 600;">${item.namaGuru}</td>
-          <td><span class="badge badge-primary">${item.jenisDokumen}</span></td>
+          <td style="color:#cbd5e1;">${fileNameDisplay}</td>
           <td>
-            <a href="${item.linkDrive}" target="_blank" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.75rem;">
-              <i class="fa-solid fa-arrow-up-right-from-square" style="color:var(--primary);"></i> Buka Berkas
+            <a href="${item.linkDrive}" download class="btn btn-primary" style="padding: 0.35rem 0.75rem; font-size: 0.75rem; font-weight:600; display: inline-flex; align-items: center; gap: 0.35rem;">
+              <i class="fa-solid fa-download"></i> Unduh File
             </a>
           </td>
           <td>${statusBadge}</td>
@@ -6252,50 +6308,130 @@
     async function submitPerangkatForm(e) {
       e.preventDefault();
       
+      const id = document.getElementById('perangkatId').value;
       const fileInput = document.getElementById('perangkatFile');
       const file = fileInput.files[0];
+      const catatan = document.getElementById('perangkatCatatan').value;
+      const jenisDokumen = document.getElementById('perangkatJenis').value;
       
-      if (!file) {
-        showToast("Silakan pilih berkas terlebih dahulu.", "warning");
+      // Jika mode tambah baru, file wajib diisi
+      if (!id && !file) {
+        showToast("Silakan pilih berkas ZIP atau RAR terlebih dahulu.", "warning");
         return;
       }
       
-      showLoading(true, "Membaca dan mengunggah berkas...");
+      const actionText = id ? "Menyimpan perubahan..." : "Membaca dan mengunggah berkas...";
+      showLoading(true, actionText);
       
-      const reader = new FileReader();
-      reader.onload = async function() {
-        const base64String = reader.result.split(',')[1];
-        
+      const proceedUpload = async (base64String, fileName, fileMimeType) => {
         const data = {
-          jenisDokumen: document.getElementById('perangkatJenis').value,
-          catatan: document.getElementById('perangkatCatatan').value,
-          namaGuru: appState.user.nama,
-          fileBase64: base64String,
-          fileName: file.name,
-          fileMimeType: file.type
+          jenisDokumen: jenisDokumen,
+          catatan: catatan,
+          namaGuru: appState.user.nama
         };
+        if (id) {
+          data.id = id;
+        }
+        if (base64String) {
+          data.fileBase64 = base64String;
+          data.fileName = fileName;
+          data.fileMimeType = fileMimeType;
+          // Catat nama file di catatan/metadata
+          data.catatan = (data.catatan ? data.catatan + "\n" : "") + "Nama File: " + fileName;
+        }
         
         try {
           await callApi("addPerangkat", data);
-          showToast("Berkas perangkat sukses diunggah dan diajukan!");
-          document.getElementById('formPerangkat').reset();
+          showToast(id ? "Perangkat ajar sukses diperbarui!" : "Berkas perangkat sukses diunggah dan diajukan!");
+          resetPerangkatForm();
           
-          // Muat ulang data
           await loadDashboardData();
           switchPane('pane-guru-riwayat');
         } catch (err) {
-          showToast("Gagal mengunggah berkas: " + err.message, "danger");
+          showToast("Gagal menyimpan berkas: " + err.message, "danger");
         } finally {
           showLoading(false);
         }
       };
       
-      reader.onerror = function() {
-        showToast("Gagal membaca file perangkat dari memori.", "danger");
-        showLoading(false);
-      };
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = async function() {
+          const base64String = reader.result.split(',')[1];
+          await proceedUpload(base64String, file.name, file.type);
+        };
+        reader.onerror = function() {
+          showToast("Gagal membaca file dari memori.", "danger");
+          showLoading(false);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        // Mode edit tanpa upload file baru
+        await proceedUpload(null, null, null);
+      }
+    }
+
+    function editPerangkat(id) {
+      const item = appState.perangkatList.find(x => x.id === id);
+      if (!item) return;
       
-      reader.readAsDataURL(file);
+      document.getElementById('perangkatId').value = item.id;
+      document.getElementById('perangkatCatatan').value = item.catatan || "";
+      
+      // Tampilkan info berkas yang sudah diunggah
+      let fileNameDisplay = "Sudah terunggah";
+      if (item.catatan && item.catatan.includes("Nama File: ")) {
+        const filePart = item.catatan.split("Nama File: ")[1];
+        fileNameDisplay = filePart ? filePart.split("\n")[0] : fileNameDisplay;
+      }
+      
+      const fileInfo = document.getElementById('perangkatFileInfo');
+      if (fileInfo) {
+        fileInfo.textContent = "Berkas saat ini: " + fileNameDisplay + " (Pilih file baru jika ingin mengganti)";
+        fileInfo.style.display = "block";
+      }
+      
+      document.getElementById('titleFormPerangkat').innerText = "Form Edit Perangkat Ajar";
+      document.getElementById('btnSubmitPerangkat').innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Simpan Perubahan Perangkat';
+      document.getElementById('btnCancelEditPerangkat').style.display = "inline-block";
+      
+      switchPane('pane-guru-unggahperangkat');
+    }
+
+    function resetPerangkatForm() {
+      document.getElementById('formPerangkat').reset();
+      document.getElementById('perangkatId').value = "";
+      
+      const fileInfo = document.getElementById('perangkatFileInfo');
+      if (fileInfo) {
+        fileInfo.style.display = "none";
+        fileInfo.textContent = "";
+      }
+      
+      document.getElementById('titleFormPerangkat').innerText = "Unggah Perangkat Ajar Baru";
+      document.getElementById('btnSubmitPerangkat').innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Ajukan Bundel Perangkat Ajar';
+      document.getElementById('btnCancelEditPerangkat').style.display = "none";
+    }
+
+    async function deletePerangkat(id) {
+      const confirmed = await showCustomConfirm(
+        "Hapus Perangkat", 
+        "Apakah Anda yakin ingin menghapus perangkat ajar ini?", 
+        "Hapus", 
+        true
+      );
+      if (!confirmed) return;
+      
+      showLoading(true, "Menghapus perangkat...");
+      try {
+        await callApi("deletePerangkat", { id });
+        showToast("Perangkat ajar berhasil dihapus.");
+        await loadDashboardData();
+      } catch (err) {
+        showToast("Gagal menghapus perangkat: " + err.message, "danger");
+      } finally {
+        showLoading(false);
+      }
     }
 
     // Dynamic row helpers for Rekap Absen
@@ -9078,17 +9214,40 @@
           
           else if (action === "addPerangkat") {
             const pRaw = JSON.parse(localStorage.getItem('db_perangkats')) || [];
-            const newPerangkat = {
-              id: "PR-" + new Date().getTime(),
-              namaGuru: payload.namaGuru,
-              jenisDokumen: payload.jenisDokumen,
-              linkDrive: payload.fileName ? `https://drive.google.com/mock-file-id?name=${encodeURIComponent(payload.fileName)}` : "https://drive.google.com/mock-file-placeholder",
-              status: "Pending",
-              catatan: payload.catatan
-            };
-            pRaw.unshift(newPerangkat);
-            localStorage.setItem('db_perangkats', JSON.stringify(pRaw));
-            resolve({ success: true, id: newPerangkat.id, linkDrive: newPerangkat.linkDrive });
+            const id = payload.id || "";
+            const linkDrive = payload.fileName ? `https://drive.google.com/uc?export=download&id=mock-file-id-${Date.now()}` : "";
+            if (id) {
+              const idx = pRaw.findIndex(p => p.id === id);
+              if (idx !== -1) {
+                pRaw[idx].namaGuru = payload.namaGuru;
+                pRaw[idx].jenisDokumen = payload.jenisDokumen;
+                if (linkDrive) {
+                  pRaw[idx].linkDrive = linkDrive;
+                }
+                pRaw[idx].catatan = payload.catatan;
+                localStorage.setItem('db_perangkats', JSON.stringify(pRaw));
+              }
+              resolve({ success: true, id: id });
+            } else {
+              const newPerangkat = {
+                id: "PR-" + new Date().getTime(),
+                namaGuru: payload.namaGuru,
+                jenisDokumen: payload.jenisDokumen,
+                linkDrive: linkDrive || "https://drive.google.com/uc?export=download&id=mock-file-placeholder",
+                status: "Pending",
+                catatan: payload.catatan
+              };
+              pRaw.unshift(newPerangkat);
+              localStorage.setItem('db_perangkats', JSON.stringify(pRaw));
+              resolve({ success: true, id: newPerangkat.id, linkDrive: newPerangkat.linkDrive });
+            }
+          }
+          
+          else if (action === "deletePerangkat") {
+            const pRaw = JSON.parse(localStorage.getItem('db_perangkats')) || [];
+            const filtered = pRaw.filter(p => p.id !== payload.id);
+            localStorage.setItem('db_perangkats', JSON.stringify(filtered));
+            resolve({ success: true });
           }
           
           else if (action === "updatePerangkatStatus") {
@@ -10192,10 +10351,16 @@
         if (item.status === "Disetujui") badgeColor = "success";
         else if (item.status.includes("Ditolak")) badgeColor = "danger";
         
+        let fileNameDisplay = "Bundel Perangkat (ZIP/RAR)";
+        if (item.catatan && item.catatan.includes("Nama File: ")) {
+          const filePart = item.catatan.split("Nama File: ")[1];
+          fileNameDisplay = filePart ? filePart.split("\n")[0] : fileNameDisplay;
+        }
+        
         tr.innerHTML = `
           <td style="font-weight: 600;">${item.namaGuru}</td>
-          <td style="color: #cbd5e1;">${item.jenisDokumen}</td>
-          <td><a href="${item.linkDrive}" target="_blank" class="btn btn-secondary" style="padding:0.3rem 0.6rem; font-size:0.8rem; background:rgba(255,255,255,0.03);"><i class="fa-brands fa-google-drive" style="color:#eab308; margin-right:0.3rem;"></i> Buka File</a></td>
+          <td style="color: #cbd5e1;">${fileNameDisplay}</td>
+          <td><a href="${item.linkDrive}" download class="btn btn-primary" style="padding:0.3rem 0.6rem; font-size:0.8rem; font-weight:600;"><i class="fa-solid fa-download" style="margin-right:0.3rem;"></i> Unduh Berkas</a></td>
           <td><span class="badge badge-${badgeColor}">${item.status}</span></td>
           <td style="color: var(--text-muted); font-size: 0.85rem;">${item.catatan || '-'}</td>
         `;
