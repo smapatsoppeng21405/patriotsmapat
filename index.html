@@ -1125,32 +1125,6 @@
         <div><i class="fa-solid fa-scale-balanced" style="color: var(--success); margin-right: 0.35rem;"></i> Lisensi: <strong>MIT License © 2026 SMAN 4 SOPPENG</strong></div>
       </div>
 
-      <!-- DEMO ACCOUNTS HELPER -->
-      <div class="demo-accounts">
-        <div class="demo-title">Akun Demo PATRIOT SMAPAT (Cepat)</div>
-        <div class="demo-grid" style="grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 0.5rem;">
-          <button type="button" class="demo-btn" onclick="fillDemo('wakasek@sekolah.com', 'wakasek123')">
-            <div>Wakasek</div>
-            wakasek123
-          </button>
-          <button type="button" class="demo-btn" onclick="fillDemo('guru@sekolah.com', 'guru123')">
-            <div>Guru Mapel</div>
-            guru123
-          </button>
-          <button type="button" class="demo-btn" onclick="fillDemo('walikelas@sekolah.com', 'walikelas123')">
-            <div>Wali Kelas</div>
-            walikelas123
-          </button>
-          <button type="button" class="demo-btn" onclick="fillDemo('guruwali@sekolah.com', 'wali123')">
-            <div>Guru Wali</div>
-            wali123
-          </button>
-          <button type="button" class="demo-btn" onclick="fillDemo('kepala@sekolah.com', 'kepala123')">
-            <div>Kepala Sek</div>
-            kepala123
-          </button>
-        </div>
-      </div>
     </div>
 
     <!-- KARTU PENGISIAN JURNAL 7KIH SISWA -->
@@ -6291,42 +6265,6 @@
     }
 
     // ==================== CLASS MANAGEMENT FUNCTIONS ====================
-    function populateClassDropdowns() {
-      const classes = appState.settings.daftarKelas || ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"];
-      
-      const selectIds = [
-        { id: 'w-filter-kelas', defaultText: 'Semua Kelas' },
-        { id: 'jadwalKelas', defaultText: 'Pilih Kelas' },
-        { id: 'rosterKelasSelect', defaultText: 'Pilih Kelas' },
-        { id: 'w-filter-absen-kelas', defaultText: 'Semua Kelas' },
-        { id: 'w-filter-kondisi-kelas', defaultText: 'Semua Kelas' },
-        { id: 'guruMasterKelas', defaultText: 'Pilih Kelas' },
-        { id: 'jurnalKelas', defaultText: 'Pilih Kelas' },
-        { id: 'nilaiKelas', defaultText: 'Pilih Kelas' },
-        { id: 'laporanKelas', defaultText: 'Pilih Kelas' },
-        { id: 'absenKelas', defaultText: 'Pilih Kelas' },
-        { id: 'kondisiKelas', defaultText: 'Pilih Kelas' },
-        { id: 'studentKelas', defaultText: 'Pilih Kelas' },
-        { id: 'filterStudentKelas', defaultText: 'Semua Kelas' },
-        { id: 'siswaGWKelas', defaultText: 'Pilih Kelas' }
-      ];
-      
-      selectIds.forEach(item => {
-        const select = document.getElementById(item.id);
-        if (!select) return;
-        
-        const currentVal = select.value;
-        select.innerHTML = `<option value="">${item.defaultText}</option>`;
-        
-        classes.forEach(c => {
-          select.innerHTML += `<option value="${c}">${c}</option>`;
-        });
-        
-        if (classes.includes(currentVal)) {
-          select.value = currentVal;
-        }
-      });
-    }
 
     function renderActiveClassesList() {
       const container = document.getElementById('activeClassesListContainer');
@@ -6748,9 +6686,9 @@
 
       const dropdownIds = [
         'jurnalKelas', 'guruMasterKelas', 'jadwalKelas', 'laporanKelas', 'absenKelas',
-        'studentKelas', 'siswaGWKelas', 'w-filter-kelas', 'w-filter-absen-kelas',
-        'w-filter-kondisi-kelas', 'rosterKelasSelect', 'ks-filter-kelas', 'ks-filter-absen-kelas',
-        'ks-filter-kondisi-kelas'
+        'nilaiKelas', 'kondisiKelas', 'studentKelas', 'siswaGWKelas', 'w-filter-kelas',
+        'w-filter-absen-kelas', 'w-filter-kondisi-kelas', 'rosterKelasSelect',
+        'ks-filter-kelas', 'ks-filter-absen-kelas', 'ks-filter-kondisi-kelas', 'filterStudentKelas'
       ];
 
       dropdownIds.forEach(id => {
@@ -6758,7 +6696,7 @@
         if (!select) return;
         const currentVal = select.value;
         
-        const isFilter = id.startsWith('w-filter') || id.startsWith('ks-filter');
+        const isFilter = id.startsWith('w-filter') || id.startsWith('ks-filter') || id.includes('filter');
         select.innerHTML = isFilter ? '<option value="">Semua Kelas</option>' : '<option value="">Pilih Kelas</option>';
 
         classList.forEach(cls => {
