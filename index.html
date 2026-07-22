@@ -2322,9 +2322,10 @@
         <!-- GURU: FORM INPUT JURNAL -->
         <div id="pane-guru-inputjurnal" class="view-pane">
           <div class="card glass-effect" style="max-width: 650px; margin: 0 auto;">
-            <div class="card-title">Form Input Jurnal Mengajar</div>
+            <div class="card-title" id="titleFormInputJurnal">Form Input Jurnal Mengajar</div>
             
             <form id="formInputJurnal" onsubmit="submitJurnalForm(event)">
+              <input type="hidden" id="jurnalId">
               <div class="form-grid">
                 <div class="form-group">
                   <label for="jurnalTanggal">Tanggal KBM</label>
@@ -2374,9 +2375,14 @@
                 <textarea id="jurnalCatatan" class="form-control" style="padding-left: 1rem;" placeholder="Catatan aktivitas atau kendala saat mengajar..."></textarea>
               </div>
 
-              <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
-                <i class="fa-solid fa-paper-plane"></i> Simpan Jurnal Mengajar
-              </button>
+              <div style="display:flex; gap:1rem; margin-top: 1rem;">
+                <button type="submit" class="btn btn-primary" style="flex:1;" id="btnSubmitJurnal">
+                  <i class="fa-solid fa-paper-plane"></i> Simpan Jurnal Mengajar
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="resetJurnalForm()" style="display:none;" id="btnCancelEditJurnal">
+                  Batal Edit
+                </button>
+              </div>
             </form>
           </div>
         </div>
@@ -2490,10 +2496,11 @@
                     <th>Materi Mengajar</th>
                     <th>Kehadiran</th>
                     <th>Catatan</th>
+                    <th>Aksi</th>
                   </tr>
                 </thead>
                 <tbody id="g-jurnal-table-body">
-                  <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Belum ada data.</td></tr>
+                  <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Belum ada data.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -4816,17 +4823,37 @@
         }
 
         else if (action === "addJurnal") {
-          const newRef = ref("jurnals").push();
-          await newRef.set({
-            tanggal: payload.tanggal,
-            guru: payload.guru,
-            kelas: payload.kelas,
-            materi: payload.materi,
-            kehadiran: payload.kehadiran,
-            catatan: payload.catatan || "",
-            mode: payload.mode || "Tatap Muka"
-          });
-          return { success: true, id: newRef.key };
+          const id = payload.id || "";
+          if (id) {
+            const dbRef = ref(`jurnals/${id}`);
+            await dbRef.update({
+              tanggal: payload.tanggal,
+              guru: payload.guru,
+              kelas: payload.kelas,
+              materi: payload.materi,
+              kehadiran: payload.kehadiran,
+              catatan: payload.catatan || "",
+              mode: payload.mode || "Tatap Muka"
+            });
+            return { success: true, id: id };
+          } else {
+            const newRef = ref("jurnals").push();
+            await newRef.set({
+              tanggal: payload.tanggal,
+              guru: payload.guru,
+              kelas: payload.kelas,
+              materi: payload.materi,
+              kehadiran: payload.kehadiran,
+              catatan: payload.catatan || "",
+              mode: payload.mode || "Tatap Muka"
+            });
+            return { success: true, id: newRef.key };
+          }
+        }
+        else if (action === "deleteJurnal") {
+          const id = payload.id;
+          await ref(`jurnals/${id}`).remove();
+          return { success: true };
         }
 
         else if (action === "addJurnal7KIH") {
@@ -5335,17 +5362,37 @@
         }
 
         else if (action === "addJurnal") {
-          const docRef = db.collection("jurnals").doc();
-          await docRef.set({
-            tanggal: payload.tanggal,
-            guru: payload.guru,
-            kelas: payload.kelas,
-            materi: payload.materi,
-            kehadiran: payload.kehadiran,
-            catatan: payload.catatan || "",
-            mode: payload.mode || "Tatap Muka"
-          });
-          return { success: true, id: docRef.id };
+          const id = payload.id || "";
+          if (id) {
+            const docRef = db.collection("jurnals").doc(id);
+            await docRef.update({
+              tanggal: payload.tanggal,
+              guru: payload.guru,
+              kelas: payload.kelas,
+              materi: payload.materi,
+              kehadiran: payload.kehadiran,
+              catatan: payload.catatan || "",
+              mode: payload.mode || "Tatap Muka"
+            });
+            return { success: true, id: id };
+          } else {
+            const docRef = db.collection("jurnals").doc();
+            await docRef.set({
+              tanggal: payload.tanggal,
+              guru: payload.guru,
+              kelas: payload.kelas,
+              materi: payload.materi,
+              kehadiran: payload.kehadiran,
+              catatan: payload.catatan || "",
+              mode: payload.mode || "Tatap Muka"
+            });
+            return { success: true, id: docRef.id };
+          }
+        }
+        else if (action === "deleteJurnal") {
+          const id = payload.id;
+          await db.collection("jurnals").doc(id).delete();
+          return { success: true };
         }
 
         else if (action === "addJurnal7KIH") {
@@ -6120,23 +6167,33 @@
     function renderGuruHistoryTables() {
       // Jurnal Table
       const jtBody = document.getElementById('g-jurnal-table-body');
-      jtBody.innerHTML = "";
-      
-      if (appState.jurnalList.length === 0) {
-        jtBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">Belum ada riwayat mengajar Anda.</td></tr>`;
-      } else {
-        appState.jurnalList.forEach(item => {
-          const tr = document.createElement('tr');
-          const formattedDate = new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
-          tr.innerHTML = `
-            <td style="font-weight: 500;">${formattedDate}</td>
-            <td><span class="badge badge-primary">${item.kelas}</span></td>
-            <td>${item.materi}</td>
-            <td><span class="badge badge-success" style="background: rgba(16,185,129,0.08);">${item.kehadiran}</span></td>
-            <td style="color:var(--text-muted); font-size:0.85rem;">${item.catatan || '-'}</td>
-          `;
-          jtBody.appendChild(tr);
-        });
+      if (jtBody) {
+        jtBody.innerHTML = "";
+        
+        if (appState.jurnalList.length === 0) {
+          jtBody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">Belum ada riwayat mengajar Anda.</td></tr>`;
+        } else {
+          appState.jurnalList.forEach(item => {
+            const tr = document.createElement('tr');
+            const formattedDate = new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+            tr.innerHTML = `
+              <td style="font-weight: 500;">${formattedDate}</td>
+              <td><span class="badge badge-primary">${item.kelas}</span></td>
+              <td>${item.materi}</td>
+              <td><span class="badge badge-success" style="background: rgba(16,185,129,0.08);">${item.kehadiran}</span></td>
+              <td style="color:var(--text-muted); font-size:0.85rem;">${item.catatan || '-'}</td>
+              <td>
+                <button type="button" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-right: 0.25rem;" onclick="editJurnal('${item.id}')">
+                  <i class="fa-solid fa-edit"></i> Edit
+                </button>
+                <button type="button" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; color: var(--danger);" onclick="deleteJurnal('${item.id}')">
+                  <i class="fa-solid fa-trash"></i> Hapus
+                </button>
+              </td>
+            `;
+            jtBody.appendChild(tr);
+          });
+        }
       }
 
       // Perangkat Table
@@ -6171,6 +6228,7 @@
     async function submitJurnalForm(e) {
       e.preventDefault();
       
+      const id = document.getElementById('jurnalId').value;
       const data = {
         tanggal: document.getElementById('jurnalTanggal').value,
         kelas: document.getElementById('jurnalKelas').value,
@@ -6180,11 +6238,12 @@
         mode: document.getElementById('jurnalMode').value,
         guru: appState.user.nama
       };
+      if (id) data.id = id;
       
       // Jika offline, simpan di localStorage
       if (!navigator.onLine) {
         saveJurnalOffline(data);
-        document.getElementById('formInputJurnal').reset();
+        resetJurnalForm();
         switchPane('pane-guru-ringkasan');
         return;
       }
@@ -6193,14 +6252,62 @@
       
       try {
         await callApi("addJurnal", data);
-        showToast("Jurnal mengajar sukses terunggah!");
-        document.getElementById('formInputJurnal').reset();
+        showToast("Jurnal mengajar sukses disimpan!");
+        resetJurnalForm();
         
         // Reload data
         await loadDashboardData();
         switchPane('pane-guru-riwayat');
       } catch (err) {
-        showToast("Gagal mengunggah jurnal: " + err.message, "danger");
+        showToast("Gagal menyimpan jurnal: " + err.message, "danger");
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    function editJurnal(id) {
+      const item = appState.jurnalList.find(x => x.id === id);
+      if (!item) return;
+      
+      document.getElementById('jurnalId').value = item.id;
+      document.getElementById('jurnalTanggal').value = item.tanggal;
+      document.getElementById('jurnalKelas').value = item.kelas;
+      document.getElementById('jurnalMateri').value = item.materi;
+      document.getElementById('jurnalKehadiran').value = item.kehadiran;
+      document.getElementById('jurnalCatatan').value = item.catatan || "";
+      document.getElementById('jurnalMode').value = item.mode || "Tatap Muka";
+      
+      document.getElementById('titleFormInputJurnal').innerText = "Form Edit Jurnal Mengajar";
+      document.getElementById('btnSubmitJurnal').innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Update Jurnal Mengajar';
+      document.getElementById('btnCancelEditJurnal').style.display = "inline-block";
+      
+      switchPane('pane-guru-inputjurnal');
+    }
+
+    function resetJurnalForm() {
+      document.getElementById('formInputJurnal').reset();
+      document.getElementById('jurnalId').value = "";
+      document.getElementById('titleFormInputJurnal').innerText = "Form Input Jurnal Mengajar";
+      document.getElementById('btnSubmitJurnal').innerHTML = '<i class="fa-solid fa-paper-plane"></i> Simpan Jurnal Mengajar';
+      document.getElementById('btnCancelEditJurnal').style.display = "none";
+    }
+
+    async function deleteJurnal(id) {
+      const confirmed = await showCustomConfirm(
+        "Hapus Jurnal", 
+        "Apakah Anda yakin ingin menghapus riwayat jurnal mengajar ini?", 
+        "Hapus", 
+        true
+      );
+      if (!confirmed) return;
+      
+      showLoading(true, "Menghapus jurnal...");
+      try {
+        await callApi("deleteJurnal", { id });
+        showToast("Jurnal mengajar berhasil dihapus.");
+        await loadDashboardData();
+      } catch (err) {
+        showToast("Gagal menghapus jurnal: " + err.message, "danger");
       } finally {
         showLoading(false);
       }
@@ -8953,19 +9060,44 @@
           
           else if (action === "addJurnal") {
             const jRaw = JSON.parse(localStorage.getItem('db_jurnals')) || [];
-            const newJurnal = {
-              id: "JR-" + new Date().getTime(),
-              tanggal: payload.tanggal,
-              guru: payload.guru,
-              kelas: payload.kelas,
-              materi: payload.materi,
-              kehadiran: payload.kehadiran,
-              catatan: payload.catatan,
-              mode: payload.mode || "Tatap Muka"
-            };
-            jRaw.unshift(newJurnal);
-            localStorage.setItem('db_jurnals', JSON.stringify(jRaw));
-            resolve({ success: true, id: newJurnal.id });
+            const id = payload.id || "";
+            if (id) {
+              const idx = jRaw.findIndex(x => x.id === id);
+              if (idx !== -1) {
+                jRaw[idx] = {
+                  id: id,
+                  tanggal: payload.tanggal,
+                  guru: payload.guru,
+                  kelas: payload.kelas,
+                  materi: payload.materi,
+                  kehadiran: payload.kehadiran,
+                  catatan: payload.catatan || "",
+                  mode: payload.mode || "Tatap Muka"
+                };
+                localStorage.setItem('db_jurnals', JSON.stringify(jRaw));
+              }
+              resolve({ success: true, id: id });
+            } else {
+              const newJurnal = {
+                id: "JR-" + new Date().getTime(),
+                tanggal: payload.tanggal,
+                guru: payload.guru,
+                kelas: payload.kelas,
+                materi: payload.materi,
+                kehadiran: payload.kehadiran,
+                catatan: payload.catatan,
+                mode: payload.mode || "Tatap Muka"
+              };
+              jRaw.unshift(newJurnal);
+              localStorage.setItem('db_jurnals', JSON.stringify(jRaw));
+              resolve({ success: true, id: newJurnal.id });
+            }
+          }
+          else if (action === "deleteJurnal") {
+            const jRaw = JSON.parse(localStorage.getItem('db_jurnals')) || [];
+            const filtered = jRaw.filter(x => x.id !== payload.id);
+            localStorage.setItem('db_jurnals', JSON.stringify(filtered));
+            resolve({ success: true });
           }
           
           else if (action === "addRekapAbsen") {

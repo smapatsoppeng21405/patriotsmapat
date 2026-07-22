@@ -736,8 +736,9 @@ function getDashboard(role, email, nama) {
 function addJurnal(payload) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName("JurnalMengajar");
+  var data = sheet.getDataRange().getValues();
   
-  var id = "JR-" + new Date().getTime() + "-" + Math.floor(Math.random() * 1000);
+  var id = payload.id || "";
   var tanggal = payload.tanggal || new Date().toISOString().substring(0, 10);
   var guru = payload.guru || payload.currentUserName;
   var kelas = payload.kelas || "";
@@ -746,10 +747,39 @@ function addJurnal(payload) {
   var catatan = payload.catatan || "";
   var mode = payload.mode || "Tatap Muka";
   
-  sheet.appendRow([id, tanggal, guru, kelas, materi, kehadiran, catatan, mode]);
+  // Jika ID dikirim, update baris yang sudah ada
+  if (id) {
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0].toString() === id.toString()) {
+        sheet.getRange(i + 1, 2, 1, 7).setValues([[tanggal, guru, kelas, materi, kehadiran, catatan, mode]]);
+        SpreadsheetApp.flush();
+        return { id: id, success: true };
+      }
+    }
+  }
+  
+  var newId = "JR-" + new Date().getTime() + "-" + Math.floor(Math.random() * 1000);
+  sheet.appendRow([newId, tanggal, guru, kelas, materi, kehadiran, catatan, mode]);
   SpreadsheetApp.flush();
   
-  return { id: id, success: true };
+  return { id: newId, success: true };
+}
+
+// Menghapus Jurnal Mengajar Guru
+function deleteJurnal(payload) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("JurnalMengajar");
+  var data = sheet.getDataRange().getValues();
+  var id = payload.id;
+  
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0].toString() === id.toString()) {
+      sheet.deleteRow(i + 1);
+      SpreadsheetApp.flush();
+      return { success: true };
+    }
+  }
+  throw new Error("Jurnal tidak ditemukan.");
 }
 
 // 4. Sinkronisasi Data Jurnal Offline
