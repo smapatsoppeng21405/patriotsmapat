@@ -2036,12 +2036,11 @@
                     <th>Email</th>
                     <th>Role</th>
                     <th>Password</th>
-                    <th>Tugas Mengajar & JP</th>
                     <th>Aksi</th>
                   </tr>
                 </thead>
                 <tbody id="w-teacher-table-body">
-                  <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Memuat daftar guru...</td></tr>
+                  <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Memuat daftar guru...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -2132,7 +2131,10 @@
               <button type="button" class="btn btn-secondary" onclick="downloadStudentTemplate()" style="padding: 0.5rem 1rem; font-size: 0.85rem; background-color: rgba(99, 102, 241, 0.08); border: 1px solid var(--primary); display: flex; align-items: center; gap: 0.5rem; color: var(--primary);">
                 <i class="fa-solid fa-file-arrow-down"></i> Unduh Template Excel
               </button>
-              <span style="font-size: 0.75rem; color: var(--text-muted);">(Format Kolom: NIS, Nama, Kelas)</span>
+              <button type="button" class="btn btn-secondary" onclick="deleteAllStudents()" style="padding: 0.5rem 1rem; font-size: 0.85rem; background-color: rgba(239, 68, 68, 0.08); border: 1px solid var(--danger); display: flex; align-items: center; gap: 0.5rem; color: var(--danger);">
+                <i class="fa-solid fa-trash-can"></i> Hapus Keseluruhan Siswa
+              </button>
+              <span style="font-size: 0.75rem; color: var(--text-muted);">(Format Kolom: NIS, Nama, Kelas, Tingkatan)</span>
             </div>
 
             <form id="formStudent" onsubmit="submitStudentForm(event)" style="margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 2rem;">
@@ -7499,7 +7501,7 @@
       
       const list = appState.teacherList || [];
       if (list.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Belum ada guru terdaftar.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Belum ada guru terdaftar.</td></tr>';
         return;
       }
       
@@ -7545,7 +7547,6 @@
             }).join("")}
           </td>
           <td style="font-family: monospace;">${item.password}</td>
-          <td>${assignmentHtml}</td>
           <td>
             <button type="button" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-right: 0.25rem;" onclick="editTeacher('${item.id}')">
               <i class="fa-solid fa-edit"></i> Edit
@@ -7722,6 +7723,36 @@
         await loadDashboardData();
       } catch (err) {
         showToast("Gagal menghapus siswa: " + err.message, "danger");
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    async function deleteAllStudents() {
+      const confirmed = await showCustomConfirm(
+        "Hapus Keseluruhan Siswa", 
+        "PERINGATAN: Apakah Anda yakin ingin menghapus seluruh data siswa dari database? Tindakan ini tidak dapat dibatalkan.", 
+        "Hapus Semua", 
+        true
+      );
+      if (!confirmed) return;
+      
+      const doubleConfirmed = confirm("Konfirmasi Terakhir: Anda benar-benar yakin ingin menghapus SEMUA data siswa?");
+      if (!doubleConfirmed) return;
+      
+      showLoading(true, "Menghapus keseluruhan siswa...");
+      try {
+        const allIds = (appState.studentList || []).map(s => s.id);
+        if (allIds.length === 0) {
+          showToast("Tidak ada data siswa untuk dihapus.", "warning");
+          return;
+        }
+        
+        await callApi("deleteStudent", { ids: allIds });
+        showToast("Seluruh data siswa berhasil dihapus.");
+        await loadDashboardData();
+      } catch (err) {
+        showToast("Gagal menghapus seluruh siswa: " + err.message, "danger");
       } finally {
         showLoading(false);
       }
