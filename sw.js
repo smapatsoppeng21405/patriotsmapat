@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wakasek-kurikulum-v12';
+const CACHE_NAME = 'wakasek-kurikulum-v13';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
