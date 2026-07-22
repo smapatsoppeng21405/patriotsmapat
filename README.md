@@ -1,6 +1,6 @@
 # 🏫 Panduan Deploy: Aplikasi PATRIOT (Platform Terintegrasi Informasi, dan Operasional Akademik) SMAPAT
 
-Aplikasi berbasis Progressive Web App (PWA) yang responsif dan berpenampilan premium untuk operasional akademik terintegrasi meliputi Wakasek Kurikulum, Guru Pengampu, Wali Kelas, Guru Wali, dan Kepala Sekolah.
+Aplikasi berbasis Progressive Web App (PWA) yang responsif dan berpenampilan premium untuk operasional akademik terintegrasi meliputi Wakasek Kurikulum, Guru Mata Pelajaran, Wali Kelas, Guru Wali, dan Kepala Sekolah.
 
 ---
 
@@ -175,7 +175,7 @@ Pada menu Data Utama Guru, Wakasek dapat memilih durasi hari sekolah:
 ### 5. Penyesuaian Jadwal Roster Secara Manual (Baru)
 - Wakasek dapat melakukan modifikasi halus atau memindahkan jadwal secara manual langsung dari grid roster mingguan kelas.
 - Cukup **klik pada salah satu sel/slot pelajaran** di grid roster. Modal penyesuaian akan muncul menampilkan detail hari, jam ke, dan kelas.
-- Pilih guru pengampu & mata pelajaran dari dropdown tugas mengajar kelas tersebut, lalu klik **"Terapkan"**.
+- Pilih guru mata pelajaran & mata pelajaran dari dropdown tugas mengajar kelas tersebut, lalu klik **"Terapkan"**.
 - **Proteksi Bentrok**: Sistem secara otomatis mengecek apakah guru yang dipindahkan sudah mengajar di kelas lain pada hari dan jam pelajaran yang sama. Jika ya, perubahan akan ditolak dan notifikasi bentrok akan muncul.
 - Tombol **"Simpan Perubahan Roster (X Edit)"** akan muncul jika ada perubahan di layar. Klik tombol ini untuk menyimpan perubahan secara massal ke database Google Sheet. Klik **"Batal"** untuk mereset seluruh modifikasi layar kembali ke data semula.
 

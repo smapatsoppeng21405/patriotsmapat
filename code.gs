@@ -27,6 +27,7 @@ function initSheets() {
     "RekapAbsen": ["ID", "Bulan", "Tahun", "WaliKelas", "Kelas", "NamaSiswa", "Hadir", "Sakit", "Izin", "Alpa"],
     "KondisiSiswa": ["ID", "Bulan", "Tahun", "WaliKelas", "Kelas", "NamaSiswa", "Kehadiran", "PrestasiAkademik", "PrestasiNonAkademik", "TujuanSetelahLulus"],
     "SiswaGuruWali": ["ID", "NIS", "NamaSiswa", "Kelas", "GuruWali"],
+    "Siswa": ["ID", "NIS", "NamaSiswa", "Kelas"],
     "Jurnal7KIH": ["ID", "Tanggal", "NIS", "NamaSiswa", "BangunPagi", "Beribadah", "Berolahraga", "MakanSehat", "GemarBelajar", "Bermasyarakat", "TidurCepat"],
     "CatatanBimbingan": ["ID", "Tanggal", "GuruWali", "NamaSiswa", "CatatanPerkembangan"]
   };
@@ -78,6 +79,19 @@ function initSheets() {
     ];
     defaultSgw.forEach(function(row) {
       sgwSheet.appendRow(row);
+    });
+  }
+
+  // Insert default students for Siswa Master if sheet Siswa is empty
+  var siswaSheet = ss.getSheetByName("Siswa");
+  if (siswaSheet && siswaSheet.getLastRow() <= 1) {
+    var defaultSiswa = [
+      ["SIS-001", "12345", "Ahmad Dani", "10-A"],
+      ["SIS-002", "12346", "Budi Santoso", "10-A"],
+      ["SIS-003", "12347", "Citra Lestari", "10-A"]
+    ];
+    defaultSiswa.forEach(function(row) {
+      siswaSheet.appendRow(row);
     });
   }
 
@@ -180,6 +194,22 @@ function doPost(e) {
       case "deleteTeacher":
         response = { status: "success", data: deleteTeacher(payload.id) };
         break;
+
+      case "addStudent":
+        response = { status: "success", data: addStudent(payload) };
+        break;
+
+      case "deleteStudent":
+        response = { status: "success", data: deleteStudent(payload.id) };
+        break;
+
+      case "importStudents":
+        response = { status: "success", data: importStudents(payload) };
+        break;
+
+      case "importTeachers":
+        response = { status: "success", data: importTeachers(payload) };
+        break;
         
       case "addSiswaGuruWali":
         response = { status: "success", data: addSiswaGuruWali(payload) };
@@ -228,12 +258,28 @@ function login(email, password) {
     var dbPassword = data[i][4].toString().trim();
     
     if (dbEmail === email.toLowerCase().trim() && dbPassword === password.trim()) {
-      return {
-        id: data[i][0],
-        nama: data[i][1],
-        email: data[i][2],
-        role: data[i][3]
-      };
+      var roleStr = data[i][3] ? data[i][3].toString() : "";
+      var rolesList = roleStr.split(",").map(function(r) { return r.trim(); }).filter(Boolean);
+      var profiles = [];
+      rolesList.forEach(function(r) {
+        profiles.push({
+          id: data[i][0],
+          nama: data[i][1],
+          email: data[i][2],
+          role: r
+        });
+      });
+      
+      if (profiles.length > 1) {
+        return { multiple: true, profiles: profiles };
+      } else {
+        return {
+          id: data[i][0],
+          nama: data[i][1],
+          email: data[i][2],
+          role: roleStr || "Guru"
+        };
+      }
     }
   }
   throw new Error("Email atau password salah.");
@@ -254,6 +300,7 @@ function getDashboard(role, email, nama) {
   var sheetSiswaGW = ss.getSheetByName("SiswaGuruWali");
   var sheetJurnal7KIH = ss.getSheetByName("Jurnal7KIH");
   var sheetCatatanBimbingan = ss.getSheetByName("CatatanBimbingan");
+  var sheetSiswa = ss.getSheetByName("Siswa");
   
   var jurnalRaw = sheetJurnal.getDataRange().getValues();
   var perangkatRaw = sheetPerangkat.getDataRange().getValues();
@@ -265,6 +312,7 @@ function getDashboard(role, email, nama) {
   var siswaGWRaw = (sheetSiswaGW && sheetSiswaGW.getLastRow() > 0) ? sheetSiswaGW.getDataRange().getValues() : [["ID", "NIS", "NamaSiswa", "Kelas", "GuruWali"]];
   var jurnal7KIHRaw = (sheetJurnal7KIH && sheetJurnal7KIH.getLastRow() > 0) ? sheetJurnal7KIH.getDataRange().getValues() : [["ID", "Tanggal", "NIS", "NamaSiswa", "BangunPagi", "Beribadah", "Berolahraga", "MakanSehat", "GemarBelajar", "Bermasyarakat", "TidurCepat"]];
   var catatanBimbinganRaw = (sheetCatatanBimbingan && sheetCatatanBimbingan.getLastRow() > 0) ? sheetCatatanBimbingan.getDataRange().getValues() : [["ID", "Tanggal", "GuruWali", "NamaSiswa", "CatatanPerkembangan"]];
+  var siswaRaw = (sheetSiswa && sheetSiswa.getLastRow() > 0) ? sheetSiswa.getDataRange().getValues() : [["ID", "NIS", "NamaSiswa", "Kelas"]];
   
   var result = {
     role: role,
@@ -278,7 +326,8 @@ function getDashboard(role, email, nama) {
     kondisiSiswaList: [],
     siswaGuruWaliList: [],
     jurnal7KIHList: [],
-    catatanBimbinganList: []
+    catatanBimbinganList: [],
+    studentList: []
   };
   
   // Format Jurnal list
@@ -424,6 +473,17 @@ function getDashboard(role, email, nama) {
       catatanPerkembangan: row[4]
     });
   }
+
+  // Format Student master list
+  for (var i = 1; i < siswaRaw.length; i++) {
+    var row = siswaRaw[i];
+    result.studentList.push({
+      id: row[0],
+      nis: row[1],
+      namaSiswa: row[2],
+      kelas: row[3]
+    });
+  }
   
   // Sort lists
   result.jurnalList.reverse();
@@ -435,6 +495,7 @@ function getDashboard(role, email, nama) {
   result.siswaGuruWaliList.reverse();
   result.jurnal7KIHList.reverse();
   result.catatanBimbinganList.reverse();
+  result.studentList.reverse();
 
   // Format GuruMaster list
   var sheetGuruMaster = ss.getSheetByName("GuruMaster");
@@ -470,7 +531,12 @@ function getDashboard(role, email, nama) {
   result.teacherList = [];
   for (var i = 1; i < usersRaw.length; i++) {
     var row = usersRaw[i];
-    if (row[3] === "Guru" || row[3] === "Wali Kelas" || row[3] === "Guru Wali" || row[3] === "Kepala Sekolah") {
+    var roleStr = row[3] ? row[3].toString() : "";
+    var roles = roleStr.split(",").map(function(r) { return r.trim(); });
+    var isTeacher = roles.some(function(r) {
+      return r === "Guru" || r === "Wali Kelas" || r === "Guru Wali" || r === "Kepala Sekolah" || r === "Wakasek";
+    });
+    if (isTeacher) {
       result.teacherList.push({
         id: row[0],
         nama: row[1],
@@ -994,6 +1060,146 @@ function deleteTeacher(id) {
   } else {
     throw new Error("Guru tidak ditemukan.");
   }
+}
+
+// Tambah/Edit Data Siswa
+function addStudent(payload) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Siswa");
+  if (!sheet) {
+    sheet = ss.insertSheet("Siswa");
+    sheet.appendRow(["ID", "NIS", "NamaSiswa", "Kelas"]);
+  }
+  
+  var id = payload.id || ("SIS-" + new Date().getTime());
+  var nis = payload.nis || "";
+  var namaSiswa = payload.namaSiswa;
+  var kelas = payload.kelas;
+  
+  var data = sheet.getDataRange().getValues();
+  var index = -1;
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] === id) {
+      index = i;
+      break;
+    }
+  }
+  
+  if (index !== -1) {
+    sheet.getRange(index + 1, 2).setValue(nis);
+    sheet.getRange(index + 1, 3).setValue(namaSiswa);
+    sheet.getRange(index + 1, 4).setValue(kelas);
+  } else {
+    sheet.appendRow([id, nis, namaSiswa, kelas]);
+  }
+  
+  SpreadsheetApp.flush();
+  return { success: true, id: id };
+}
+
+// Hapus Data Siswa
+function deleteStudent(id) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Siswa");
+  if (!sheet) throw new Error("Sheet Siswa tidak ditemukan.");
+  
+  var data = sheet.getDataRange().getValues();
+  var index = -1;
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] === id) {
+      index = i;
+      break;
+    }
+  }
+  
+  if (index !== -1) {
+    sheet.deleteRow(index + 1);
+    SpreadsheetApp.flush();
+    return { success: true };
+  } else {
+    throw new Error("Siswa tidak ditemukan.");
+  }
+}
+
+// Impor Siswa Massal dari Excel
+function importStudents(payload) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Siswa");
+  if (!sheet) {
+    sheet = ss.insertSheet("Siswa");
+    sheet.appendRow(["ID", "NIS", "NamaSiswa", "Kelas"]);
+  }
+  
+  var list = payload.list || [];
+  if (list.length === 0) return { success: true, count: 0 };
+  
+  var existingData = sheet.getDataRange().getValues();
+  var existingNisMap = {};
+  for (var i = 1; i < existingData.length; i++) {
+    var nisKey = existingData[i][1] ? existingData[i][1].toString().trim() : "";
+    if (nisKey) {
+      existingNisMap[nisKey] = i + 1; // baris di excel
+    }
+  }
+  
+  var timestamp = new Date().getTime();
+  list.forEach(function(item, idx) {
+    var id = item.id || ("SIS-" + timestamp + "-" + idx + "-" + Math.floor(Math.random() * 100));
+    var nis = item.nis ? item.nis.toString().trim() : "";
+    var namaSiswa = item.namaSiswa || "";
+    var kelas = item.kelas || "";
+    
+    // Validasi duplikasi NIS: jika NIS sudah ada, update baris lama. Jika tidak, append baru
+    if (nis && existingNisMap[nis]) {
+      var rowNum = existingNisMap[nis];
+      sheet.getRange(rowNum, 3).setValue(namaSiswa);
+      sheet.getRange(rowNum, 4).setValue(kelas);
+    } else {
+      sheet.appendRow([id, nis, namaSiswa, kelas]);
+    }
+  });
+  
+  SpreadsheetApp.flush();
+  return { success: true, count: list.length };
+}
+
+// Impor Guru Massal dari Excel
+function importTeachers(payload) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Users");
+  
+  var list = payload.list || [];
+  if (list.length === 0) return { success: true, count: 0 };
+  
+  var existingData = sheet.getDataRange().getValues();
+  var existingEmailMap = {};
+  for (var i = 1; i < existingData.length; i++) {
+    var emailKey = existingData[i][2] ? existingData[i][2].toString().toLowerCase().trim() : "";
+    if (emailKey) {
+      existingEmailMap[emailKey] = i + 1; // baris di excel
+    }
+  }
+  
+  var timestamp = new Date().getTime();
+  list.forEach(function(item, idx) {
+    var id = item.id || ("USR-" + timestamp + "-" + idx + "-" + Math.floor(Math.random() * 100));
+    var nama = item.nama || "";
+    var email = item.email ? item.email.toString().toLowerCase().trim() : "";
+    var role = item.role || "Guru";
+    var password = item.password ? item.password.toString().trim() : "guru123";
+    
+    if (email && existingEmailMap[email]) {
+      var rowNum = existingEmailMap[email];
+      sheet.getRange(rowNum, 2).setValue(nama);
+      sheet.getRange(rowNum, 4).setValue(role);
+      sheet.getRange(rowNum, 5).setValue(password);
+    } else {
+      sheet.appendRow([id, nama, email, role, password]);
+    }
+  });
+  
+  SpreadsheetApp.flush();
+  return { success: true, count: list.length };
 }
 
 // 12. Menambah Rekap Absensi Bulanan Siswa (Wali Kelas)
