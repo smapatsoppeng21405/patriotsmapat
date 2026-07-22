@@ -1950,9 +1950,17 @@
           <!-- 2. Manajemen Akun Guru & Wali Kelas -->
           <div class="card glass-effect" style="margin-bottom: 2rem;">
             <div class="card-title">1. Registrasi Akun Guru & Wali Kelas</div>
-            <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1.5rem; line-height:1.5;">
+            <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1rem; line-height:1.5;">
               Daftarkan akun login guru terlebih dahulu di sini. Setelah didaftarkan, Anda dapat menentukan kelas, mata pelajaran, dan beban jam mengajar mereka di form tugas mengajar di bawah.
             </p>
+            
+            <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap;">
+              <input type="file" id="teacherExcelImportInput" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleTeacherExcelImport(event)">
+              <button type="button" class="btn btn-secondary" onclick="document.getElementById('teacherExcelImportInput').click()" style="padding: 0.5rem 1rem; font-size: 0.85rem; background-color: var(--border-color); border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fa-solid fa-file-import" style="color: var(--success);"></i> Impor Guru dari Excel / CSV
+              </button>
+              <span style="font-size: 0.75rem; color: var(--text-muted);">(Format Kolom: Nama, Email, Role, Password)</span>
+            </div>
             
             <form id="formTeacher" onsubmit="submitTeacherForm(event)" style="margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 2rem;">
               <input type="hidden" id="teacherId">
@@ -2130,11 +2138,13 @@
                 </div>
                 <div class="form-group">
                   <label for="siswaGWNama">Nama Lengkap Siswa</label>
-                  <input type="text" id="siswaGWNama" class="form-control" style="padding-left: 1rem;" placeholder="E.g., Ahmad Dani, Citra Lestari" required>
+                  <select id="siswaGWNama" class="filter-control" style="padding: 0.85rem 1rem;" required onchange="handleSiswaGWNameChange()">
+                    <option value="">Pilih Siswa (Pilih Kelas Dulu)</option>
+                  </select>
                 </div>
                 <div class="form-group">
                   <label for="siswaGWKelas">Kelas</label>
-                  <select id="siswaGWKelas" class="filter-control" style="padding: 0.85rem 1rem;" required>
+                  <select id="siswaGWKelas" class="filter-control" style="padding: 0.85rem 1rem;" required onchange="populateSiswaGWNames()">
                     <option value="">Pilih Kelas</option>
                     <option value="10-A">10-A</option>
                     <option value="10-B">10-B</option>
@@ -2174,6 +2184,79 @@
                 </thead>
                 <tbody id="w-siswagw-table-body">
                   <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Belum ada data siswa bimbingan.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- WAKASEK: DATA UTAMA SISWA (SISWA MASTER) -->
+        <div id="pane-wakasek-siswamaster" class="view-pane">
+          <div class="card glass-effect" style="margin-bottom: 2rem;">
+            <div class="card-title">Registrasi & Impor Data Siswa</div>
+            <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1rem; line-height:1.5;">
+              Kelola basis data utama siswa di sini. Anda bisa menambahkan secara manual atau mengimpor daftar siswa dalam jumlah besar dari file Excel/CSV.
+            </p>
+
+            <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap;">
+              <input type="file" id="studentExcelImportInput" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleStudentExcelImport(event)">
+              <button type="button" class="btn btn-secondary" onclick="document.getElementById('studentExcelImportInput').click()" style="padding: 0.5rem 1rem; font-size: 0.85rem; background-color: var(--border-color); border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fa-solid fa-file-import" style="color: var(--success);"></i> Impor Siswa dari Excel / CSV
+              </button>
+              <span style="font-size: 0.75rem; color: var(--text-muted);">(Format Kolom: NIS, Nama, Kelas)</span>
+            </div>
+
+            <form id="formStudent" onsubmit="submitStudentForm(event)" style="margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 2rem;">
+              <input type="hidden" id="studentId">
+              <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
+                <div class="form-group">
+                  <label for="studentNis">NIS / Nomor Induk Siswa</label>
+                  <input type="text" id="studentNis" class="form-control" placeholder="E.g., 12345" required style="padding-left:1rem;">
+                </div>
+                <div class="form-group">
+                  <label for="studentNama">Nama Lengkap Siswa</label>
+                  <input type="text" id="studentNama" class="form-control" placeholder="E.g., Ahmad Dani" required style="padding-left:1rem;">
+                </div>
+                <div class="form-group">
+                  <label for="studentKelas">Kelas</label>
+                  <select id="studentKelas" class="form-control" required style="padding-left:1rem; height: calc(2.5rem + 2px);">
+                    <option value="">Pilih Kelas</option>
+                  </select>
+                </div>
+              </div>
+              <div style="display:flex; gap:1rem; margin-top: 1rem;">
+                <button type="submit" class="btn btn-primary" style="flex:1;">
+                  <i class="fa-solid fa-floppy-disk"></i> Simpan Data Siswa
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="resetStudentForm()" style="display:none;" id="btnCancelEditStudent">
+                  Batal Edit
+                </button>
+              </div>
+            </form>
+
+            <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+              <div style="flex: 1; min-width: 200px;">
+                <input type="text" id="searchStudentInput" class="filter-control" placeholder="Cari NIS atau Nama Siswa..." oninput="renderStudentTable()" style="padding: 0.75rem 1rem; width: 100%;">
+              </div>
+              <div style="width: 180px;">
+                <select id="filterStudentKelas" class="filter-control" onchange="renderStudentTable()" style="padding: 0.75rem 1rem; width: 100%;">
+                  <option value="">Semua Kelas</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>NIS</th>
+                    <th>Nama Siswa</th>
+                    <th>Kelas</th>
+                    <th>Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="w-student-table-body">
+                  <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Memuat data siswa...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -2678,7 +2761,10 @@
 
               <div style="margin: 1.5rem 0 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
                 <h4 style="font-weight: 500; font-size: 1rem; color: var(--text-main);">Data Absensi Siswa</h4>
-                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                  <button type="button" class="btn btn-primary" onclick="loadClassStudentsToAbsen()" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; background-color: var(--primary); border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 0.35rem;">
+                    <i class="fa-solid fa-users"></i> Muat Siswa Kelas
+                  </button>
                   <input type="file" id="excelImportFileInput" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleExcelImport(event)">
                   <button type="button" class="btn btn-secondary" onclick="document.getElementById('excelImportFileInput').click()" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; background-color: var(--border-color); border: 1px solid rgba(255,255,255,0.05);">
                     <i class="fa-solid fa-file-import" style="color: var(--success);"></i> Impor Excel / CSV
@@ -4191,6 +4277,7 @@
         menuItems = [
           { text: "Ringkasan", pane: "pane-wakasek-ringkasan", icon: "fa-chart-pie" },
           { text: "Data Utama Guru", pane: "pane-wakasek-gurumaster", icon: "fa-user-gear" },
+          { text: "Data Utama Siswa", pane: "pane-wakasek-siswamaster", icon: "fa-users-gear" },
           { text: "Monitoring Jurnal", pane: "pane-wakasek-jurnal", icon: "fa-book-open" },
           { text: "Validasi Perangkat", pane: "pane-wakasek-perangkat", icon: "fa-file-shield" },
           { text: "Laporan Wali Kelas", pane: "pane-wakasek-laporanwali", icon: "fa-envelope-open-text" },
@@ -4278,6 +4365,7 @@
         let pageTitle = "Dashboard";
         if (paneId.includes("ringkasan")) pageTitle = "Ringkasan Dashboard";
         else if (paneId.includes("gurumaster")) pageTitle = "Data Utama Guru & Jam Pelajaran";
+        else if (paneId.includes("siswamaster")) pageTitle = "Data Utama Siswa";
         else if (paneId.includes("jurnal") && !paneId.includes("walikelas") && !paneId.includes("kepala") && !paneId.includes("7kih")) pageTitle = "Jurnal KBM Kurikulum";
         else if (paneId.includes("jurnal") && paneId.includes("walikelas")) pageTitle = "Jurnal Kelas Bimbingan";
         else if (paneId.includes("perangkat") && !paneId.includes("kepala")) pageTitle = "Persetujuan Perangkat Ajar";
@@ -4444,6 +4532,7 @@
           const sgwObj = root.siswagw || {};
           const j7Obj = root.jurnal7kih || {};
           const cbObj = root.catatanbimbingan || {};
+          const sObj = root.students || {};
 
           let settings = { hariBelajar: 5, daftarKelas: ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"] };
           if (root.settings) {
@@ -4471,6 +4560,7 @@
           const sgwRaw = Object.keys(sgwObj).map(k => ({ id: k, ...sgwObj[k] }));
           const j7kihRaw = Object.keys(j7Obj).map(k => ({ id: k, ...j7Obj[k] }));
           const cbRaw = Object.keys(cbObj).map(k => ({ id: k, ...cbObj[k] }));
+          const sRaw = Object.keys(sObj).map(k => ({ id: k, ...sObj[k] }));
 
           const teachers = users;
 
@@ -4489,7 +4579,8 @@
             kondisiSiswaList: [...ksRaw],
             siswaGuruWaliList: [...sgwRaw],
             jurnal7KIHList: [...j7kihRaw],
-            catatanBimbinganList: [...cbRaw]
+            catatanBimbinganList: [...cbRaw],
+            studentList: [...sRaw]
           };
 
           if (role === "Wakasek") {
@@ -4657,6 +4748,56 @@
         else if (action === "deleteTeacher") {
           await ref(`users/${payload.id}`).remove();
           return { success: true };
+        }
+
+        else if (action === "addStudent") {
+          const key = payload.id || ref("students").push().key;
+          await ref(`students/${key}`).update({
+            nis: payload.nis || "",
+            namaSiswa: payload.namaSiswa,
+            kelas: payload.kelas
+          });
+          return { success: true, id: key };
+        }
+
+        else if (action === "deleteStudent") {
+          await ref(`students/${payload.id}`).remove();
+          return { success: true };
+        }
+
+        else if (action === "importStudents") {
+          const list = payload.list || [];
+          const updates = {};
+          
+          for (const item of list) {
+            const key = item.nis ? item.nis.toString().trim() : ref("students").push().key;
+            updates[`students/${key}`] = {
+              nis: item.nis ? item.nis.toString().trim() : "",
+              namaSiswa: item.namaSiswa,
+              kelas: item.kelas
+            };
+          }
+          
+          await ref("/").update(updates);
+          return { success: true, count: list.length };
+        }
+
+        else if (action === "importTeachers") {
+          const list = payload.list || [];
+          const updates = {};
+          
+          for (const item of list) {
+            const key = item.email ? item.email.toLowerCase().trim().replace(/[@.]/g, "_") : ref("users").push().key;
+            updates[`users/${key}`] = {
+              nama: item.nama,
+              email: item.email,
+              role: item.role || "Guru",
+              password: item.password || "guru123"
+            };
+          }
+          
+          await ref("/").update(updates);
+          return { success: true, count: list.length };
         }
 
         else if (action === "addSiswaGuruWali") {
@@ -4869,7 +5010,7 @@
 
           const [
             jSnap, pSnap, nSnap, jdSnap, lpSnap, gmSnap,
-            uSnap, raSnap, ksSnap, sgwSnap, j7Snap, cbSnap, setSnap
+            uSnap, raSnap, ksSnap, sgwSnap, j7Snap, cbSnap, sSnap, setSnap
           ] = await Promise.all([
             db.collection("jurnals").get(),
             db.collection("perangkats").get(),
@@ -4883,6 +5024,7 @@
             db.collection("siswagw").get(),
             db.collection("jurnal7kih").get(),
             db.collection("catatanbimbingan").get(),
+            db.collection("students").get(),
             db.collection("settings").doc("main").get()
           ]);
 
@@ -4898,6 +5040,7 @@
           const sgwRaw = sgwSnap.docs.map(d => ({ id: d.id, ...d.data() }));
           const j7kihRaw = j7Snap.docs.map(d => ({ id: d.id, ...d.data() }));
           const cbRaw = cbSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+          const sRaw = sSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
           let settings = { hariBelajar: 5, daftarKelas: ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"] };
           if (setSnap.exists) {
@@ -4930,7 +5073,8 @@
             kondisiSiswaList: [...ksRaw],
             siswaGuruWaliList: [...sgwRaw],
             jurnal7KIHList: [...j7kihRaw],
-            catatanBimbinganList: [...cbRaw]
+            catatanBimbinganList: [...cbRaw],
+            studentList: [...sRaw]
           };
 
           if (role === "Wakasek") {
@@ -5096,6 +5240,54 @@
         else if (action === "deleteTeacher") {
           await db.collection("users").doc(payload.id).delete();
           return { success: true };
+        }
+
+        else if (action === "addStudent") {
+          const id = payload.id || db.collection("students").doc().id;
+          await db.collection("students").doc(id).set({
+            nis: payload.nis || "",
+            namaSiswa: payload.namaSiswa,
+            kelas: payload.kelas
+          }, { merge: true });
+          return { success: true, id: id };
+        }
+
+        else if (action === "deleteStudent") {
+          await db.collection("students").doc(payload.id).delete();
+          return { success: true };
+        }
+
+        else if (action === "importStudents") {
+          const list = payload.list || [];
+          const batch = db.batch();
+          for (const item of list) {
+            const docId = item.nis ? item.nis.toString().trim() : db.collection("students").doc().id;
+            const docRef = db.collection("students").doc(docId);
+            batch.set(docRef, {
+              nis: item.nis ? item.nis.toString().trim() : "",
+              namaSiswa: item.namaSiswa,
+              kelas: item.kelas
+            }, { merge: true });
+          }
+          await batch.commit();
+          return { success: true, count: list.length };
+        }
+
+        else if (action === "importTeachers") {
+          const list = payload.list || [];
+          const batch = db.batch();
+          for (const item of list) {
+            const docId = item.email ? item.email.toLowerCase().trim().replace(/[@.]/g, "_") : db.collection("users").doc().id;
+            const docRef = db.collection("users").doc(docId);
+            batch.set(docRef, {
+              nama: item.nama,
+              email: item.email,
+              role: item.role || "Guru",
+              password: item.password || "guru123"
+            }, { merge: true });
+          }
+          await batch.commit();
+          return { success: true, count: list.length };
         }
 
         else if (action === "addSiswaGuruWali") {
@@ -5355,6 +5547,7 @@
         populateJadwalGuruDropdown();
         renderGuruMasterTable();
         renderTeacherTable();
+        renderStudentTable();
         populateTeacherDropdowns();
         renderWakasekRekapAbsenTable();
         renderWakasekKondisiSiswaTable();
@@ -6112,7 +6305,10 @@
         { id: 'nilaiKelas', defaultText: 'Pilih Kelas' },
         { id: 'laporanKelas', defaultText: 'Pilih Kelas' },
         { id: 'absenKelas', defaultText: 'Pilih Kelas' },
-        { id: 'kondisiKelas', defaultText: 'Pilih Kelas' }
+        { id: 'kondisiKelas', defaultText: 'Pilih Kelas' },
+        { id: 'studentKelas', defaultText: 'Pilih Kelas' },
+        { id: 'filterStudentKelas', defaultText: 'Semua Kelas' },
+        { id: 'siswaGWKelas', defaultText: 'Pilih Kelas' }
       ];
       
       selectIds.forEach(item => {
@@ -7124,6 +7320,291 @@
       });
     }
 
+    // ---------------- DATA UTAMA SISWA FUNCTIONS ----------------
+    async function submitStudentForm(e) {
+      e.preventDefault();
+      
+      const id = document.getElementById('studentId').value;
+      const nis = document.getElementById('studentNis').value.trim();
+      const namaSiswa = document.getElementById('studentNama').value.trim();
+      const kelas = document.getElementById('studentKelas').value;
+      
+      showLoading(true, "Menyimpan data siswa...");
+      try {
+        const payload = { nis, namaSiswa, kelas };
+        if (id) payload.id = id;
+        
+        await callApi("addStudent", payload);
+        showToast("Data siswa berhasil disimpan!");
+        resetStudentForm();
+        await loadDashboardData();
+      } catch (err) {
+        showToast("Gagal menyimpan data siswa: " + err.message, "danger");
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    function resetStudentForm() {
+      document.getElementById('formStudent').reset();
+      document.getElementById('studentId').value = "";
+      document.getElementById('btnCancelEditStudent').style.display = "none";
+    }
+
+    function editStudent(id) {
+      const item = appState.studentList.find(s => s.id === id);
+      if (!item) return;
+      
+      document.getElementById('studentId').value = item.id;
+      document.getElementById('studentNis').value = item.nis || "";
+      document.getElementById('studentNama').value = item.namaSiswa || "";
+      document.getElementById('studentKelas').value = item.kelas || "";
+      
+      document.getElementById('btnCancelEditStudent').style.display = "inline-block";
+      document.getElementById('studentNis').focus();
+    }
+
+    async function deleteStudent(id) {
+      if (!confirm("Apakah Anda yakin ingin menghapus data siswa ini?")) return;
+      
+      showLoading(true, "Menghapus data siswa...");
+      try {
+        await callApi("deleteStudent", { id });
+        showToast("Data siswa berhasil dihapus.");
+        await loadDashboardData();
+      } catch (err) {
+        showToast("Gagal menghapus data siswa: " + err.message, "danger");
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    function renderStudentTable() {
+      const tbody = document.getElementById('w-student-table-body');
+      if (!tbody) return;
+      tbody.innerHTML = "";
+      
+      const search = document.getElementById('searchStudentInput').value.toLowerCase().trim();
+      const classFilter = document.getElementById('filterStudentKelas').value;
+      
+      const list = appState.studentList || [];
+      const filtered = list.filter(item => {
+        const matchSearch = (item.namaSiswa || "").toLowerCase().includes(search) || (item.nis || "").toString().includes(search);
+        const matchClass = classFilter === "" || item.kelas === classFilter;
+        return matchSearch && matchClass;
+      });
+      
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Tidak ada data siswa yang cocok.</td></tr>';
+        return;
+      }
+      
+      filtered.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="font-family: monospace; font-weight: 600; color: var(--primary);">${item.nis || "-"}</td>
+          <td style="font-weight: 600; color: #cbd5e1;">${item.namaSiswa}</td>
+          <td><span class="badge badge-success" style="background:rgba(16,185,129,0.08);">${item.kelas}</span></td>
+          <td>
+            <button type="button" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-right: 0.25rem;" onclick="editStudent('${item.id}')">
+              <i class="fa-solid fa-edit"></i> Edit
+            </button>
+            <button type="button" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; color: var(--danger);" onclick="deleteStudent('${item.id}')">
+              <i class="fa-solid fa-trash"></i> Hapus
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // ---------------- EXCEL BULK IMPORTS FUNCTIONS ----------------
+    function handleStudentExcelImport(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          const data = evt.target.result;
+          if (file.name.endsWith('.csv')) {
+            const lines = data.split('\n');
+            let parsedData = [];
+            for (let i = 1; i < lines.length; i++) {
+              if (lines[i].trim() === '') continue;
+              const cols = lines[i].split(/[,;]/);
+              if (cols.length >= 2) {
+                parsedData.push({
+                  nis: cols[0].replace(/["']/g, "").trim(),
+                  namaSiswa: cols[1].replace(/["']/g, "").trim(),
+                  kelas: cols[2] ? cols[2].replace(/["']/g, "").trim() : ""
+                });
+              }
+            }
+            submitStudentImport(parsedData);
+          } else {
+            if (typeof XLSX === 'undefined') {
+              showLoading(true, "Memuat library parser Excel...");
+              const script = document.createElement('script');
+              script.src = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+              script.onload = () => {
+                showLoading(false);
+                parseStudentExcel(data);
+              };
+              document.head.appendChild(script);
+            } else {
+              parseStudentExcel(data);
+            }
+          }
+        } catch (err) {
+          showToast("Gagal membaca file: " + err.message, "danger");
+        }
+      };
+      
+      if (file.name.endsWith('.csv')) {
+        reader.readAsText(file);
+      } else {
+        reader.readAsArrayBuffer(file);
+      }
+      e.target.value = "";
+    }
+
+    function parseStudentExcel(arrayBuffer) {
+      try {
+        const data = new Uint8Array(arrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        
+        let parsedData = [];
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i];
+          if (!row || row.length === 0) continue;
+          parsedData.push({
+            nis: row[0] ? row[0].toString().trim() : "",
+            namaSiswa: row[1] ? row[1].toString().trim() : "",
+            kelas: row[2] ? row[2].toString().trim() : ""
+          });
+        }
+        submitStudentImport(parsedData);
+      } catch (err) {
+        showToast("Gagal parse Excel: " + err.message, "danger");
+      }
+    }
+
+    async function submitStudentImport(list) {
+      if (list.length === 0) {
+        showToast("Tidak ada data siswa ditemukan di file excel.", "warning");
+        return;
+      }
+      
+      showLoading(true, `Mengimpor ${list.length} siswa...`);
+      try {
+        await callApi("importStudents", { list });
+        showToast(`Berhasil mengimpor ${list.length} siswa!`);
+        await loadDashboardData();
+      } catch (err) {
+        showToast("Gagal mengimpor data siswa: " + err.message, "danger");
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    function handleTeacherExcelImport(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          const data = evt.target.result;
+          if (file.name.endsWith('.csv')) {
+            const lines = data.split('\n');
+            let parsedData = [];
+            for (let i = 1; i < lines.length; i++) {
+              if (lines[i].trim() === '') continue;
+              const cols = lines[i].split(/[,;]/);
+              if (cols.length >= 2) {
+                parsedData.push({
+                  nama: cols[0].replace(/["']/g, "").trim(),
+                  email: cols[1].replace(/["']/g, "").trim(),
+                  role: cols[2] ? cols[2].replace(/["']/g, "").trim() : "Guru",
+                  password: cols[3] ? cols[3].replace(/["']/g, "").trim() : "guru123"
+                });
+              }
+            }
+            submitTeacherImport(parsedData);
+          } else {
+            if (typeof XLSX === 'undefined') {
+              showLoading(true, "Memuat library parser Excel...");
+              const script = document.createElement('script');
+              script.src = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+              script.onload = () => {
+                showLoading(false);
+                parseTeacherExcel(data);
+              };
+              document.head.appendChild(script);
+            } else {
+              parseTeacherExcel(data);
+            }
+          }
+        } catch (err) {
+          showToast("Gagal membaca file: " + err.message, "danger");
+        }
+      };
+      
+      if (file.name.endsWith('.csv')) {
+        reader.readAsText(file);
+      } else {
+        reader.readAsArrayBuffer(file);
+      }
+      e.target.value = "";
+    }
+
+    function parseTeacherExcel(arrayBuffer) {
+      try {
+        const data = new Uint8Array(arrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        
+        let parsedData = [];
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i];
+          if (!row || row.length === 0) continue;
+          parsedData.push({
+            nama: row[0] ? row[0].toString().trim() : "",
+            email: row[1] ? row[1].toString().trim() : "",
+            role: row[2] ? row[2].toString().trim() : "Guru",
+            password: row[3] ? row[3].toString().trim() : "guru123"
+          });
+        }
+        submitTeacherImport(parsedData);
+      } catch (err) {
+        showToast("Gagal parse Excel: " + err.message, "danger");
+      }
+    }
+
+    async function submitTeacherImport(list) {
+      if (list.length === 0) {
+        showToast("Tidak ada data guru ditemukan di file excel.", "warning");
+        return;
+      }
+      
+      showLoading(true, `Mengimpor ${list.length} guru...`);
+      try {
+        await callApi("importTeachers", { list });
+        showToast(`Berhasil mengimpor ${list.length} akun guru!`);
+        await loadDashboardData();
+      } catch (err) {
+        showToast("Gagal mengimpor data guru: " + err.message, "danger");
+      } finally {
+        showLoading(false);
+      }
+    }
+
     // Render Jadwal di Wakasek (Master List)
     function renderWakasekJadwalTable() {
       const tbody = document.getElementById('w-jadwal-table-body');
@@ -7621,6 +8102,7 @@
              const sgwRaw = JSON.parse(localStorage.getItem('db_siswagw')) || [];
              const j7kihRaw = JSON.parse(localStorage.getItem('db_jurnal7kih')) || [];
              const cbRaw = JSON.parse(localStorage.getItem('db_catatanbimbingan')) || [];
+             const sRaw = JSON.parse(localStorage.getItem('db_students')) || [];
              
              const teachers = users;
  
@@ -7639,7 +8121,8 @@
                kondisiSiswaList: [...ksRaw],
                siswaGuruWaliList: [...sgwRaw],
                jurnal7KIHList: [...j7kihRaw],
-               catatanBimbinganList: [...cbRaw]
+               catatanBimbinganList: [...cbRaw],
+               studentList: [...sRaw]
              };
             
             if (role === "Wakasek") {
@@ -7958,6 +8441,91 @@
             }
           }
 
+          else if (action === "addStudent") {
+            const students = JSON.parse(localStorage.getItem('db_students')) || [];
+            const id = payload.id || "SIS-" + new Date().getTime();
+            const index = students.findIndex(s => s.id === id);
+            
+            const newStudent = {
+              id: id,
+              nis: payload.nis || "",
+              namaSiswa: payload.namaSiswa,
+              kelas: payload.kelas
+            };
+            
+            if (index !== -1) {
+              students[index] = newStudent;
+            } else {
+              students.push(newStudent);
+            }
+            
+            localStorage.setItem('db_students', JSON.stringify(students));
+            resolve({ success: true, id: id });
+          }
+
+          else if (action === "deleteStudent") {
+            const students = JSON.parse(localStorage.getItem('db_students')) || [];
+            const index = students.findIndex(s => s.id === payload.id);
+            if (index !== -1) {
+              students.splice(index, 1);
+              localStorage.setItem('db_students', JSON.stringify(students));
+              resolve({ success: true });
+            } else {
+              reject(new Error("Siswa tidak ditemukan di database mockup."));
+            }
+          }
+
+          else if (action === "importStudents") {
+            const students = JSON.parse(localStorage.getItem('db_students')) || [];
+            const list = payload.list || [];
+            
+            list.forEach(item => {
+              const id = item.id || "SIS-" + new Date().getTime() + "-" + Math.floor(Math.random() * 1000);
+              const index = item.nis ? students.findIndex(s => s.nis.toString().trim() === item.nis.toString().trim()) : -1;
+              const newStudent = {
+                id: index !== -1 ? students[index].id : id,
+                nis: item.nis ? item.nis.toString().trim() : "",
+                namaSiswa: item.namaSiswa,
+                kelas: item.kelas
+              };
+              
+              if (index !== -1) {
+                students[index] = newStudent;
+              } else {
+                students.push(newStudent);
+              }
+            });
+            
+            localStorage.setItem('db_students', JSON.stringify(students));
+            resolve({ success: true, count: list.length });
+          }
+
+          else if (action === "importTeachers") {
+            const users = JSON.parse(localStorage.getItem('db_users')) || [];
+            const list = payload.list || [];
+            
+            list.forEach(item => {
+              const id = item.id || "USR-" + new Date().getTime() + "-" + Math.floor(Math.random() * 1000);
+              const index = item.email ? users.findIndex(u => u.email.toLowerCase().trim() === item.email.toLowerCase().trim()) : -1;
+              const newUser = {
+                id: index !== -1 ? users[index].id : id,
+                nama: item.nama,
+                email: item.email,
+                role: item.role || "Guru",
+                password: item.password || "guru123"
+              };
+              
+              if (index !== -1) {
+                users[index] = newUser;
+              } else {
+                users.push(newUser);
+              }
+            });
+            
+            localStorage.setItem('db_users', JSON.stringify(users));
+            resolve({ success: true, count: list.length });
+          }
+
           else if (action === "addSiswaGuruWali") {
             const sgwRaw = JSON.parse(localStorage.getItem('db_siswagw')) || [];
             const id = payload.id || "SGW-" + new Date().getTime();
@@ -8193,6 +8761,12 @@
         { id: "CB-1", tanggal: "2026-07-03", guruWali: "Ibu Rahma (Guru Wali)", namaSiswa: "Ahmad Dani", catatanPerkembangan: "Ahmad menunjukkan perkembangan yang sangat baik dalam kedisiplinan dan ibadah." }
       ];
       
+      const mockStudents = [
+        { id: "SIS-1", nis: "12345", namaSiswa: "Ahmad Dani", kelas: "10-A" },
+        { id: "SIS-2", nis: "12346", namaSiswa: "Budi Santoso", kelas: "10-A" },
+        { id: "SIS-3", nis: "12347", namaSiswa: "Citra Lestari", kelas: "10-A" }
+      ];
+      
       localStorage.setItem('db_users', JSON.stringify(mockUsers));
       localStorage.setItem('db_jurnals', JSON.stringify(mockJurnals));
       localStorage.setItem('db_perangkats', JSON.stringify(mockPerangkats));
@@ -8206,6 +8780,7 @@
       localStorage.setItem('db_siswagw', JSON.stringify(mockSiswaGW));
       localStorage.setItem('db_jurnal7kih', JSON.stringify(mockJurnal7KIH));
       localStorage.setItem('db_catatanbimbingan', JSON.stringify(mockCatatanBimbingan));
+      localStorage.setItem('db_students', JSON.stringify(mockStudents));
     }
 
     // ==================== PATRIOT SMAPAT: EXCEL IMPORT & ROLE FUNCTIONS ====================
@@ -8383,9 +8958,12 @@
       if (!item) return;
       
       document.getElementById('siswaGWId').value = item.id;
-      document.getElementById('siswaGWNis').value = item.nis || "";
-      document.getElementById('siswaGWNama').value = item.namaSiswa;
       document.getElementById('siswaGWKelas').value = item.kelas;
+      
+      // Populate names dropdown first, then set the value
+      populateSiswaGWNames();
+      document.getElementById('siswaGWNama').value = item.namaSiswa;
+      document.getElementById('siswaGWNis').value = item.nis || "";
       document.getElementById('siswaGWGuruWali').value = item.guruWali;
       
       document.getElementById('btnCancelEditSiswaGW').style.display = "inline-flex";
@@ -8395,7 +8973,80 @@
       document.getElementById('formSiswaGW').reset();
       document.getElementById('siswaGWId').value = "";
       document.getElementById('siswaGWNis').value = "";
+      const selectNama = document.getElementById('siswaGWNama');
+      if (selectNama) selectNama.innerHTML = '<option value="">Pilih Siswa (Pilih Kelas Dulu)</option>';
       document.getElementById('btnCancelEditSiswaGW').style.display = "none";
+    }
+
+    function populateSiswaGWNames() {
+      const kelas = document.getElementById('siswaGWKelas').value;
+      const selectNama = document.getElementById('siswaGWNama');
+      if (!selectNama) return;
+      
+      selectNama.innerHTML = '<option value="">Pilih Siswa</option>';
+      
+      if (!kelas) return;
+      
+      const students = appState.studentList || [];
+      const classStudents = students.filter(s => s.kelas && s.kelas.toUpperCase() === kelas.toUpperCase());
+      
+      classStudents.sort((a, b) => a.namaSiswa.localeCompare(b.namaSiswa)).forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.namaSiswa;
+        opt.textContent = s.namaSiswa;
+        opt.setAttribute('data-nis', s.nis || "");
+        selectNama.appendChild(opt);
+      });
+      
+      document.getElementById('siswaGWNis').value = "";
+    }
+
+    function handleSiswaGWNameChange() {
+      const selectNama = document.getElementById('siswaGWNama');
+      const selectedOpt = selectNama.options[selectNama.selectedIndex];
+      const nisInput = document.getElementById('siswaGWNis');
+      
+      if (selectedOpt && selectedOpt.value) {
+        nisInput.value = selectedOpt.getAttribute('data-nis') || "";
+      } else {
+        nisInput.value = "";
+      }
+    }
+
+    function loadClassStudentsToAbsen() {
+      const selectedClass = document.getElementById('absenKelas').value;
+      if (!selectedClass) {
+        showToast("Pilih kelas bimbingan terlebih dahulu!", "warning");
+        return;
+      }
+      
+      const students = appState.studentList || [];
+      const classStudents = students.filter(s => s.kelas && s.kelas.toUpperCase() === selectedClass.toUpperCase());
+      
+      if (classStudents.length === 0) {
+        showToast("Tidak ada data siswa untuk kelas " + selectedClass + " di database utama.", "warning");
+        return;
+      }
+      
+      const tbody = document.getElementById('absen-input-tbody');
+      tbody.innerHTML = "";
+      
+      const sortedStudents = [...classStudents].sort((a, b) => a.namaSiswa.localeCompare(b.namaSiswa));
+      
+      sortedStudents.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><input type="text" class="form-control s-nama" style="padding-left:0.5rem;" value="${item.namaSiswa}" required></td>
+          <td><input type="number" class="form-control s-hadir" style="padding-left:0.5rem;" min="0" value="20" required></td>
+          <td><input type="number" class="form-control s-sakit" style="padding-left:0.5rem;" min="0" value="0" required></td>
+          <td><input type="number" class="form-control s-izin" style="padding-left:0.5rem;" min="0" value="0" required></td>
+          <td><input type="number" class="form-control s-alpa" style="padding-left:0.5rem;" min="0" value="0" required></td>
+          <td style="text-align: center;"><button type="button" class="btn btn-danger" onclick="this.closest('tr').remove()" style="padding:0.25rem 0.5rem; font-size:0.75rem;"><i class="fa-solid fa-trash"></i></button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+      
+      showToast("Berhasil memuat " + classStudents.length + " siswa kelas " + selectedClass + "!");
     }
 
     async function deleteSiswaGW(id) {
