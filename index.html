@@ -2645,7 +2645,7 @@
             <div class="card-title">Kirim Laporan Wali Kelas</div>
             <form id="formKirimLaporan" onsubmit="submitLaporanForm(event)">
               <div class="form-grid">
-                <div class="form-group">
+                <div class="form-group" id="laporanKelasGroup">
                   <label for="laporanKelas">Kelas Bimbingan</label>
                   <select id="laporanKelas" class="filter-control" style="padding: 0.85rem 1rem;" required>
                     <option value="">Pilih Kelas</option>
@@ -2742,7 +2742,7 @@
                     <option value="2027">2027</option>
                   </select>
                 </div>
-                <div class="form-group">
+                <div class="form-group" id="absenKelasGroup">
                   <label for="absenKelas">Kelas Bimbingan</label>
                   <select id="absenKelas" class="filter-control" style="padding: 0.85rem 1rem;" required>
                     <option value="">Pilih Kelas</option>
@@ -2850,7 +2850,7 @@
                     <option value="2027">2027</option>
                   </select>
                 </div>
-                <div class="form-group">
+                <div class="form-group" id="kondisiKelasGroup">
                   <label for="kondisiKelas">Kelas Bimbingan</label>
                   <select id="kondisiKelas" class="filter-control" style="padding: 0.85rem 1rem;" required onchange="populateKondisiSiswaNames()">
                     <option value="">Pilih Kelas</option>
@@ -5528,6 +5528,12 @@
       populateClassDropdowns();
       
       if (role === "Wakasek") {
+        // Show class selection dropdown groups for Wakasek
+        ['absenKelasGroup', 'kondisiKelasGroup', 'laporanKelasGroup'].forEach(gId => {
+          const el = document.getElementById(gId);
+          if (el) el.style.display = 'block';
+        });
+        
         // Stats
         document.getElementById('w-stat-guru').textContent = appState.stats.totalGuru || 0;
         document.getElementById('w-stat-jurnal').textContent = appState.stats.totalJurnal || 0;
@@ -5590,13 +5596,19 @@
         document.getElementById('wk-stat-total-jurnal').textContent = appState.stats.totalJurnalSekolah || 0;
         document.getElementById('wk-stat-rata-nilai').textContent = appState.stats.totalRekapSaya || 0;
         
+        // Hide class selection dropdown groups for Wali Kelas
+        ['absenKelasGroup', 'kondisiKelasGroup', 'laporanKelasGroup'].forEach(gId => {
+          const el = document.getElementById(gId);
+          if (el) el.style.display = 'none';
+        });
+
         // Jurnal Monitoring khusus bimbingan
         renderWaliKelasJurnalTable();
         renderWaliKelasRekapAbsenTable();
         renderWaliKelasKondisiSiswaTable();
         resetRekapAbsenForm();
         
-        // Populate names of students in that class
+        // Populate names of students in that class for conditions dropdown
         populateKondisiSiswaNames();
       }
       else if (role === "Guru Wali") {
@@ -6066,13 +6078,22 @@
     function resetRekapAbsenForm() {
       const form = document.getElementById('formRekapAbsen');
       if (form) form.reset();
+      
+      // Re-trigger class dropdown populate to make sure their own class is selected
+      populateClassDropdowns();
+
       const tbody = document.getElementById('absen-input-tbody');
       if (tbody) {
         tbody.innerHTML = "";
-        // Pre-populate with 3 rows
-        addAbsenRow("", 20, 0, 0, 0);
-        addAbsenRow("", 20, 0, 0, 0);
-        addAbsenRow("", 20, 0, 0, 0);
+        if (appState.user && appState.user.role === "Wali Kelas" && appState.user.waliKelasClass) {
+          // Auto load student list instead of blank rows
+          loadClassStudentsToAbsen();
+        } else {
+          // Pre-populate with 3 rows for Wakasek or other manually input roles
+          addAbsenRow("", 20, 0, 0, 0);
+          addAbsenRow("", 20, 0, 0, 0);
+          addAbsenRow("", 20, 0, 0, 0);
+        }
       }
     }
 
