@@ -484,7 +484,9 @@ function getDashboard(role, email, nama) {
       makanSehat: row[7],
       gemarBelajar: row[8],
       bermasyarakat: row[9],
-      tidurCepat: row[10]
+      tidurCepat: row[10],
+      guruWali: row[11] || "",
+      kelas: row[12] || ""
     });
   }
 

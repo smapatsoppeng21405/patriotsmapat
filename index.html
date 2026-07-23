@@ -1453,7 +1453,12 @@
         <!-- WAKASEK: MONITORING JURNAL -->
         <div id="pane-wakasek-jurnal" class="view-pane">
           <div class="card glass-effect">
-            <div class="card-title">Monitoring Jurnal Mengajar Guru</div>
+            <div class="card-title">
+              <span>Monitoring Jurnal Mengajar Guru</span>
+              <button type="button" class="btn btn-secondary" onclick="downloadWakasekJurnal()" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+                <i class="fa-solid fa-download"></i> Unduh Rekap
+              </button>
+            </div>
             
             <div class="filter-group">
               <div class="filter-item">
@@ -1730,7 +1735,12 @@
         <!-- WAKASEK: LAPORAN WALI KELAS -->
         <div id="pane-wakasek-laporanwali" class="view-pane">
           <div class="card glass-effect">
-            <div class="card-title">Laporan Wali Kelas Masuk</div>
+            <div class="card-title">
+              <span>Laporan Wali Kelas Masuk</span>
+              <button type="button" class="btn btn-secondary" onclick="downloadWakasekLaporan()" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+                <i class="fa-solid fa-download"></i> Unduh Rekap
+              </button>
+            </div>
             <div class="table-container">
               <table class="data-table">
                 <thead>
@@ -1755,7 +1765,12 @@
         <!-- WAKASEK: MONITORING REKAP ABSEN -->
         <div id="pane-wakasek-rekapabsen" class="view-pane">
           <div class="card glass-effect">
-            <div class="card-title">Monitoring Rekap Absensi Bulanan Kelas</div>
+            <div class="card-title">
+              <span>Monitoring Rekap Absensi Bulanan Kelas</span>
+              <button type="button" class="btn btn-secondary" onclick="downloadWakasekAbsen()" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+                <i class="fa-solid fa-download"></i> Unduh Rekap
+              </button>
+            </div>
             <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
               <div class="form-group">
                 <label for="w-filter-absen-bulan">Filter Bulan</label>
@@ -2221,7 +2236,12 @@
         <!-- WAKASEK: MONITORING JURNAL 7KIH & BIMBINGAN GURU WALI -->
         <div id="pane-wakasek-jurnal7kih" class="view-pane">
           <div class="card glass-effect" style="margin-bottom: 2rem;">
-            <div class="card-title">Monitoring Jurnal Karakter 7KIH Siswa</div>
+            <div class="card-title">
+              <span>Monitoring Jurnal Karakter 7KIH Siswa</span>
+              <button type="button" class="btn btn-secondary" onclick="downloadWakasek7KIH()" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+                <i class="fa-solid fa-download"></i> Unduh Rekap
+              </button>
+            </div>
             <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
               <div class="form-group">
                 <label for="w-filter-7kih-guru">Filter Guru Wali</label>
@@ -2257,7 +2277,12 @@
           </div>
 
           <div class="card glass-effect">
-            <div class="card-title">Monitoring Catatan Perkembangan Bimbingan Guru Wali</div>
+            <div class="card-title">
+              <span>Monitoring Catatan Perkembangan Bimbingan Guru Wali</span>
+              <button type="button" class="btn btn-secondary" onclick="downloadWakasekBimbingan()" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+                <i class="fa-solid fa-download"></i> Unduh Rekap
+              </button>
+            </div>
             <div class="table-container">
               <table class="data-table">
                 <thead>
@@ -2498,7 +2523,12 @@
         <!-- GURU: RIWAYAT DAN STATUS -->
         <div id="pane-guru-riwayat" class="view-pane">
           <div class="card glass-effect" style="margin-bottom: 2rem;">
-            <div class="card-title">Riwayat Jurnal Mengajar Saya</div>
+            <div class="card-title">
+              <span>Riwayat Jurnal Mengajar Saya</span>
+              <button type="button" class="btn btn-secondary" onclick="downloadGuruJurnal()" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+                <i class="fa-solid fa-download"></i> Unduh Rekap
+              </button>
+            </div>
             <div class="table-container">
               <table class="data-table">
                 <thead>
@@ -2701,7 +2731,12 @@
         <!-- WALI KELAS: MONITORING JURNAL -->
         <div id="pane-walikelas-jurnal" class="view-pane">
           <div class="card glass-effect">
-            <div class="card-title">Monitoring Aktivitas Jurnal Mengajar Kelas</div>
+            <div class="card-title">
+              <span>Monitoring Aktivitas Jurnal Mengajar Kelas</span>
+              <button type="button" class="btn btn-secondary" onclick="downloadWaliKelasJurnal()" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+                <i class="fa-solid fa-download"></i> Unduh Rekap
+              </button>
+            </div>
             <div class="table-container">
               <table class="data-table">
                 <thead>
@@ -2774,7 +2809,12 @@
           </div>
 
           <div class="card glass-effect">
-            <div class="card-title">Riwayat Laporan Kelas Saya</div>
+            <div class="card-title">
+              <span>Riwayat Laporan Kelas Saya</span>
+              <button type="button" class="btn btn-secondary" onclick="downloadWaliKelasLaporan()" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+                <i class="fa-solid fa-download"></i> Unduh Rekap
+              </button>
+            </div>
             <div class="table-container">
               <table class="data-table">
                 <thead>
@@ -2880,7 +2920,12 @@
           </div>
 
           <div class="card glass-effect">
-            <div class="card-title">Riwayat Rekap Absensi Kelas Saya</div>
+            <div class="card-title">
+              <span>Riwayat Rekap Absensi Kelas Saya</span>
+              <button type="button" class="btn btn-secondary" onclick="downloadWaliKelasAbsen()" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+                <i class="fa-solid fa-download"></i> Unduh Rekap
+              </button>
+            </div>
             <div class="table-container">
               <table class="data-table">
                 <thead>
@@ -3071,7 +3116,12 @@
           </div>
 
           <div class="card glass-effect" style="margin-bottom: 2rem;">
-            <div class="card-title">Riwayat Catatan Bimbingan Perwalian Saya</div>
+            <div class="card-title">
+              <span>Riwayat Catatan Bimbingan Perwalian Saya</span>
+              <button type="button" class="btn btn-secondary" onclick="downloadGuruWaliBimbingan()" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+                <i class="fa-solid fa-download"></i> Unduh Rekap
+              </button>
+            </div>
             <div class="table-container">
               <table class="data-table">
                 <thead>
@@ -3092,9 +3142,14 @@
           <div class="card glass-effect">
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
               <div class="card-title" style="margin-bottom: 0;">Riwayat Jurnal 7KIH Siswa Bimbingan (Diisi Mandiri oleh Siswa)</div>
-              <button class="btn btn-success" onclick="copyStudent7KIHLink()" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
-                <i class="fa-solid fa-share-nodes"></i> Bagikan Link Ke Siswa
-              </button>
+              <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <button type="button" class="btn btn-success" onclick="copyStudent7KIHLink()" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+                  <i class="fa-solid fa-share-nodes"></i> Bagikan Link Ke Siswa
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="downloadGuruWali7KIH()" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+                  <i class="fa-solid fa-download"></i> Unduh Rekap
+                </button>
+              </div>
             </div>
             <div class="table-container">
               <table class="data-table">
@@ -3192,7 +3247,12 @@
         <!-- KEPALA SEKOLAH: MONITORING JURNAL -->
         <div id="pane-kepala-jurnal" class="view-pane">
           <div class="card glass-effect">
-            <div class="card-title">Monitoring Jurnal Mengajar Guru</div>
+            <div class="card-title">
+              <span>Monitoring Jurnal Mengajar Guru</span>
+              <button type="button" class="btn btn-secondary" onclick="downloadKepalaJurnal()" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+                <i class="fa-solid fa-download"></i> Unduh Rekap
+              </button>
+            </div>
             <div class="filter-group">
               <div class="filter-item">
                 <label>Cari Nama Guru</label>
@@ -3280,7 +3340,12 @@
         <!-- KEPALA SEKOLAH: MONITORING REKAP ABSEN -->
         <div id="pane-kepala-rekapabsen" class="view-pane">
           <div class="card glass-effect">
-            <div class="card-title">Monitoring Rekap Absensi Bulanan Kelas</div>
+            <div class="card-title">
+              <span>Monitoring Rekap Absensi Bulanan Kelas</span>
+              <button type="button" class="btn btn-secondary" onclick="downloadKepalaAbsen()" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+                <i class="fa-solid fa-download"></i> Unduh Rekap
+              </button>
+            </div>
             <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
               <div class="form-group">
                 <label for="ks-filter-absen-bulan">Filter Bulan</label>
@@ -3406,9 +3471,14 @@
           <div class="card glass-effect" style="margin-bottom: 2rem;">
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
               <div class="card-title" style="margin-bottom: 0;">Monitoring Jurnal Karakter 7KIH Siswa</div>
-              <button class="btn btn-success" onclick="copyStudent7KIHLink()" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
-                <i class="fa-solid fa-link"></i> Salin Link Pengisian 7KIH Siswa
-              </button>
+              <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <button type="button" class="btn btn-success" onclick="copyStudent7KIHLink()" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+                  <i class="fa-solid fa-link"></i> Salin Link Pengisian 7KIH Siswa
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="downloadKepala7KIH()" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+                  <i class="fa-solid fa-download"></i> Unduh Rekap
+                </button>
+              </div>
             </div>
             <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
               <div class="form-group">
@@ -3447,7 +3517,12 @@
           </div>
 
           <div class="card glass-effect">
-            <div class="card-title">Monitoring Catatan Perkembangan Bimbingan Guru Wali</div>
+            <div class="card-title">
+              <span>Monitoring Catatan Perkembangan Bimbingan Guru Wali</span>
+              <button type="button" class="btn btn-secondary" onclick="downloadKepalaBimbingan()" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+                <i class="fa-solid fa-download"></i> Unduh Rekap
+              </button>
+            </div>
             <div class="table-container">
               <table class="data-table">
                 <thead>
@@ -3860,6 +3935,352 @@
         text.textContent = "Offline";
         showToast("Koneksi internet terputus. Menggunakan Mode Offline.", "danger");
       }
+    }
+
+    // EXPORT TO CSV / EXCEL UTILITY
+    function downloadCSV(headers, data, filename) {
+      let csvContent = "\uFEFF"; // UTF-8 BOM
+      csvContent += headers.map(h => `"${h.replace(/"/g, '""')}"`).join(",") + "\n";
+      
+      data.forEach(row => {
+        let rowContent = row.map(val => {
+          let strVal = val === null || val === undefined ? "" : String(val);
+          strVal = strVal.replace(/\r?\n|\r/g, " ");
+          return `"${strVal.replace(/"/g, '""')}"`;
+        }).join(",");
+        csvContent += rowContent + "\n";
+      });
+      
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", filename);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function downloadWakasekJurnal() {
+      const searchGuru = document.getElementById('w-filter-guru').value.toLowerCase();
+      const searchKelas = document.getElementById('w-filter-kelas').value;
+      const order = document.getElementById('w-filter-date').value;
+      
+      let filtered = (appState.jurnalList || []).filter(item => {
+        const matchesGuru = item.guru.toLowerCase().includes(searchGuru);
+        const matchesKelas = searchKelas === "" ? true : item.kelas.includes(searchKelas);
+        return matchesGuru && matchesKelas;
+      });
+      
+      filtered.sort((a, b) => {
+        const dateA = new Date(a.tanggal);
+        const dateB = new Date(b.tanggal);
+        return order === 'desc' ? dateB - dateA : dateA - dateB;
+      });
+      
+      const headers = ["Tanggal", "Nama Guru", "Kelas", "Materi Mengajar", "Kehadiran", "Catatan Jurnal", "Mode"];
+      const csvData = filtered.map(item => [
+        new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+        item.guru,
+        item.kelas,
+        item.materi,
+        item.kehadiran,
+        item.catatan || "-",
+        item.mode || "Tatap Muka"
+      ]);
+      
+      downloadCSV(headers, csvData, `Rekap_Jurnal_Mengajar_Kurikulum_${new Date().toISOString().substring(0, 10)}.csv`);
+    }
+
+    function downloadKepalaJurnal() {
+      const searchGuru = document.getElementById('ks-filter-guru').value.toLowerCase();
+      const searchKelas = document.getElementById('ks-filter-kelas').value;
+      const order = document.getElementById('ks-filter-date').value;
+      
+      let filtered = (appState.jurnalList || []).filter(item => {
+        const matchesGuru = item.guru.toLowerCase().includes(searchGuru);
+        const matchesKelas = searchKelas === "" ? true : item.kelas.includes(searchKelas);
+        return matchesGuru && matchesKelas;
+      });
+      
+      if (order === "asc") {
+        filtered.sort((a, b) => new Date(a.tanggal) - new Date(b.tanggal));
+      } else {
+        filtered.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
+      }
+      
+      const headers = ["Tanggal", "Nama Guru", "Kelas", "Materi Mengajar", "Kehadiran", "Catatan Jurnal", "Mode"];
+      const csvData = filtered.map(item => [
+        new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+        item.guru,
+        item.kelas,
+        item.materi,
+        item.kehadiran,
+        item.catatan || "-",
+        item.mode || "Tatap Muka"
+      ]);
+      
+      downloadCSV(headers, csvData, `Rekap_Jurnal_Mengajar_Sekolah_${new Date().toISOString().substring(0, 10)}.csv`);
+    }
+
+    function downloadWaliKelasJurnal() {
+      const list = appState.jurnalList || [];
+      const headers = ["Tanggal", "Nama Guru", "Kelas", "Materi Mengajar", "Kehadiran", "Catatan"];
+      const csvData = list.map(item => [
+        new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+        item.guru,
+        item.kelas,
+        item.materi,
+        item.kehadiran,
+        item.catatan || "-"
+      ]);
+      
+      const className = (appState.user && appState.user.waliKelasClass) || '';
+      downloadCSV(headers, csvData, `Rekap_Jurnal_Mengajar_Kelas_${className}_${new Date().toISOString().substring(0, 10)}.csv`);
+    }
+
+    function downloadGuruJurnal() {
+      const list = appState.jurnalList || [];
+      const headers = ["Tanggal", "Kelas", "Materi Mengajar", "Kehadiran", "Catatan"];
+      const csvData = list.map(item => [
+        new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+        item.kelas,
+        item.materi,
+        item.kehadiran,
+        item.catatan || "-"
+      ]);
+      
+      const teacherName = (appState.user && appState.user.nama) || 'Guru';
+      downloadCSV(headers, csvData, `Riwayat_Jurnal_Mengajar_${teacherName.replace(/\s+/g, '_')}_${new Date().toISOString().substring(0, 10)}.csv`);
+    }
+
+    function downloadWakasekAbsen() {
+      const filterBulan = document.getElementById('w-filter-absen-bulan').value.toLowerCase();
+      const filterTahun = document.getElementById('w-filter-absen-tahun').value.toLowerCase();
+      const filterKelas = document.getElementById('w-filter-absen-kelas').value.toLowerCase();
+      
+      const filtered = (appState.rekapAbsenList || []).filter(item => {
+        const matchBulan = !filterBulan || item.bulan.toLowerCase() === filterBulan;
+        const matchTahun = !filterTahun || item.tahun.toString().toLowerCase() === filterTahun;
+        const matchKelas = !filterKelas || item.kelas.toLowerCase() === filterKelas;
+        return matchBulan && matchTahun && matchKelas;
+      });
+      
+      const headers = ["Wali Kelas", "Kelas", "Bulan", "Tahun", "Nama Siswa", "Hadir", "Sakit", "Izin", "Alpa"];
+      const csvData = filtered.map(item => [
+        item.waliKelas,
+        item.kelas,
+        item.bulan,
+        item.tahun,
+        item.namaSiswa,
+        item.hadir,
+        item.sakit,
+        item.izin,
+        item.alpa
+      ]);
+      
+      downloadCSV(headers, csvData, `Rekap_Absensi_Sekolah_${new Date().toISOString().substring(0, 10)}.csv`);
+    }
+
+    function downloadWaliKelasAbsen() {
+      const list = appState.rekapAbsenList || [];
+      const headers = ["Bulan", "Tahun", "Kelas", "Nama Siswa", "Hadir", "Sakit", "Izin", "Alpa"];
+      const csvData = list.map(item => [
+        item.bulan,
+        item.tahun,
+        item.kelas,
+        item.namaSiswa,
+        item.hadir,
+        item.sakit,
+        item.izin,
+        item.alpa
+      ]);
+      
+      const className = (appState.user && appState.user.waliKelasClass) || '';
+      downloadCSV(headers, csvData, `Rekap_Absensi_Kelas_${className}_${new Date().toISOString().substring(0, 10)}.csv`);
+    }
+
+    function downloadKepalaAbsen() {
+      const filterBulan = document.getElementById('ks-filter-absen-bulan').value.toLowerCase();
+      const filterTahun = document.getElementById('ks-filter-absen-tahun').value.toLowerCase();
+      const filterKelas = document.getElementById('ks-filter-absen-kelas').value.toLowerCase();
+      
+      const filtered = (appState.rekapAbsenList || []).filter(item => {
+        const matchBulan = !filterBulan || item.bulan.toLowerCase() === filterBulan;
+        const matchTahun = !filterTahun || item.tahun.toString().toLowerCase() === filterTahun;
+        const matchKelas = !filterKelas || item.kelas.toLowerCase() === filterKelas;
+        return matchBulan && matchTahun && matchKelas;
+      });
+      
+      const headers = ["Wali Kelas", "Kelas", "Bulan", "Tahun", "Nama Siswa", "Hadir", "Sakit", "Izin", "Alpa"];
+      const csvData = filtered.map(item => [
+        item.waliKelas,
+        item.kelas,
+        item.bulan,
+        item.tahun,
+        item.namaSiswa,
+        item.hadir,
+        item.sakit,
+        item.izin,
+        item.alpa
+      ]);
+      
+      downloadCSV(headers, csvData, `Rekap_Absensi_Sekolah_${new Date().toISOString().substring(0, 10)}.csv`);
+    }
+
+    function downloadGuruWali7KIH() {
+      const list = appState.jurnal7KIHList || [];
+      const headers = ["Tanggal", "NIS", "Nama Siswa", "Kelas", "Bangun Pagi", "Beribadah", "Berolahraga", "Makan Sehat", "Gemar Belajar", "Bermasyarakat", "Tidur Cepat"];
+      const csvData = list.map(item => [
+        new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+        item.nis || "-",
+        item.namaSiswa,
+        item.kelas || "-",
+        item.bangunPagi || "Tidak",
+        item.beribadah || "Tidak",
+        item.berolahraga || "Tidak",
+        item.makanSehat || "Tidak",
+        item.gemarBelajar || "Tidak",
+        item.bermasyarakat || "Tidak",
+        item.tidurCepat || "Tidak"
+      ]);
+      
+      const teacherName = (appState.user && appState.user.nama) || 'Guru_Wali';
+      downloadCSV(headers, csvData, `Rekap_Jurnal_7KIH_Perwalian_${teacherName.replace(/\s+/g, '_')}_${new Date().toISOString().substring(0, 10)}.csv`);
+    }
+
+    function downloadGuruWaliBimbingan() {
+      const list = appState.catatanBimbinganList || [];
+      const headers = ["Tanggal", "Nama Siswa", "Catatan Perkembangan"];
+      const csvData = list.map(item => [
+        new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+        item.namaSiswa,
+        item.catatanPerkembangan || "-"
+      ]);
+      
+      const teacherName = (appState.user && appState.user.nama) || 'Guru_Wali';
+      downloadCSV(headers, csvData, `Rekap_Bimbingan_Perwalian_${teacherName.replace(/\s+/g, '_')}_${new Date().toISOString().substring(0, 10)}.csv`);
+    }
+
+    function downloadWakasek7KIH() {
+      const filterGuru = document.getElementById('w-filter-7kih-guru').value;
+      const filterNama = document.getElementById('w-filter-7kih-nama').value.toLowerCase();
+      
+      const filtered = (appState.jurnal7KIHList || []).filter(item => {
+        const matchGuru = !filterGuru || (item.guruWali && item.guruWali === filterGuru);
+        const matchNama = !filterNama || 
+                          (item.namaSiswa && item.namaSiswa.toLowerCase().includes(filterNama)) || 
+                          (item.nis && item.nis.toString().toLowerCase().includes(filterNama));
+        return matchGuru && matchNama;
+      });
+      
+      const headers = ["Tanggal", "Guru Wali", "NIS", "Nama Siswa", "Kelas", "Bangun Pagi", "Beribadah", "Berolahraga", "Makan Sehat", "Gemar Belajar", "Bermasyarakat", "Tidur Cepat"];
+      const csvData = filtered.map(item => [
+        new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+        item.guruWali || "Umum",
+        item.nis || "-",
+        item.namaSiswa,
+        item.kelas || "-",
+        item.bangunPagi || "Tidak",
+        item.beribadah || "Tidak",
+        item.berolahraga || "Tidak",
+        item.makanSehat || "Tidak",
+        item.gemarBelajar || "Tidak",
+        item.bermasyarakat || "Tidak",
+        item.tidurCepat || "Tidak"
+      ]);
+      
+      downloadCSV(headers, csvData, `Rekap_Jurnal_7KIH_Sekolah_${new Date().toISOString().substring(0, 10)}.csv`);
+    }
+
+    function downloadWakasekBimbingan() {
+      const list = appState.catatanBimbinganList || [];
+      const headers = ["Tanggal", "Guru Wali", "Nama Siswa", "Catatan Perkembangan"];
+      const csvData = list.map(item => [
+        new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+        item.guruWali || "",
+        item.namaSiswa,
+        item.catatanPerkembangan || "-"
+      ]);
+      
+      downloadCSV(headers, csvData, `Rekap_Catatan_Bimbingan_Guru_Wali_Sekolah_${new Date().toISOString().substring(0, 10)}.csv`);
+    }
+
+    function downloadKepala7KIH() {
+      const filterGuru = document.getElementById('ks-filter-7kih-guru').value;
+      const filterNama = document.getElementById('ks-filter-7kih-nama').value.toLowerCase();
+      
+      const filtered = (appState.jurnal7KIHList || []).filter(item => {
+        const matchGuru = !filterGuru || (item.guruWali && item.guruWali === filterGuru);
+        const matchNama = !filterNama || 
+                          (item.namaSiswa && item.namaSiswa.toLowerCase().includes(filterNama)) || 
+                          (item.nis && item.nis.toString().toLowerCase().includes(filterNama));
+        return matchGuru && matchNama;
+      });
+      
+      const headers = ["Tanggal", "Guru Wali", "NIS", "Nama Siswa", "Kelas", "Bangun Pagi", "Beribadah", "Berolahraga", "Makan Sehat", "Gemar Belajar", "Bermasyarakat", "Tidur Cepat"];
+      const csvData = filtered.map(item => [
+        new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+        item.guruWali || "Umum",
+        item.nis || "-",
+        item.namaSiswa,
+        item.kelas || "-",
+        item.bangunPagi || "Tidak",
+        item.beribadah || "Tidak",
+        item.berolahraga || "Tidak",
+        item.makanSehat || "Tidak",
+        item.gemarBelajar || "Tidak",
+        item.bermasyarakat || "Tidak",
+        item.tidurCepat || "Tidak"
+      ]);
+      
+      downloadCSV(headers, csvData, `Rekap_Jurnal_7KIH_Sekolah_${new Date().toISOString().substring(0, 10)}.csv`);
+    }
+
+    function downloadKepalaBimbingan() {
+      const list = appState.catatanBimbinganList || [];
+      const headers = ["Tanggal", "Guru Wali", "Nama Siswa", "Catatan Perkembangan"];
+      const csvData = list.map(item => [
+        new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+        item.guruWali || "",
+        item.namaSiswa,
+        item.catatanPerkembangan || "-"
+      ]);
+      
+      downloadCSV(headers, csvData, `Rekap_Catatan_Bimbingan_Guru_Wali_Sekolah_${new Date().toISOString().substring(0, 10)}.csv`);
+    }
+
+    function downloadWaliKelasLaporan() {
+      const list = appState.laporanWaliList || [];
+      const headers = ["Tanggal", "Kelas", "Kategori", "Judul Laporan", "Isi Laporan", "Tindak Lanjut"];
+      const csvData = list.map(item => [
+        new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+        item.kelas,
+        item.kategori,
+        item.judul,
+        item.isi,
+        item.tindakLanjut || "-"
+      ]);
+      
+      const className = (appState.user && appState.user.waliKelasClass) || '';
+      downloadCSV(headers, csvData, `Rekap_Laporan_Wali_Kelas_${className}_${new Date().toISOString().substring(0, 10)}.csv`);
+    }
+
+    function downloadWakasekLaporan() {
+      const list = appState.laporanWaliList || [];
+      const headers = ["Tanggal", "Wali Kelas", "Kelas", "Kategori", "Judul Laporan", "Isi Laporan", "Tindak Lanjut"];
+      const csvData = list.map(item => [
+        new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+        item.waliKelas,
+        item.kelas,
+        item.kategori,
+        item.judul,
+        item.isi,
+        item.tindakLanjut || "-"
+      ]);
+      
+      downloadCSV(headers, csvData, `Rekap_Laporan_Wali_Kelas_Sekolah_${new Date().toISOString().substring(0, 10)}.csv`);
     }
 
     // TOAST NOTIFICATIONS
@@ -5908,6 +6329,7 @@
         populateSiswaGWFormDropdowns();
         renderActiveClassesList();
         renderWakasekJurnal7KIHTable();
+        renderWakasekCatatanBimbinganTable();
         populateWakasekFilterDropdowns();
         
         // Set setelan hari belajar config
@@ -10735,7 +11157,87 @@
     }
 
     function populateWakasekFilterDropdowns() {
-      // Safe no-op or populate Wakasek filter dropdowns if present
+      const selectGuru7KIH = document.getElementById('w-filter-7kih-guru');
+      if (selectGuru7KIH) {
+        const currentVal = selectGuru7KIH.value;
+        selectGuru7KIH.innerHTML = '<option value="">Semua Guru Wali</option>';
+        const gwList = [];
+        (appState.jurnal7KIHList || []).forEach(j => {
+          if (j.guruWali && !gwList.includes(j.guruWali)) gwList.push(j.guruWali);
+        });
+        gwList.forEach(g => {
+          const opt = document.createElement('option');
+          opt.value = g;
+          opt.textContent = g;
+          selectGuru7KIH.appendChild(opt);
+        });
+        selectGuru7KIH.value = currentVal;
+      }
+    }
+
+    function filterWakasek7KIH() {
+      const filterGuru = document.getElementById('w-filter-7kih-guru').value;
+      const filterNama = document.getElementById('w-filter-7kih-nama').value.toLowerCase();
+      
+      const filtered = (appState.jurnal7KIHList || []).filter(item => {
+        const matchGuru = !filterGuru || (item.guruWali && item.guruWali === filterGuru);
+        const matchNama = !filterNama || 
+                          (item.namaSiswa && item.namaSiswa.toLowerCase().includes(filterNama)) || 
+                          (item.nis && item.nis.toString().toLowerCase().includes(filterNama));
+        return matchGuru && matchNama;
+      });
+      
+      renderWakasekJurnal7KIHTable(filtered);
+    }
+
+    function renderWakasekCatatanBimbinganTable() {
+      const tbody = document.getElementById('w-catatan-bimbingan-table-body');
+      if (!tbody) return;
+      tbody.innerHTML = "";
+      
+      const list = appState.catatanBimbinganList || [];
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Belum ada catatan bimbingan dari Guru Wali.</td></tr>`;
+        return;
+      }
+      
+      list.forEach(item => {
+        const tr = document.createElement('tr');
+        const formattedDate = item.tanggal ? new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
+        
+        tr.innerHTML = `
+          <td style="font-weight:500; white-space: nowrap;">${formattedDate}</td>
+          <td style="font-weight:600;"><i class="fa-regular fa-user" style="color:var(--primary); margin-right:0.3rem;"></i> ${item.guruWali || 'Umum'}</td>
+          <td style="font-weight:600;">${item.namaSiswa}</td>
+          <td style="color:var(--text-main); font-size:0.9rem; line-height:1.4;">${item.catatanPerkembangan || '-'}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderKepalaCatatanBimbinganTable() {
+      const tbody = document.getElementById('ks-catatan-bimbingan-table-body');
+      if (!tbody) return;
+      tbody.innerHTML = "";
+      
+      const list = appState.catatanBimbinganList || [];
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Belum ada catatan bimbingan.</td></tr>`;
+        return;
+      }
+      
+      list.forEach(item => {
+        const tr = document.createElement('tr');
+        const formattedDate = item.tanggal ? new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
+        
+        tr.innerHTML = `
+          <td style="font-weight:500; white-space: nowrap;">${formattedDate}</td>
+          <td style="font-weight:600;"><i class="fa-regular fa-user" style="color:var(--primary); margin-right:0.3rem;"></i> ${item.guruWali || 'Umum'}</td>
+          <td style="font-weight:600;">${item.namaSiswa}</td>
+          <td style="color:var(--text-main); font-size:0.9rem; line-height:1.4;">${item.catatanPerkembangan || '-'}</td>
+        `;
+        tbody.appendChild(tr);
+      });
     }
 
     function renderKepalaJurnal7KIHTable(list = null) {
