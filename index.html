@@ -1352,6 +1352,11 @@
             <i class="fa-solid fa-download"></i> Instal App
           </button>
 
+          <!-- PWA UPDATE BUTTON -->
+          <button class="sync-btn" id="updatePwaBtn" onclick="forceUpdateApp()" style="background: rgba(139, 92, 246, 0.15); color: var(--accent); border: 1px solid rgba(139, 92, 246, 0.3);" title="Klik untuk mengunduh versi terbaru aplikasi">
+            <i class="fa-solid fa-cloud-arrow-down"></i> Update Aplikasi
+          </button>
+
           <!-- ONLINE / OFFLINE STATUS -->
           <div class="network-badge network-online" id="networkStatusBadge">
             <i class="fa-solid fa-circle" style="font-size: 0.6rem;"></i>
@@ -3799,6 +3804,41 @@
       showToast("Aplikasi PATRIOT SMAPAT berhasil diinstal di perangkat Anda!", "success");
       deferredPrompt = null;
     });
+
+    async function forceUpdateApp() {
+      const confirmed = await showCustomConfirm(
+        "Update Aplikasi", 
+        "Apakah Anda yakin ingin mengecek dan mengunduh versi terbaru aplikasi? Cache lama akan dibersihkan dan aplikasi dimuat ulang.", 
+        "Ya, Update", 
+        true
+      );
+      if (!confirmed) return;
+
+      showLoading(true, "Mengunduh pembaruan dari server...");
+      
+      try {
+        // Hapus semua cache storage browser
+        if ('caches' in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map(key => caches.delete(key)));
+        }
+        
+        // Unregister service worker agar memuat ulang versi terbaru
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.map(reg => reg.unregister()));
+        }
+        
+        showToast("Pembaruan berhasil! Aplikasi akan dimuat ulang dalam 1.5 detik.", "success");
+        
+        setTimeout(() => {
+          window.location.reload(true);
+        }, 1500);
+      } catch (err) {
+        showToast("Gagal melakukan update: " + err.message, "danger");
+        showLoading(false);
+      }
+    }
 
     // PENDETEKSI STATUS INTERNET
     function updateOnlineStatus() {
