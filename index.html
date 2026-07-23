@@ -4396,6 +4396,7 @@
       } else if (role === "Wali Kelas") {
         menuItems = [
           { text: "Ringkasan", pane: "pane-walikelas-ringkasan", icon: "fa-house-chimney" },
+          { text: "Analisis Nilai", pane: "pane-walikelas-inputnilai", icon: "fa-chart-simple" },
           { text: "Jurnal Bimbingan", pane: "pane-walikelas-jurnal", icon: "fa-book" },
           { text: "Rekap Absen Siswa", pane: "pane-walikelas-rekapabsen", icon: "fa-calendar-days" }
         ];
@@ -7250,9 +7251,9 @@
             allowedClasses.push("Kelas Mapil X", "Kelas Mapil XI", "Kelas Mapil XII");
           }
         }
-        // Jika user adalah Wali Kelas, batasi kelas input bimbingan (absen, kondisi, laporan) ke kelasnya sendiri
+        // Jika user adalah Wali Kelas, batasi kelas input bimbingan (absen, kondisi, laporan, nilai) ke kelasnya sendiri
         if (appState.user && appState.user.role === "Wali Kelas" && appState.user.waliKelasClass) {
-          if (['absenKelas', 'kondisiKelas', 'laporanKelas'].includes(id)) {
+          if (['absenKelas', 'kondisiKelas', 'laporanKelas', 'nilaiKelas'].includes(id)) {
             allowedClasses = [appState.user.waliKelasClass];
           }
         }
@@ -9102,7 +9103,7 @@
                nilaiList: [...nRaw],
                jadwalList: [...jdRaw],
                laporanWaliList: [...lpRaw],
-               guruMasterList: [...gmRaw],
+        guruMasterList: [...gmRaw],
                settings: settings,
                teacherList: teachers,
                rekapAbsenList: [...raRaw],
@@ -9113,6 +9114,41 @@
                studentList: [...sRaw],
                kelasMapelPilihanList: [...kmpRaw]
              };
+
+             // Auto-merge missing students into studentList from other lists to prevent missing student names
+             const studentKeys = {};
+             result.studentList.forEach(s => {
+               const key = (s.namaSiswa ? s.namaSiswa.toLowerCase().trim() : "") + "|" + (s.kelas ? s.kelas.toLowerCase().trim() : "");
+               studentKeys[key] = true;
+             });
+             
+             result.siswaGuruWaliList.forEach(s => {
+               const key = (s.namaSiswa ? s.namaSiswa.toLowerCase().trim() : "") + "|" + (s.kelas ? s.kelas.toLowerCase().trim() : "");
+               if (s.namaSiswa && !studentKeys[key]) {
+                 result.studentList.push({
+                   id: s.id || ("SIS-AUTO-" + Date.now() + Math.random()),
+                   nis: s.nis || "",
+                   namaSiswa: s.namaSiswa,
+                   kelas: s.kelas,
+                   tingkatan: ""
+                 });
+                 studentKeys[key] = true;
+               }
+             });
+
+             result.rekapAbsenList.forEach(ra => {
+               const key = (ra.namaSiswa ? ra.namaSiswa.toLowerCase().trim() : "") + "|" + (ra.kelas ? ra.kelas.toLowerCase().trim() : "");
+               if (ra.namaSiswa && !studentKeys[key]) {
+                 result.studentList.push({
+                   id: ra.id || ("SIS-AUTO-" + Date.now() + Math.random()),
+                   nis: "",
+                   namaSiswa: ra.namaSiswa,
+                   kelas: ra.kelas,
+                   tingkatan: ""
+                 });
+                 studentKeys[key] = true;
+               }
+             });
             
             if (role === "Wakasek") {
               const pending = pRaw.filter(p => p.status === "Pending").length;
@@ -9148,7 +9184,7 @@
               result.perangkatList = myPerangkats;
               result.guruJadwalList = myJadwals;
               result.laporanWaliList = [];
-              result.rekapAbsenList = [];
+              result.rekapAbsenList = result.rekapAbsenList; // Do not clear, so Guru can use as fallback for student names
               result.kondisiSiswaList = [];
             } 
             else if (role === "Wali Kelas") {

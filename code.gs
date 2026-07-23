@@ -509,6 +509,41 @@ function getDashboard(role, email, nama) {
   result.catatanBimbinganList.reverse();
   result.studentList.reverse();
 
+  // Auto-merge missing students into studentList from other lists to prevent missing student names in Guru account
+  var studentKeys = {};
+  result.studentList.forEach(function(s) {
+    var key = (s.namaSiswa ? s.namaSiswa.toLowerCase().trim() : "") + "|" + (s.kelas ? s.kelas.toLowerCase().trim() : "");
+    studentKeys[key] = true;
+  });
+  
+  result.siswaGuruWaliList.forEach(function(s) {
+    var key = (s.namaSiswa ? s.namaSiswa.toLowerCase().trim() : "") + "|" + (s.kelas ? s.kelas.toLowerCase().trim() : "");
+    if (s.namaSiswa && !studentKeys[key]) {
+      result.studentList.push({
+        id: s.id || ("SIS-AUTO-" + new Date().getTime()),
+        nis: s.nis || "",
+        namaSiswa: s.namaSiswa,
+        kelas: s.kelas,
+        tingkatan: ""
+      });
+      studentKeys[key] = true;
+    }
+  });
+
+  result.rekapAbsenList.forEach(function(ra) {
+    var key = (ra.namaSiswa ? ra.namaSiswa.toLowerCase().trim() : "") + "|" + (ra.kelas ? ra.kelas.toLowerCase().trim() : "");
+    if (ra.namaSiswa && !studentKeys[key]) {
+      result.studentList.push({
+        id: ra.id || ("SIS-AUTO-" + new Date().getTime()),
+        nis: "",
+        namaSiswa: ra.namaSiswa,
+        kelas: ra.kelas,
+        tingkatan: ""
+      });
+      studentKeys[key] = true;
+    }
+  });
+
   // Format GuruMaster list
   var sheetGuruMaster = ss.getSheetByName("GuruMaster");
   var guruMasterRaw = sheetGuruMaster ? sheetGuruMaster.getDataRange().getValues() : [["ID", "NamaGuru", "Mapel", "Kelas", "JumlahJam"]];
@@ -632,9 +667,9 @@ function getDashboard(role, email, nama) {
     result.perangkatList = guruPerangkat;
     result.guruJadwalList = guruJadwal;
     result.laporanWaliList = [];
-    result.rekapAbsenList = [];
+    result.rekapAbsenList = result.rekapAbsenList; // Do not clear, so Guru can use as fallback for student names
     result.kondisiSiswaList = [];
-    result.siswaGuruWaliList = [];
+    result.siswaGuruWaliList = result.siswaGuruWaliList; // Do not clear, so Guru can use as fallback for student names
     result.jurnal7KIHList = [];
   }
   else if (role === "Wali Kelas") {
