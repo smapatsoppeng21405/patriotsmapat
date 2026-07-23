@@ -23,6 +23,11 @@
   <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+  <!-- Excel & PDF Export Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
+
   <!-- Firebase SDK (Super-Fast Real-Time Storage) -->
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -3625,6 +3630,29 @@
   </div>
 
 
+  <!-- Download Format Chooser Modal -->
+  <div id="downloadFormatModal" class="modal-backdrop" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(8px); z-index: 10000; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.25s ease;">
+    <div class="card glass-effect" style="width: 90%; max-width: 450px; padding: 2rem; border-radius: 1rem; border: 1px solid var(--border-color); transform: scale(0.9); transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);">
+      <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;">
+        <div style="width: 3rem; height: 3rem; border-radius: 50%; background: rgba(99, 102, 241, 0.1); border: 1px solid var(--primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+          <i class="fa-solid fa-cloud-arrow-down" style="color: var(--primary); font-size: 1.25rem;"></i>
+        </div>
+        <h3 style="margin: 0; font-size: 1.2rem; font-weight: 600; color: var(--text-main);">Pilih Format Unduhan</h3>
+      </div>
+      <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 2rem; line-height: 1.6;">Silakan pilih format file rekap yang ingin Anda unduh:</p>
+      <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+        <button id="downloadExcelBtn" type="button" class="btn btn-primary" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.85rem;">
+          <i class="fa-solid fa-file-excel" style="font-size: 1.1rem;"></i> Unduh sebagai berkas EXCEL (.xlsx)
+        </button>
+        <button id="downloadPdfBtn" type="button" class="btn" style="background: var(--danger); color: white; display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.85rem; border: none; font-weight: 500; border-radius: 0.5rem; cursor: pointer;">
+          <i class="fa-solid fa-file-pdf" style="font-size: 1.1rem;"></i> Unduh sebagai berkas PDF (.pdf)
+        </button>
+        <button id="downloadFormatCancelBtn" type="button" class="btn" style="background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid var(--border-color); margin-top: 0.5rem;">Batal</button>
+      </div>
+    </div>
+  </div>
+
+
   <!-- ==================== MODAL PILIH SISWA TIDAK HADIR ==================== -->
   <div class="modal-overlay" id="absentStudentsModal" style="display:none; z-index: 9999;">
     <div class="modal-box glass-effect" style="max-width: 500px; max-height: 85vh; display: flex; flex-direction: column; padding: 1.5rem;">
@@ -3962,6 +3990,99 @@
       document.body.removeChild(link);
     }
 
+    function exportData(title, headers, rows, filenamePrefix) {
+      return new Promise((resolve) => {
+        const modal = document.getElementById('downloadFormatModal');
+        if (!modal) {
+          downloadCSV(headers, rows, filenamePrefix + ".csv");
+          resolve(true);
+          return;
+        }
+        
+        modal.style.display = 'flex';
+        modal.style.opacity = '0';
+        setTimeout(() => {
+          modal.style.opacity = '1';
+          modal.querySelector('.card').style.transform = 'scale(1)';
+        }, 10);
+        
+        const close = () => {
+          modal.querySelector('.card').style.transform = 'scale(0.9)';
+          modal.style.opacity = '0';
+          setTimeout(() => {
+            modal.style.display = 'none';
+          }, 250);
+        };
+        
+        document.getElementById('downloadFormatCancelBtn').onclick = () => {
+          close();
+          resolve(false);
+        };
+        
+        document.getElementById('downloadExcelBtn').onclick = () => {
+          close();
+          try {
+            const wsData = [headers, ...rows];
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Rekap");
+            XLSX.writeFile(wb, `${filenamePrefix}.xlsx`);
+            showToast("Rekap Excel berhasil diunduh!");
+          } catch (e) {
+            console.error("Gagal ekspor Excel, fallback ke CSV:", e);
+            downloadCSV(headers, rows, `${filenamePrefix}.csv`);
+            showToast("Terjadi error Excel, file diunduh sebagai CSV", "warning");
+          }
+          resolve(true);
+        };
+        
+        document.getElementById('downloadPdfBtn').onclick = () => {
+          close();
+          try {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('l', 'mm', 'a4'); // Landscape A4
+            
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(14);
+            doc.text(title, 14, 15);
+            
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(9);
+            doc.text(`Unduh Tanggal: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`, 14, 21);
+            
+            doc.autoTable({
+              startY: 25,
+              head: [headers],
+              body: rows,
+              theme: 'grid',
+              headStyles: {
+                fillColor: [99, 102, 241],
+                textColor: [255, 255, 255],
+                fontSize: 8,
+                fontStyle: 'bold'
+              },
+              bodyStyles: {
+                fontSize: 7,
+                textColor: [50, 50, 50]
+              },
+              alternateRowStyles: {
+                fillColor: [245, 247, 250]
+              },
+              margin: { left: 14, right: 14 }
+            });
+            
+            doc.save(`${filenamePrefix}.pdf`);
+            showToast("Rekap PDF berhasil diunduh!");
+          } catch (e) {
+            console.error("Gagal ekspor PDF, fallback ke CSV:", e);
+            downloadCSV(headers, rows, `${filenamePrefix}.csv`);
+            showToast("Terjadi error PDF, file diunduh sebagai CSV", "warning");
+          }
+          resolve(true);
+        };
+      });
+    }
+
     function downloadWakasekJurnal() {
       const searchGuru = document.getElementById('w-filter-guru').value.toLowerCase();
       const searchKelas = document.getElementById('w-filter-kelas').value;
@@ -3980,7 +4101,7 @@
       });
       
       const headers = ["Tanggal", "Nama Guru", "Kelas", "Materi Mengajar", "Kehadiran", "Catatan Jurnal", "Mode"];
-      const csvData = filtered.map(item => [
+      const rows = filtered.map(item => [
         new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
         item.guru,
         item.kelas,
@@ -3990,7 +4111,7 @@
         item.mode || "Tatap Muka"
       ]);
       
-      downloadCSV(headers, csvData, `Rekap_Jurnal_Mengajar_Kurikulum_${new Date().toISOString().substring(0, 10)}.csv`);
+      exportData("Monitoring Jurnal Mengajar Guru", headers, rows, `Rekap_Jurnal_Mengajar_Kurikulum_${new Date().toISOString().substring(0, 10)}`);
     }
 
     function downloadKepalaJurnal() {
@@ -4011,7 +4132,7 @@
       }
       
       const headers = ["Tanggal", "Nama Guru", "Kelas", "Materi Mengajar", "Kehadiran", "Catatan Jurnal", "Mode"];
-      const csvData = filtered.map(item => [
+      const rows = filtered.map(item => [
         new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
         item.guru,
         item.kelas,
@@ -4021,13 +4142,13 @@
         item.mode || "Tatap Muka"
       ]);
       
-      downloadCSV(headers, csvData, `Rekap_Jurnal_Mengajar_Sekolah_${new Date().toISOString().substring(0, 10)}.csv`);
+      exportData("Monitoring Jurnal Mengajar Guru (Kepala Sekolah)", headers, rows, `Rekap_Jurnal_Mengajar_Sekolah_${new Date().toISOString().substring(0, 10)}`);
     }
 
     function downloadWaliKelasJurnal() {
       const list = appState.jurnalList || [];
       const headers = ["Tanggal", "Nama Guru", "Kelas", "Materi Mengajar", "Kehadiran", "Catatan"];
-      const csvData = list.map(item => [
+      const rows = list.map(item => [
         new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
         item.guru,
         item.kelas,
@@ -4037,13 +4158,14 @@
       ]);
       
       const className = (appState.user && appState.user.waliKelasClass) || '';
-      downloadCSV(headers, csvData, `Rekap_Jurnal_Mengajar_Kelas_${className}_${new Date().toISOString().substring(0, 10)}.csv`);
+      exportData(`Monitoring Aktivitas Jurnal Mengajar Kelas ${className}`, headers, rows, `Rekap_Jurnal_Mengajar_Kelas_${className}_${new Date().toISOString().substring(0, 10)}`);
     }
 
+    // GURU WALI & WALI KELAS: REKAP ABSENSI DAN LAPORAN GURU WALI & WALI KELAS
     function downloadGuruJurnal() {
       const list = appState.jurnalList || [];
       const headers = ["Tanggal", "Kelas", "Materi Mengajar", "Kehadiran", "Catatan"];
-      const csvData = list.map(item => [
+      const rows = list.map(item => [
         new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
         item.kelas,
         item.materi,
@@ -4052,7 +4174,7 @@
       ]);
       
       const teacherName = (appState.user && appState.user.nama) || 'Guru';
-      downloadCSV(headers, csvData, `Riwayat_Jurnal_Mengajar_${teacherName.replace(/\s+/g, '_')}_${new Date().toISOString().substring(0, 10)}.csv`);
+      exportData(`Riwayat Jurnal Mengajar - ${teacherName}`, headers, rows, `Riwayat_Jurnal_Mengajar_${teacherName.replace(/\s+/g, '_')}_${new Date().toISOString().substring(0, 10)}`);
     }
 
     function downloadWakasekAbsen() {
@@ -4068,7 +4190,7 @@
       });
       
       const headers = ["Wali Kelas", "Kelas", "Bulan", "Tahun", "Nama Siswa", "Hadir", "Sakit", "Izin", "Alpa"];
-      const csvData = filtered.map(item => [
+      const rows = filtered.map(item => [
         item.waliKelas,
         item.kelas,
         item.bulan,
@@ -4080,13 +4202,13 @@
         item.alpa
       ]);
       
-      downloadCSV(headers, csvData, `Rekap_Absensi_Sekolah_${new Date().toISOString().substring(0, 10)}.csv`);
+      exportData("Monitoring Rekap Absensi Bulanan Kelas (Kurikulum)", headers, rows, `Rekap_Absensi_Sekolah_${new Date().toISOString().substring(0, 10)}`);
     }
 
     function downloadWaliKelasAbsen() {
       const list = appState.rekapAbsenList || [];
       const headers = ["Bulan", "Tahun", "Kelas", "Nama Siswa", "Hadir", "Sakit", "Izin", "Alpa"];
-      const csvData = list.map(item => [
+      const rows = list.map(item => [
         item.bulan,
         item.tahun,
         item.kelas,
@@ -4098,7 +4220,7 @@
       ]);
       
       const className = (appState.user && appState.user.waliKelasClass) || '';
-      downloadCSV(headers, csvData, `Rekap_Absensi_Kelas_${className}_${new Date().toISOString().substring(0, 10)}.csv`);
+      exportData(`Rekap Absensi Bulanan Kelas ${className}`, headers, rows, `Rekap_Absensi_Kelas_${className}_${new Date().toISOString().substring(0, 10)}`);
     }
 
     function downloadKepalaAbsen() {
@@ -4114,7 +4236,7 @@
       });
       
       const headers = ["Wali Kelas", "Kelas", "Bulan", "Tahun", "Nama Siswa", "Hadir", "Sakit", "Izin", "Alpa"];
-      const csvData = filtered.map(item => [
+      const rows = filtered.map(item => [
         item.waliKelas,
         item.kelas,
         item.bulan,
@@ -4126,13 +4248,13 @@
         item.alpa
       ]);
       
-      downloadCSV(headers, csvData, `Rekap_Absensi_Sekolah_${new Date().toISOString().substring(0, 10)}.csv`);
+      exportData("Monitoring Rekap Absensi Bulanan Kelas (Kepala Sekolah)", headers, rows, `Rekap_Absensi_Sekolah_${new Date().toISOString().substring(0, 10)}`);
     }
 
     function downloadGuruWali7KIH() {
       const list = appState.jurnal7KIHList || [];
       const headers = ["Tanggal", "NIS", "Nama Siswa", "Kelas", "Bangun Pagi", "Beribadah", "Berolahraga", "Makan Sehat", "Gemar Belajar", "Bermasyarakat", "Tidur Cepat"];
-      const csvData = list.map(item => [
+      const rows = list.map(item => [
         new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
         item.nis || "-",
         item.namaSiswa,
@@ -4147,20 +4269,21 @@
       ]);
       
       const teacherName = (appState.user && appState.user.nama) || 'Guru_Wali';
-      downloadCSV(headers, csvData, `Rekap_Jurnal_7KIH_Perwalian_${teacherName.replace(/\s+/g, '_')}_${new Date().toISOString().substring(0, 10)}.csv`);
+      exportData(`Rekap Jurnal Karakter 7KIH Siswa Bimbingan - ${teacherName}`, headers, rows, `Rekap_Jurnal_7KIH_Perwalian_${teacherName.replace(/\s+/g, '_')}_${new Date().toISOString().substring(0, 10)}`);
     }
 
+    // KEPALA SEKOLAH & GURU WALI: REKAP ABSENSI DAN LAPORAN GURU WALI & WALI KELAS
     function downloadGuruWaliBimbingan() {
       const list = appState.catatanBimbinganList || [];
-      const headers = ["Tanggal", "Nama Siswa", "Catatan Perkembangan"];
-      const csvData = list.map(item => [
+      const headers = ["Tanggal", "Nama Siswa", "Catatan Bimbingan"];
+      const rows = list.map(item => [
         new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
         item.namaSiswa,
         item.catatanPerkembangan || "-"
       ]);
       
       const teacherName = (appState.user && appState.user.nama) || 'Guru_Wali';
-      downloadCSV(headers, csvData, `Rekap_Bimbingan_Perwalian_${teacherName.replace(/\s+/g, '_')}_${new Date().toISOString().substring(0, 10)}.csv`);
+      exportData(`Riwayat Catatan Bimbingan Perwalian Saya - ${teacherName}`, headers, rows, `Rekap_Bimbingan_Perwalian_${teacherName.replace(/\s+/g, '_')}_${new Date().toISOString().substring(0, 10)}`);
     }
 
     function downloadWakasek7KIH() {
@@ -4176,7 +4299,7 @@
       });
       
       const headers = ["Tanggal", "Guru Wali", "NIS", "Nama Siswa", "Kelas", "Bangun Pagi", "Beribadah", "Berolahraga", "Makan Sehat", "Gemar Belajar", "Bermasyarakat", "Tidur Cepat"];
-      const csvData = filtered.map(item => [
+      const rows = filtered.map(item => [
         new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
         item.guruWali || "Umum",
         item.nis || "-",
@@ -4191,20 +4314,20 @@
         item.tidurCepat || "Tidak"
       ]);
       
-      downloadCSV(headers, csvData, `Rekap_Jurnal_7KIH_Sekolah_${new Date().toISOString().substring(0, 10)}.csv`);
+      exportData("Monitoring Jurnal Karakter 7KIH Siswa (Kurikulum)", headers, rows, `Rekap_Jurnal_7KIH_Sekolah_${new Date().toISOString().substring(0, 10)}`);
     }
 
     function downloadWakasekBimbingan() {
       const list = appState.catatanBimbinganList || [];
       const headers = ["Tanggal", "Guru Wali", "Nama Siswa", "Catatan Perkembangan"];
-      const csvData = list.map(item => [
+      const rows = list.map(item => [
         new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
         item.guruWali || "",
         item.namaSiswa,
         item.catatanPerkembangan || "-"
       ]);
       
-      downloadCSV(headers, csvData, `Rekap_Catatan_Bimbingan_Guru_Wali_Sekolah_${new Date().toISOString().substring(0, 10)}.csv`);
+      exportData("Monitoring Catatan Perkembangan Bimbingan Guru Wali (Kurikulum)", headers, rows, `Rekap_Catatan_Bimbingan_Guru_Wali_Sekolah_${new Date().toISOString().substring(0, 10)}`);
     }
 
     function downloadKepala7KIH() {
@@ -4220,7 +4343,7 @@
       });
       
       const headers = ["Tanggal", "Guru Wali", "NIS", "Nama Siswa", "Kelas", "Bangun Pagi", "Beribadah", "Berolahraga", "Makan Sehat", "Gemar Belajar", "Bermasyarakat", "Tidur Cepat"];
-      const csvData = filtered.map(item => [
+      const rows = filtered.map(item => [
         new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
         item.guruWali || "Umum",
         item.nis || "-",
@@ -4235,26 +4358,26 @@
         item.tidurCepat || "Tidak"
       ]);
       
-      downloadCSV(headers, csvData, `Rekap_Jurnal_7KIH_Sekolah_${new Date().toISOString().substring(0, 10)}.csv`);
+      exportData("Monitoring Jurnal Karakter 7KIH Siswa (Kepala Sekolah)", headers, rows, `Rekap_Jurnal_7KIH_Sekolah_${new Date().toISOString().substring(0, 10)}`);
     }
 
     function downloadKepalaBimbingan() {
       const list = appState.catatanBimbinganList || [];
       const headers = ["Tanggal", "Guru Wali", "Nama Siswa", "Catatan Perkembangan"];
-      const csvData = list.map(item => [
+      const rows = list.map(item => [
         new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
         item.guruWali || "",
         item.namaSiswa,
         item.catatanPerkembangan || "-"
       ]);
       
-      downloadCSV(headers, csvData, `Rekap_Catatan_Bimbingan_Guru_Wali_Sekolah_${new Date().toISOString().substring(0, 10)}.csv`);
+      exportData("Monitoring Catatan Perkembangan Bimbingan Guru Wali (Kepala Sekolah)", headers, rows, `Rekap_Catatan_Bimbingan_Guru_Wali_Sekolah_${new Date().toISOString().substring(0, 10)}`);
     }
 
     function downloadWaliKelasLaporan() {
       const list = appState.laporanWaliList || [];
       const headers = ["Tanggal", "Kelas", "Kategori", "Judul Laporan", "Isi Laporan", "Tindak Lanjut"];
-      const csvData = list.map(item => [
+      const rows = list.map(item => [
         new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
         item.kelas,
         item.kategori,
@@ -4264,13 +4387,13 @@
       ]);
       
       const className = (appState.user && appState.user.waliKelasClass) || '';
-      downloadCSV(headers, csvData, `Rekap_Laporan_Wali_Kelas_${className}_${new Date().toISOString().substring(0, 10)}.csv`);
+      exportData(`Riwayat Laporan Kelas Bimbingan - Kelas ${className}`, headers, rows, `Rekap_Laporan_Wali_Kelas_${className}_${new Date().toISOString().substring(0, 10)}`);
     }
 
     function downloadWakasekLaporan() {
       const list = appState.laporanWaliList || [];
       const headers = ["Tanggal", "Wali Kelas", "Kelas", "Kategori", "Judul Laporan", "Isi Laporan", "Tindak Lanjut"];
-      const csvData = list.map(item => [
+      const rows = list.map(item => [
         new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
         item.waliKelas,
         item.kelas,
@@ -4280,7 +4403,7 @@
         item.tindakLanjut || "-"
       ]);
       
-      downloadCSV(headers, csvData, `Rekap_Laporan_Wali_Kelas_Sekolah_${new Date().toISOString().substring(0, 10)}.csv`);
+      exportData("Monitoring Laporan Wali Kelas Masuk (Kurikulum)", headers, rows, `Rekap_Laporan_Wali_Kelas_Sekolah_${new Date().toISOString().substring(0, 10)}`);
     }
 
     // TOAST NOTIFICATIONS
