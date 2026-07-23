@@ -4012,6 +4012,22 @@
     }
 
     function completeUserLogin(profile, allProfiles) {
+      if (profile.role === "Wali Kelas" && !profile.waliKelasClass && profile.nama) {
+        const matchClass = profile.nama.match(/Wali\s+Kelas\s+([A-Za-zA-Z0-9\-]+)/i);
+        if (matchClass && matchClass[1]) {
+          profile.waliKelasClass = matchClass[1].trim().replace(/^(\d+)([a-zA-Z])$/i, "$1-$2");
+        }
+      }
+      if (allProfiles) {
+        allProfiles.forEach(p => {
+          if (p.role === "Wali Kelas" && !p.waliKelasClass && p.nama) {
+            const matchClass = p.nama.match(/Wali\s+Kelas\s+([A-Za-zA-Z0-9\-]+)/i);
+            if (matchClass && matchClass[1]) {
+              p.waliKelasClass = matchClass[1].trim().replace(/^(\d+)([a-zA-Z])$/i, "$1-$2");
+            }
+          }
+        });
+      }
       const finalUser = { ...profile, allProfiles: allProfiles || [profile] };
       appState.user = finalUser;
       localStorage.setItem('si_kurikulum_user', JSON.stringify(finalUser));
@@ -4342,6 +4358,14 @@
     // SETUP SESSION INTERFACES
     function setupSessionUI() {
       showAuthView(false);
+      
+      // Auto-extract homeroom class (Wali Kelas) if missing
+      if (appState.user && appState.user.role === "Wali Kelas" && !appState.user.waliKelasClass && appState.user.nama) {
+        const matchClass = appState.user.nama.match(/Wali\s+Kelas\s+([A-Za-zA-Z0-9\-]+)/i);
+        if (matchClass && matchClass[1]) {
+          appState.user.waliKelasClass = matchClass[1].trim().replace(/^(\d+)([a-zA-Z])$/i, "$1-$2");
+        }
+      }
       
       // Update Profile UI sidebar
       document.getElementById('userName').textContent = appState.user.nama;
@@ -10143,10 +10167,9 @@
         return;
       }
       
-      const students = appState.studentList || [];
-      const classStudents = students.filter(s => s.kelas && s.kelas.toUpperCase() === selectedClass.toUpperCase());
+      const studentNames = getStudentsForClass(selectedClass);
       
-      if (classStudents.length === 0) {
+      if (studentNames.length === 0) {
         showToast("Tidak ada data siswa untuk kelas " + selectedClass + " di database utama.", "warning");
         return;
       }
@@ -10154,12 +10177,12 @@
       const tbody = document.getElementById('absen-input-tbody');
       tbody.innerHTML = "";
       
-      const sortedStudents = [...classStudents].sort((a, b) => a.namaSiswa.localeCompare(b.namaSiswa));
+      const sortedNames = [...studentNames].sort((a, b) => a.localeCompare(b));
       
-      sortedStudents.forEach(item => {
+      sortedNames.forEach(name => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td><input type="text" class="form-control s-nama" style="padding-left:0.5rem;" value="${item.namaSiswa}" required></td>
+          <td><input type="text" class="form-control s-nama" style="padding-left:0.5rem;" value="${name}" required></td>
           <td><input type="number" class="form-control s-hadir" style="padding-left:0.5rem;" min="0" value="20" required></td>
           <td><input type="number" class="form-control s-sakit" style="padding-left:0.5rem;" min="0" value="0" required></td>
           <td><input type="number" class="form-control s-izin" style="padding-left:0.5rem;" min="0" value="0" required></td>
@@ -10169,7 +10192,7 @@
         tbody.appendChild(tr);
       });
       
-      showToast("Berhasil memuat " + classStudents.length + " siswa kelas " + selectedClass + "!");
+      showToast("Berhasil memuat " + studentNames.length + " siswa kelas " + selectedClass + "!");
     }
 
     function populateKondisiSiswaNames() {
@@ -10181,13 +10204,14 @@
       
       if (!kelas) return;
       
-      const students = appState.studentList || [];
-      const classStudents = students.filter(s => s.kelas && s.kelas.toUpperCase() === kelas.toUpperCase());
+      const studentNames = getStudentsForClass(kelas);
       
-      classStudents.sort((a, b) => a.namaSiswa.localeCompare(b.namaSiswa)).forEach(s => {
+      const sortedNames = [...studentNames].sort((a, b) => a.localeCompare(b));
+      
+      sortedNames.forEach(name => {
         const opt = document.createElement('option');
-        opt.value = s.namaSiswa;
-        opt.textContent = s.namaSiswa;
+        opt.value = name;
+        opt.textContent = name;
         selectNama.appendChild(opt);
       });
     }

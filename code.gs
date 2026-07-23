@@ -271,24 +271,39 @@ function login(email, password) {
       var rolesList = roleStr.split(",").map(function(r) { return r.trim(); }).filter(Boolean);
       var profiles = [];
       rolesList.forEach(function(r) {
+        var wClass = data[i][5] || "";
+        if (r === "Wali Kelas" && !wClass) {
+          var matchClass = data[i][1].match(/Wali\s+Kelas\s+([A-Za-z0-9\-]+)/i);
+          if (matchClass && matchClass[1]) {
+            wClass = matchClass[1].trim().replace(/^(\d+)([a-zA-Z])$/, "$1-$2");
+          }
+        }
         profiles.push({
           id: data[i][0],
           nama: data[i][1],
           email: data[i][2],
           role: r,
-          waliKelasClass: data[i][5] || ""
+          waliKelasClass: wClass
         });
       });
       
       if (profiles.length > 1) {
         return { multiple: true, profiles: profiles };
       } else {
+        var firstRole = rolesList[0] || "Guru";
+        var wClass = data[i][5] || "";
+        if (firstRole === "Wali Kelas" && !wClass) {
+          var matchClass = data[i][1].match(/Wali\s+Kelas\s+([A-Za-z0-9\-]+)/i);
+          if (matchClass && matchClass[1]) {
+            wClass = matchClass[1].trim().replace(/^(\d+)([a-zA-Z])$/, "$1-$2");
+          }
+        }
         return {
           id: data[i][0],
           nama: data[i][1],
           email: data[i][2],
           role: roleStr || "Guru",
-          waliKelasClass: data[i][5] || ""
+          waliKelasClass: wClass
         };
       }
     }
@@ -688,7 +703,7 @@ function getDashboard(role, email, nama) {
     var myClass = "";
     var matchClass = nama.match(/Wali Kelas\s+([A-Za-zA-Z0-9\-]+)/i);
     if (matchClass && matchClass[1]) {
-      myClass = matchClass[1].trim();
+      myClass = matchClass[1].trim().replace(/^(\d+)([a-zA-Z])$/, "$1-$2");
     }
     if (myClass) {
       result.jurnalList = result.jurnalList.filter(function(j) {
