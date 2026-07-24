@@ -1977,7 +1977,11 @@
               Daftarkan akun login guru terlebih dahulu di sini. Setelah didaftarkan, Anda dapat menentukan kelas, mata pelajaran, dan beban jam mengajar mereka di form tugas mengajar di bawah.
             </p>
             
-            <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap;">
+            <div id="teacherAdminOnlyWarning" style="display: none; margin-bottom: 1.5rem; padding: 1rem; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.2); border-radius: 6px; color: #f59e0b; font-size: 0.85rem;">
+              <i class="fa-solid fa-triangle-exclamation"></i> Pengisian dan edit data guru hanya dapat dilakukan oleh akun Administrator.
+            </div>
+
+            <div id="teacherExcelImportControls" style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap;">
               <input type="file" id="teacherExcelImportInput" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleTeacherExcelImport(event)">
               <button type="button" class="btn btn-secondary" onclick="document.getElementById('teacherExcelImportInput').click()" style="padding: 0.5rem 1rem; font-size: 0.85rem; background-color: var(--border-color); border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 0.5rem;">
                 <i class="fa-solid fa-file-import" style="color: var(--success);"></i> Impor Guru dari Excel / CSV
@@ -1985,7 +1989,7 @@
               <button type="button" class="btn btn-secondary" onclick="downloadTeacherTemplate()" style="padding: 0.5rem 1rem; font-size: 0.85rem; background-color: rgba(99, 102, 241, 0.08); border: 1px solid var(--primary); display: flex; align-items: center; gap: 0.5rem; color: var(--primary);">
                 <i class="fa-solid fa-file-arrow-down"></i> Unduh Template Excel
               </button>
-              <span style="font-size: 0.75rem; color: var(--text-muted);">(Format Kolom: Nama, Email, Role, Password)</span>
+              <span style="font-size: 0.75rem; color: var(--text-muted);">(Format Kolom: Nama, Email, Role, Password, WaliKelasClass, Mapel)</span>
             </div>
             
             <form id="formTeacher" onsubmit="submitTeacherForm(event)" style="margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 2rem;">
@@ -2175,7 +2179,11 @@
               Kelola basis data utama siswa di sini. Anda bisa menambahkan secara manual atau mengimpor daftar siswa dalam jumlah besar dari file Excel/CSV.
             </p>
 
-            <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap;">
+            <div id="studentAdminOnlyWarning" style="display: none; margin-bottom: 1.5rem; padding: 1rem; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.2); border-radius: 6px; color: #f59e0b; font-size: 0.85rem;">
+              <i class="fa-solid fa-triangle-exclamation"></i> Pengisian dan edit data siswa hanya dapat dilakukan oleh akun Administrator.
+            </div>
+
+            <div id="studentExcelImportControls" style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap;">
               <input type="file" id="studentExcelImportInput" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleStudentExcelImport(event)">
               <button type="button" class="btn btn-secondary" onclick="document.getElementById('studentExcelImportInput').click()" style="padding: 0.5rem 1rem; font-size: 0.85rem; background-color: var(--border-color); border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 0.5rem;">
                 <i class="fa-solid fa-file-import" style="color: var(--success);"></i> Impor Siswa dari Excel / CSV
@@ -5532,6 +5540,7 @@
         }
 
         else if (action === "addTeacher") {
+          if (payload.currentUserRole !== "Admin") throw new Error("Akses Ditolak: Hanya Admin yang dapat menambah/mengedit data guru.");
           const key = payload.id || ref("users").push().key;
           await ref(`users/${key}`).update({
             nama: payload.nama,
@@ -5546,11 +5555,13 @@
         }
 
         else if (action === "deleteTeacher") {
+          if (payload.currentUserRole !== "Admin") throw new Error("Akses Ditolak: Hanya Admin yang dapat menghapus data guru.");
           await ref(`users/${payload.id}`).remove();
           return { success: true };
         }
 
         else if (action === "addStudent") {
+          if (payload.currentUserRole !== "Admin") throw new Error("Akses Ditolak: Hanya Admin yang dapat menambah/mengedit data siswa.");
           const key = payload.id || ref("students").push().key;
           await ref(`students/${key}`).update({
             nis: payload.nis || "",
@@ -5562,6 +5573,7 @@
         }
 
         else if (action === "deleteStudent") {
+          if (payload.currentUserRole !== "Admin") throw new Error("Akses Ditolak: Hanya Admin yang dapat menghapus data siswa.");
           const ids = payload.ids || [payload.id];
           for (const id of ids) {
             await ref(`students/${id}`).remove();
@@ -5587,6 +5599,7 @@
         }
 
         else if (action === "importStudents") {
+          if (payload.currentUserRole !== "Admin") throw new Error("Akses Ditolak: Hanya Admin yang dapat mengimpor data siswa.");
           const list = payload.list || [];
           const updates = {};
           
@@ -5605,6 +5618,7 @@
         }
 
         else if (action === "importTeachers") {
+          if (payload.currentUserRole !== "Admin") throw new Error("Akses Ditolak: Hanya Admin yang dapat mengimpor data guru.");
           const list = payload.list || [];
           const updates = {};
           
@@ -5614,7 +5628,9 @@
               nama: item.nama,
               email: item.email,
               role: item.role || "Guru",
-              password: item.password || "guru123"
+              password: item.password || "guru123",
+              waliKelasClass: item.waliKelasClass || "",
+              mapel: item.mapel || ""
             };
           }
           
@@ -6112,6 +6128,7 @@
         }
 
         else if (action === "addTeacher") {
+          if (payload.currentUserRole !== "Admin") throw new Error("Akses Ditolak: Hanya Admin yang dapat menambah/mengedit data guru.");
           const id = payload.id || db.collection("users").doc().id;
           await db.collection("users").doc(id).set({
             nama: payload.nama,
@@ -6125,11 +6142,13 @@
         }
 
         else if (action === "deleteTeacher") {
+          if (payload.currentUserRole !== "Admin") throw new Error("Akses Ditolak: Hanya Admin yang dapat menghapus data guru.");
           await db.collection("users").doc(payload.id).delete();
           return { success: true };
         }
 
         else if (action === "addStudent") {
+          if (payload.currentUserRole !== "Admin") throw new Error("Akses Ditolak: Hanya Admin yang dapat menambah/mengedit data siswa.");
           const id = payload.id || db.collection("students").doc().id;
           await db.collection("students").doc(id).set({
             nis: payload.nis || "",
@@ -6141,6 +6160,7 @@
         }
 
         else if (action === "deleteStudent") {
+          if (payload.currentUserRole !== "Admin") throw new Error("Akses Ditolak: Hanya Admin yang dapat menghapus data siswa.");
           const ids = payload.ids || [payload.id];
           const batch = db.batch();
           for (const id of ids) {
@@ -6168,6 +6188,7 @@
         }
 
         else if (action === "importStudents") {
+          if (payload.currentUserRole !== "Admin") throw new Error("Akses Ditolak: Hanya Admin yang dapat mengimpor data siswa.");
           const list = payload.list || [];
           const batch = db.batch();
           for (const item of list) {
@@ -6185,6 +6206,7 @@
         }
 
         else if (action === "importTeachers") {
+          if (payload.currentUserRole !== "Admin") throw new Error("Akses Ditolak: Hanya Admin yang dapat mengimpor data guru.");
           const list = payload.list || [];
           const batch = db.batch();
           for (const item of list) {
@@ -6194,7 +6216,9 @@
               nama: item.nama,
               email: item.email,
               role: item.role || "Guru",
-              password: item.password || "guru123"
+              password: item.password || "guru123",
+              waliKelasClass: item.waliKelasClass || "",
+              mapel: item.mapel || ""
             }, { merge: true });
           }
           await batch.commit();
@@ -6483,6 +6507,24 @@
       populateClassDropdowns();
       
       if (role === "Wakasek" || role === "Admin") {
+        const isAdmin = (role === "Admin");
+
+        // Toggle teacher master data entry visibilities
+        const formTeacher = document.getElementById('formTeacher');
+        const teacherImportControls = document.getElementById('teacherExcelImportControls');
+        const teacherWarning = document.getElementById('teacherAdminOnlyWarning');
+        if (formTeacher) formTeacher.style.display = isAdmin ? 'block' : 'none';
+        if (teacherImportControls) teacherImportControls.style.display = isAdmin ? 'flex' : 'none';
+        if (teacherWarning) teacherWarning.style.display = isAdmin ? 'none' : 'block';
+
+        // Toggle student master data entry visibilities
+        const formStudent = document.getElementById('formStudent');
+        const studentImportControls = document.getElementById('studentExcelImportControls');
+        const studentWarning = document.getElementById('studentAdminOnlyWarning');
+        if (formStudent) formStudent.style.display = isAdmin ? 'block' : 'none';
+        if (studentImportControls) studentImportControls.style.display = isAdmin ? 'flex' : 'none';
+        if (studentWarning) studentWarning.style.display = isAdmin ? 'none' : 'block';
+
         // Show class selection dropdown groups for Wakasek
         ['absenKelasGroup', 'kondisiKelasGroup', 'laporanKelasGroup'].forEach(gId => {
           const el = document.getElementById(gId);
@@ -8563,6 +8605,11 @@
      async function submitTeacherForm(e) {
        e.preventDefault();
        
+       if (!appState.user || appState.user.role !== "Admin") {
+         showToast("Akses Ditolak: Hanya Admin yang dapat menambah/mengedit data guru.", "danger");
+         return;
+       }
+
        const id = document.getElementById('teacherId').value;
        const nama = document.getElementById('teacherNama').value;
        const nip = document.getElementById('teacherNip') ? document.getElementById('teacherNip').value.trim() : "";
@@ -8630,9 +8677,13 @@
 
     // Hapus Akun Guru
     async function deleteTeacher(id) {
+      if (!appState.user || appState.user.role !== "Admin") {
+        showToast("Akses Ditolak: Hanya Admin yang dapat menghapus data guru.", "danger");
+        return;
+      }
       if (!confirm("Apakah Anda yakin ingin menghapus akun guru ini? Menghapus guru dapat berdampak pada roster dan tugas mengajar yang sudah terdaftar.")) return;
       
-      showLoading(true, "Menghapus akun guru...");
+      showLoading(true, "Menyapus akun guru...");
       try {
         await callApi("deleteTeacher", { id });
         showToast("Akun guru berhasil dihapus.");
@@ -8655,10 +8706,22 @@
         return;
       }
       
+      const isAdmin = (appState.user && appState.user.role === "Admin");
+
       list.forEach(item => {
         const nipDisplay = item.nip ? `<div style="font-size:0.75rem; color:var(--primary); font-family:monospace;">NIP: ${item.nip}</div>` : '';
 
         const tr = document.createElement('tr');
+        
+        const actionsHtml = isAdmin ? `
+          <button type="button" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-right: 0.25rem;" onclick="editTeacher('${item.id}')">
+            <i class="fa-solid fa-edit"></i> Edit
+          </button>
+          <button type="button" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; color: var(--danger);" onclick="deleteTeacher('${item.id}')">
+            <i class="fa-solid fa-trash"></i> Hapus
+          </button>
+        ` : `<span style="color: var(--text-muted); font-size: 0.75rem; font-style: italic;">Akses Terbatas</span>`;
+
         tr.innerHTML = `
           <td style="font-weight:600; color:#cbd5e1;">${item.nama}${nipDisplay}</td>
           <td>${item.email}</td>
@@ -8681,14 +8744,7 @@
           </td>
           <td>${item.mapel || '-'}</td>
           <td style="font-family: monospace;">${item.password}</td>
-          <td>
-            <button type="button" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-right: 0.25rem;" onclick="editTeacher('${item.id}')">
-              <i class="fa-solid fa-edit"></i> Edit
-            </button>
-            <button type="button" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; color: var(--danger);" onclick="deleteTeacher('${item.id}')">
-              <i class="fa-solid fa-trash"></i> Hapus
-            </button>
-          </td>
+          <td>${actionsHtml}</td>
         `;
         tbody.appendChild(tr);
       });
@@ -8697,6 +8753,11 @@
     // ---------------- DATA UTAMA SISWA FUNCTIONS ----------------
     async function submitStudentForm(e) {
       e.preventDefault();
+      
+      if (!appState.user || appState.user.role !== "Admin") {
+        showToast("Akses Ditolak: Hanya Admin yang dapat menambah/mengedit data siswa.", "danger");
+        return;
+      }
       
       const id = document.getElementById('studentId').value;
       const nis = document.getElementById('studentNis').value.trim();
@@ -8741,6 +8802,10 @@
     }
 
     async function deleteStudent(id) {
+      if (!appState.user || appState.user.role !== "Admin") {
+        showToast("Akses Ditolak: Hanya Admin yang dapat menghapus data siswa.", "danger");
+        return;
+      }
       if (!confirm("Apakah Anda yakin ingin menghapus data siswa ini?")) return;
       
       showLoading(true, "Menghapus data siswa...");
@@ -8760,9 +8825,14 @@
       if (!tbody) return;
       tbody.innerHTML = "";
       
+      const isAdmin = (appState.user && appState.user.role === "Admin");
+
       // Reset status bulk delete
       const selectAllHeader = document.getElementById('selectAllStudents');
-      if (selectAllHeader) selectAllHeader.checked = false;
+      if (selectAllHeader) {
+        selectAllHeader.checked = false;
+        selectAllHeader.disabled = !isAdmin;
+      }
       const bulkDeleteContainer = document.getElementById('bulkDeleteContainer');
       if (bulkDeleteContainer) bulkDeleteContainer.style.display = "none";
       
@@ -8783,21 +8853,26 @@
       
       filtered.forEach((item, idx) => {
         const tr = document.createElement('tr');
+        
+        const chkHtml = isAdmin ? `<input type="checkbox" class="student-select-chk" value="${item.id}" onchange="updateBulkDeleteButton()">` : `<input type="checkbox" disabled>`;
+        
+        const actionsHtml = isAdmin ? `
+          <button type="button" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-right: 0.25rem;" onclick="editStudent('${item.id}')">
+            <i class="fa-solid fa-edit"></i> Edit
+          </button>
+          <button type="button" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; color: var(--danger);" onclick="deleteStudent('${item.id}')">
+            <i class="fa-solid fa-trash"></i> Hapus
+          </button>
+        ` : `<span style="color: var(--text-muted); font-size: 0.75rem; font-style: italic;">Akses Terbatas</span>`;
+
         tr.innerHTML = `
-          <td><input type="checkbox" class="student-select-chk" value="${item.id}" onchange="updateBulkDeleteButton()"></td>
+          <td>${chkHtml}</td>
           <td>${idx + 1}</td>
           <td style="font-family: monospace; font-weight: 600; color: var(--primary);">${item.nis || "-"}</td>
           <td style="font-weight: 600; color: #cbd5e1;">${item.namaSiswa}</td>
           <td><span class="badge badge-success" style="background:rgba(16,185,129,0.08);">${item.kelas}</span></td>
           <td><span class="badge badge-primary" style="background:rgba(99,102,241,0.08); color:var(--primary); font-weight:600;">${item.tingkatan || "-"}</span></td>
-          <td>
-            <button type="button" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-right: 0.25rem;" onclick="editStudent('${item.id}')">
-              <i class="fa-solid fa-edit"></i> Edit
-            </button>
-            <button type="button" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; color: var(--danger);" onclick="deleteStudent('${item.id}')">
-              <i class="fa-solid fa-trash"></i> Hapus
-            </button>
-          </td>
+          <td>${actionsHtml}</td>
         `;
         tbody.appendChild(tr);
       });
@@ -8829,6 +8904,10 @@
     }
 
     async function deleteSelectedStudents() {
+      if (!appState.user || appState.user.role !== "Admin") {
+        showToast("Akses Ditolak: Hanya Admin yang dapat menghapus data siswa.", "danger");
+        return;
+      }
       const checkboxes = document.querySelectorAll('.student-select-chk');
       const checkedBoxes = Array.from(checkboxes).filter(chk => chk.checked);
       if (checkedBoxes.length === 0) return;
@@ -8863,6 +8942,10 @@
     }
 
     async function deleteAllStudents() {
+      if (!appState.user || appState.user.role !== "Admin") {
+        showToast("Akses Ditolak: Hanya Admin yang dapat menghapus data siswa.", "danger");
+        return;
+      }
       const confirmed = await showCustomConfirm(
         "Hapus Keseluruhan Siswa", 
         "PERINGATAN: Apakah Anda yakin ingin menghapus seluruh data siswa dari database? Tindakan ini tidak dapat dibatalkan.", 
@@ -8942,11 +9025,11 @@
     }
 
     function generateTeacherTemplateFile() {
-      const headers = [["Nama Lengkap", "Email", "Role", "Password"]];
+      const headers = [["Nama Lengkap", "Email", "Role", "Password", "WaliKelasClass", "Mata Pelajaran"]];
       const sampleData = [
-        ["Ahmad Dahlan", "dahlan@sekolah.com", "Guru", "guru123"],
-        ["Siti Khadijah", "siti@sekolah.com", "Guru, Wali Kelas", "guru123"],
-        ["Mulyadi", "mulyadi@sekolah.com", "Wakasek", "admin123"]
+        ["Ahmad Dahlan", "dahlan@sekolah.com", "Guru", "guru123", "", "Fisika Dasar"],
+        ["Siti Khadijah", "siti@sekolah.com", "Guru, Wali Kelas", "guru123", "10-A", "Matematika Aljabar, Matematika Peminatan"],
+        ["Mulyadi", "mulyadi@sekolah.com", "Wakasek", "admin123", "", ""]
       ];
       const data = headers.concat(sampleData);
       
@@ -9099,6 +9182,10 @@
     }
 
     async function submitStudentImport(list) {
+      if (!appState.user || appState.user.role !== "Admin") {
+        showToast("Akses Ditolak: Hanya Admin yang dapat mengimpor data siswa.", "danger");
+        return;
+      }
       if (list.length === 0) {
         showToast("Tidak ada data siswa ditemukan di file excel.", "warning");
         return;
@@ -9117,6 +9204,10 @@
     }
 
     function handleTeacherExcelImport(e) {
+      if (!appState.user || appState.user.role !== "Admin") {
+        showToast("Akses Ditolak: Hanya Admin yang dapat mengimpor data guru.", "danger");
+        return;
+      }
       const file = e.target.files[0];
       if (!file) return;
       
@@ -9135,7 +9226,9 @@
                   nama: cols[0].replace(/["']/g, "").trim(),
                   email: cols[1].replace(/["']/g, "").trim(),
                   role: cols[2] ? cols[2].replace(/["']/g, "").trim() : "Guru",
-                  password: cols[3] ? cols[3].replace(/["']/g, "").trim() : "guru123"
+                  password: cols[3] ? cols[3].replace(/["']/g, "").trim() : "guru123",
+                  waliKelasClass: cols[4] ? cols[4].replace(/["']/g, "").trim() : "",
+                  mapel: cols[5] ? cols[5].replace(/["']/g, "").trim() : ""
                 });
               }
             }
@@ -9183,7 +9276,9 @@
             nama: row[0] ? row[0].toString().trim() : "",
             email: row[1] ? row[1].toString().trim() : "",
             role: row[2] ? row[2].toString().trim() : "Guru",
-            password: row[3] ? row[3].toString().trim() : "guru123"
+            password: row[3] ? row[3].toString().trim() : "guru123",
+            waliKelasClass: row[4] ? row[4].toString().trim() : "",
+            mapel: row[5] ? row[5].toString().trim() : ""
           });
         }
         submitTeacherImport(parsedData);
@@ -9193,6 +9288,10 @@
     }
 
     async function submitTeacherImport(list) {
+      if (!appState.user || appState.user.role !== "Admin") {
+        showToast("Akses Ditolak: Hanya Admin yang dapat mengimpor data guru.", "danger");
+        return;
+      }
       if (list.length === 0) {
         showToast("Tidak ada data guru ditemukan di file excel.", "warning");
         return;
@@ -10369,6 +10468,7 @@
           }
 
           else if (action === "addTeacher") {
+            if (payload.currentUserRole !== "Admin") return reject(new Error("Akses Ditolak: Hanya Admin yang dapat menambah/mengedit data guru."));
             const users = JSON.parse(localStorage.getItem('db_users')) || [];
             const id = payload.id || "USR-" + new Date().getTime();
             const index = users.findIndex(u => u.id === id);
@@ -10394,6 +10494,7 @@
           }
 
           else if (action === "deleteTeacher") {
+            if (payload.currentUserRole !== "Admin") return reject(new Error("Akses Ditolak: Hanya Admin yang dapat menghapus data guru."));
             const users = JSON.parse(localStorage.getItem('db_users')) || [];
             const index = users.findIndex(u => u.id === payload.id);
             if (index !== -1) {
@@ -10406,6 +10507,7 @@
           }
 
           else if (action === "addStudent") {
+            if (payload.currentUserRole !== "Admin") return reject(new Error("Akses Ditolak: Hanya Admin yang dapat menambah/mengedit data siswa."));
             const students = JSON.parse(localStorage.getItem('db_students')) || [];
             const id = payload.id || "SIS-" + new Date().getTime();
             const index = students.findIndex(s => s.id === id);
@@ -10429,6 +10531,7 @@
           }
 
           else if (action === "deleteStudent") {
+            if (payload.currentUserRole !== "Admin") return reject(new Error("Akses Ditolak: Hanya Admin yang dapat menghapus data siswa."));
             const students = JSON.parse(localStorage.getItem('db_students')) || [];
             const ids = payload.ids || [payload.id];
             const updated = students.filter(s => !ids.includes(s.id));
@@ -10468,6 +10571,7 @@
           }
 
           else if (action === "importStudents") {
+            if (payload.currentUserRole !== "Admin") return reject(new Error("Akses Ditolak: Hanya Admin yang dapat mengimpor data siswa."));
             const students = JSON.parse(localStorage.getItem('db_students')) || [];
             const list = payload.list || [];
             
@@ -10494,6 +10598,7 @@
           }
 
           else if (action === "importTeachers") {
+            if (payload.currentUserRole !== "Admin") return reject(new Error("Akses Ditolak: Hanya Admin yang dapat mengimpor data guru."));
             const users = JSON.parse(localStorage.getItem('db_users')) || [];
             const list = payload.list || [];
             
@@ -10505,7 +10610,9 @@
                 nama: item.nama,
                 email: item.email,
                 role: item.role || "Guru",
-                password: item.password || "guru123"
+                password: item.password || "guru123",
+                waliKelasClass: item.waliKelasClass || "",
+                mapel: item.mapel || ""
               };
               
               if (index !== -1) {

@@ -189,26 +189,32 @@ function doPost(e) {
         break;
 
       case "addTeacher":
+        if (payload.currentUserRole !== "Admin") throw new Error("Akses ditolak. Pengisian data guru hanya dapat dilakukan oleh Admin.");
         response = { status: "success", data: addTeacher(payload) };
         break;
 
       case "deleteTeacher":
+        if (payload.currentUserRole !== "Admin") throw new Error("Akses ditolak. Penghapusan data guru hanya dapat dilakukan oleh Admin.");
         response = { status: "success", data: deleteTeacher(payload.id) };
         break;
 
       case "addStudent":
+        if (payload.currentUserRole !== "Admin") throw new Error("Akses ditolak. Pengisian data siswa hanya dapat dilakukan oleh Admin.");
         response = { status: "success", data: addStudent(payload) };
         break;
 
       case "deleteStudent":
-        response = { status: "success", data: deleteStudent(payload.id) };
+        if (payload.currentUserRole !== "Admin") throw new Error("Akses ditolak. Penghapusan data siswa hanya dapat dilakukan oleh Admin.");
+        response = { status: "success", data: deleteStudent(payload) };
         break;
 
       case "importStudents":
+        if (payload.currentUserRole !== "Admin") throw new Error("Akses ditolak. Impor data siswa hanya dapat dilakukan oleh Admin.");
         response = { status: "success", data: importStudents(payload) };
         break;
 
       case "importTeachers":
+        if (payload.currentUserRole !== "Admin") throw new Error("Akses ditolak. Impor data guru hanya dapat dilakukan oleh Admin.");
         response = { status: "success", data: importTeachers(payload) };
         break;
         
@@ -1385,14 +1391,18 @@ function importTeachers(payload) {
     var email = item.email ? item.email.toString().toLowerCase().trim() : "";
     var role = item.role || "Guru";
     var password = item.password ? item.password.toString().trim() : "guru123";
+    var waliKelasClass = item.waliKelasClass || "";
+    var mapel = item.mapel || "";
     
     if (email && existingEmailMap[email]) {
       var rowNum = existingEmailMap[email];
       sheet.getRange(rowNum, 2).setValue(nama);
       sheet.getRange(rowNum, 4).setValue(role);
       sheet.getRange(rowNum, 5).setValue(password);
+      sheet.getRange(rowNum, 6).setValue(waliKelasClass);
+      sheet.getRange(rowNum, 7).setValue(mapel);
     } else {
-      sheet.appendRow([id, nama, email, role, password]);
+      sheet.appendRow([id, nama, email, role, password, waliKelasClass, mapel]);
     }
   });
   
