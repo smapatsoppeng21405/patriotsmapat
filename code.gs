@@ -119,7 +119,7 @@ function doPost(e) {
     var payload = request.payload || {};
     
     // Auth bypass check
-    if (action !== "login" && action !== "addJurnal7KIH" && !payload.currentUserEmail) {
+    if (action !== "login" && action !== "addJurnal7KIH" && action !== "getSiswaPublic" && !payload.currentUserEmail) {
       throw new Error("Sesi pengguna tidak valid. Silakan login kembali.");
     }
     
@@ -228,6 +228,10 @@ function doPost(e) {
         
       case "addJurnal7KIH":
         response = { status: "success", data: addJurnal7KIH(payload) };
+        break;
+        
+      case "getSiswaPublic":
+        response = { status: "success", data: getSiswaPublic() };
         break;
         
       case "deleteJurnal7KIH":
@@ -739,7 +743,8 @@ function getDashboard(role, email, nama, waliKelasClass) {
     var myJurnal7KIH = result.jurnal7KIHList.filter(function(j) {
       var isMatchNis = j.nis && myStudentNisList.indexOf(j.nis.toString().trim()) !== -1;
       var isMatchName = j.namaSiswa && myStudentNamesList.indexOf(j.namaSiswa.toLowerCase().trim()) !== -1;
-      return isMatchNis || isMatchName;
+      var isMatchGW = j.guruWali && (j.guruWali.toLowerCase().indexOf(nama.toLowerCase()) !== -1 || j.guruWali.toLowerCase().indexOf(email.toLowerCase()) !== -1);
+      return isMatchNis || isMatchName || isMatchGW;
     });
     
     var myCatatanBimbingan = result.catatanBimbinganList.filter(function(c) {
@@ -1754,4 +1759,52 @@ function deleteSiswaMapelPilihan(payload) {
     }
   }
   throw new Error("Siswa mapel pilihan tidak ditemukan.");
+}
+
+// Mengambil Data Siswa & Setelan untuk Form Publik Jurnal 7KIH
+function getSiswaPublic() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheetSiswa = ss.getSheetByName("Siswa");
+  var siswaRaw = (sheetSiswa && sheetSiswa.getLastRow() > 0) ? sheetSiswa.getDataRange().getValues() : [["ID", "NIS", "NamaSiswa", "Kelas"]];
+  
+  var studentList = [];
+  for (var i = 1; i < siswaRaw.length; i++) {
+    var row = siswaRaw[i];
+    studentList.push({
+      nis: row[1] ? row[1].toString().trim() : "",
+      namaSiswa: row[2] ? row[2].toString().trim() : "",
+      kelas: row[3] ? row[3].toString().trim() : ""
+    });
+  }
+
+  // Also read settings to get daftar_kelas
+  var sheetSettings = ss.getSheetByName("Settings");
+  var settingsRaw = sheetSettings ? sheetSettings.getDataRange().getValues() : [["Key", "Value"]];
+  var daftarKelas = ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"];
+  for (var i = 1; i < settingsRaw.length; i++) {
+    var row = settingsRaw[i];
+    if (row[0].toString().trim() === "daftar_kelas") {
+      var val = row[1].toString().trim();
+      daftarKelas = val ? val.split(",") : daftarKelas;
+    }
+  }
+
+  // If student table is empty, fall back to any students registered in SiswaGuruWali to ensure compatibility
+  if (studentList.length === 0) {
+    var sheetSgw = ss.getSheetByName("SiswaGuruWali");
+    var sgwRaw = (sheetSgw && sheetSgw.getLastRow() > 0) ? sheetSgw.getDataRange().getValues() : [];
+    for (var i = 1; i < sgwRaw.length; i++) {
+      var row = sgwRaw[i];
+      studentList.push({
+        nis: row[1] ? row[1].toString().trim() : "",
+        namaSiswa: row[2] ? row[2].toString().trim() : "",
+        kelas: row[3] ? row[3].toString().trim() : ""
+      });
+    }
+  }
+
+  return {
+    studentList: studentList,
+    daftarKelas: daftarKelas
+  };
 }

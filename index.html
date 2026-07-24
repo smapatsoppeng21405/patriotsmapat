@@ -1145,24 +1145,20 @@
       <form id="formStudent7KIH" onsubmit="submitStudent7KIHForm(event)">
         <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
           <div class="form-group">
-            <label for="studentNIS">NIS Siswa</label>
-            <input type="text" id="studentNIS" class="form-control" style="padding-left: 1rem;" placeholder="Masukkan NIS Anda" required>
+            <label for="studentKelas">Kelas</label>
+            <select id="studentKelas" class="filter-control" style="padding: 0.85rem 1rem;" required onchange="populateStudentNamesForPublic()">
+              <option value="">Pilih Kelas</option>
+            </select>
           </div>
           <div class="form-group">
             <label for="studentNama">Nama Lengkap Siswa</label>
-            <input type="text" id="studentNama" class="form-control" style="padding-left: 1rem;" placeholder="Nama Lengkap Anda" required>
+            <select id="studentNama" class="filter-control" style="padding: 0.85rem 1rem;" required onchange="handleStudentNameChange()">
+              <option value="">Pilih Nama Anda</option>
+            </select>
           </div>
           <div class="form-group">
-            <label for="studentKelas">Kelas</label>
-            <select id="studentKelas" class="filter-control" style="padding: 0.85rem 1rem;" required>
-              <option value="">Pilih Kelas</option>
-              <option value="10-A">10-A</option>
-              <option value="10-B">10-B</option>
-              <option value="11-A">11-A</option>
-              <option value="11-B">11-B</option>
-              <option value="12-A">12-A</option>
-              <option value="12-B">12-B</option>
-            </select>
+            <label for="studentNIS">NIS Siswa</label>
+            <input type="text" id="studentNIS" class="form-control" style="padding-left: 1rem;" placeholder="Pilih Nama Anda" readonly required>
           </div>
         </div>
 
@@ -5330,6 +5326,44 @@
           throw new Error("Email atau password salah.");
         }
 
+        else if (action === "getSiswaPublic") {
+          const snap = await ref("/").once("value");
+          const root = snap.val() || {};
+          const sObj = root.students || {};
+          const studentList = Object.keys(sObj).map(k => ({
+            nis: sObj[k].nis ? sObj[k].nis.toString().trim() : "",
+            namaSiswa: sObj[k].namaSiswa ? sObj[k].namaSiswa.toString().trim() : "",
+            kelas: sObj[k].kelas ? sObj[k].kelas.toString().trim() : ""
+          }));
+          
+          let settings = { hariBelajar: 5, daftarKelas: ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"] };
+          if (root.settings) {
+            if (root.settings.daftar_kelas) {
+              settings.daftarKelas = typeof root.settings.daftar_kelas === "string" 
+                ? root.settings.daftar_kelas.split(",").map(s => s.trim()).filter(Boolean)
+                : root.settings.daftar_kelas;
+            } else if (root.settings.daftarKelas) {
+              settings.daftarKelas = root.settings.daftarKelas;
+            }
+          }
+          
+          if (studentList.length === 0) {
+            const sgwObj = root.siswagw || {};
+            Object.keys(sgwObj).forEach(k => {
+              studentList.push({
+                nis: sgwObj[k].nis ? sgwObj[k].nis.toString().trim() : "",
+                namaSiswa: sgwObj[k].namaSiswa ? sgwObj[k].namaSiswa.toString().trim() : "",
+                kelas: sgwObj[k].kelas ? sgwObj[k].kelas.toString().trim() : ""
+              });
+            });
+          }
+
+          return {
+            studentList: studentList,
+            daftarKelas: settings.daftarKelas
+          };
+        }
+
         else if (action === "getDashboard") {
           const role = payload.currentUserRole;
           const email = payload.currentUserEmail;
@@ -5964,6 +5998,49 @@
             return { multiple: true, profiles: foundUsers };
           }
           throw new Error("Password salah.");
+        }
+
+        else if (action === "getSiswaPublic") {
+          const snapshot = await db.collection("students").get();
+          const studentList = [];
+          snapshot.forEach(doc => {
+            const data = doc.data();
+            studentList.push({
+              nis: data.nis ? data.nis.toString().trim() : "",
+              namaSiswa: data.namaSiswa ? data.namaSiswa.toString().trim() : "",
+              kelas: data.kelas ? data.kelas.toString().trim() : ""
+            });
+          });
+          
+          let settings = { hariBelajar: 5, daftarKelas: ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"] };
+          const settingsDoc = await db.collection("settings").doc("app_settings").get();
+          if (settingsDoc.exists) {
+            const sData = settingsDoc.data();
+            if (sData.daftar_kelas) {
+              settings.daftarKelas = typeof sData.daftar_kelas === "string" 
+                ? sData.daftar_kelas.split(",").map(s => s.trim()).filter(Boolean)
+                : sData.daftar_kelas;
+            } else if (sData.daftarKelas) {
+              settings.daftarKelas = sData.daftarKelas;
+            }
+          }
+          
+          if (studentList.length === 0) {
+            const sgwSnap = await db.collection("siswagw").get();
+            sgwSnap.forEach(doc => {
+              const data = doc.data();
+              studentList.push({
+                nis: data.nis ? data.nis.toString().trim() : "",
+                namaSiswa: data.namaSiswa ? data.namaSiswa.toString().trim() : "",
+                kelas: data.kelas ? data.kelas.toString().trim() : ""
+              });
+            });
+          }
+
+          return {
+            studentList: studentList,
+            daftarKelas: settings.daftarKelas
+          };
         }
 
         else if (action === "getDashboard") {
@@ -10309,6 +10386,33 @@
               reject(new Error("Email atau password tidak terdaftar di sistem."));
             }
           }
+
+          else if (action === "getSiswaPublic") {
+            const students = JSON.parse(localStorage.getItem('db_students')) || [];
+            const settings = JSON.parse(localStorage.getItem('db_settings')) || { hariBelajar: 5, daftarKelas: ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"] };
+            
+            const studentList = students.map(s => ({
+              nis: s.nis ? s.nis.toString().trim() : "",
+              namaSiswa: s.namaSiswa ? s.namaSiswa.toString().trim() : "",
+              kelas: s.kelas ? s.kelas.toString().trim() : ""
+            }));
+
+            if (studentList.length === 0) {
+              const sgwRaw = JSON.parse(localStorage.getItem('db_siswagw')) || [];
+              sgwRaw.forEach(s => {
+                studentList.push({
+                  nis: s.nis ? s.nis.toString().trim() : "",
+                  namaSiswa: s.namaSiswa ? s.namaSiswa.toString().trim() : "",
+                  kelas: s.kelas ? s.kelas.toString().trim() : ""
+                });
+              });
+            }
+
+            resolve({
+              studentList: studentList,
+              daftarKelas: settings.daftarKelas || ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"]
+            });
+          }
           
           else if (action === "getDashboard") {
             const role = payload.currentUserRole;
@@ -10507,10 +10611,11 @@
               const myStudentNames = myStudents.map(s => s.namaSiswa ? s.namaSiswa.toLowerCase().trim() : "");
               
               const myJurnals = j7kihRaw.filter(j => {
-                const matchNis = j.nis && myStudentNisList.includes(j.nis.toString().trim());
-                const matchName = j.namaSiswa && myStudentNames.includes(j.namaSiswa.toLowerCase().trim());
-                return matchNis || matchName;
-              });
+                 const matchGW = j.guruWali && j.guruWali.toLowerCase().includes(nama.toLowerCase());
+                 const matchNis = j.nis && myStudentNisList.includes(j.nis.toString().trim());
+                 const matchName = j.namaSiswa && myStudentNames.includes(j.namaSiswa.toLowerCase().trim());
+                 return matchGW || matchNis || matchName;
+               });
               
               const myCatatanBimbingan = cbRaw.filter(c => c.guruWali.toLowerCase() === nama.toLowerCase());
               
@@ -11508,25 +11613,90 @@
     }
 
     // 3. GURU WALI: JURNAL 7KIH & CATATAN BIMBINGAN
-    function showStudent7KIHView(show) {
+    async function showStudent7KIHView(show) {
       const loginCard = document.getElementById('loginCard');
       const studentCard = document.getElementById('student7KIHCard');
       if (show) {
-        // Load settings from local storage to populate dropdown options dynamically
-        const localSettings = JSON.parse(localStorage.getItem('db_settings'));
-        if (localSettings) {
-          appState.settings = {
-            hariBelajar: localSettings.hari_belajar || localSettings.hariBelajar || 5,
-            daftarKelas: localSettings.daftar_kelas || localSettings.daftarKelas || ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"]
-          };
-        }
-        populateClassDropdowns();
+        // Reset dropdown and NIS input to default state
+        const selectKelas = document.getElementById('studentKelas');
+        if (selectKelas) selectKelas.value = "";
+        
+        const selectNama = document.getElementById('studentNama');
+        if (selectNama) selectNama.innerHTML = '<option value="">Pilih Nama Anda</option>';
+        document.getElementById('studentNIS').value = "";
+
         loginCard.style.display = "none";
         studentCard.style.display = "block";
         document.getElementById('studentTanggal').value = new Date().toISOString().substring(0, 10);
+
+        showLoading(true, "Memuat data siswa...");
+        try {
+          const data = await callApi("getSiswaPublic");
+          if (data) {
+            appState.publicStudentList = data.studentList || [];
+            if (data.daftarKelas) {
+              appState.settings = appState.settings || {};
+              appState.settings.daftarKelas = data.daftarKelas;
+              
+              // Populate classes list
+              populateClassDropdowns();
+            }
+          }
+        } catch (err) {
+          console.error("Gagal memuat data siswa public:", err);
+          showToast("Gagal memuat data siswa utama dari server. Menggunakan data lokal jika tersedia.", "warning");
+          // Fallback to local settings/cache if any
+          const localSettings = JSON.parse(localStorage.getItem('db_settings'));
+          if (localSettings) {
+            appState.settings = {
+              hariBelajar: localSettings.hari_belajar || localSettings.hariBelajar || 5,
+              daftarKelas: localSettings.daftar_kelas || localSettings.daftarKelas || ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"]
+            };
+          }
+          populateClassDropdowns();
+        } finally {
+          showLoading(false);
+        }
       } else {
         loginCard.style.display = "block";
         studentCard.style.display = "none";
+      }
+    }
+
+    function populateStudentNamesForPublic() {
+      const kelas = document.getElementById('studentKelas').value;
+      const selectNama = document.getElementById('studentNama');
+      if (!selectNama) return;
+      
+      selectNama.innerHTML = '<option value="">Pilih Nama Anda</option>';
+      document.getElementById('studentNIS').value = "";
+      
+      if (!kelas) return;
+      
+      const students = appState.publicStudentList || [];
+      const classStudents = students.filter(s => s.kelas && s.kelas.toUpperCase() === kelas.toUpperCase());
+      
+      // Sort alphabetically
+      classStudents.sort((a, b) => a.namaSiswa.localeCompare(b.namaSiswa)).forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.namaSiswa;
+        opt.textContent = s.namaSiswa;
+        opt.setAttribute('data-nis', s.nis || "");
+        selectNama.appendChild(opt);
+      });
+    }
+
+    function handleStudentNameChange() {
+      const selectNama = document.getElementById('studentNama');
+      if (!selectNama) return;
+      const selectedOpt = selectNama.options[selectNama.selectedIndex];
+      const nisInput = document.getElementById('studentNIS');
+      if (!nisInput) return;
+      
+      if (selectedOpt && selectedOpt.value) {
+        nisInput.value = selectedOpt.getAttribute('data-nis') || "";
+      } else {
+        nisInput.value = "";
       }
     }
 
