@@ -28,7 +28,7 @@ function initSheets() {
     "KondisiSiswa": ["ID", "Bulan", "Tahun", "WaliKelas", "Kelas", "NamaSiswa", "Kehadiran", "PrestasiAkademik", "PrestasiNonAkademik", "TujuanSetelahLulus"],
     "SiswaGuruWali": ["ID", "NIS", "NamaSiswa", "Kelas", "GuruWali"],
     "Siswa": ["ID", "NIS", "NamaSiswa", "Kelas", "Tingkatan"],
-    "Jurnal7KIH": ["ID", "Tanggal", "NIS", "NamaSiswa", "BangunPagi", "Beribadah", "Berolahraga", "MakanSehat", "GemarBelajar", "Bermasyarakat", "TidurCepat"],
+    "Jurnal7KAIH": ["ID", "Tanggal", "NIS", "NamaSiswa", "BangunPagi", "Beribadah", "Berolahraga", "MakanSehat", "GemarBelajar", "Bermasyarakat", "TidurCepat"],
     "CatatanBimbingan": ["ID", "Tanggal", "GuruWali", "NamaSiswa", "CatatanPerkembangan"],
     "KelasMapelPilihan": ["ID", "GuruEmail", "NamaKelas", "Tingkatan", "NamaSiswa", "NIS"]
   };
@@ -119,7 +119,7 @@ function doPost(e) {
     var payload = request.payload || {};
     
     // Auth bypass check
-    if (action !== "login" && action !== "addJurnal7KIH" && action !== "getSiswaPublic" && !payload.currentUserEmail) {
+    if (action !== "login" && action !== "addJurnal7KAIH" && action !== "getSiswaPublic" && !payload.currentUserEmail) {
       throw new Error("Sesi pengguna tidak valid. Silakan login kembali.");
     }
     
@@ -230,16 +230,16 @@ function doPost(e) {
         response = { status: "success", data: deleteSiswaGuruWali(payload.id) };
         break;
         
-      case "addJurnal7KIH":
-        response = { status: "success", data: addJurnal7KIH(payload) };
+      case "addJurnal7KAIH":
+        response = { status: "success", data: addJurnal7KAIH(payload) };
         break;
         
       case "getSiswaPublic":
         response = { status: "success", data: getSiswaPublic() };
         break;
         
-      case "deleteJurnal7KIH":
-        response = { status: "success", data: deleteJurnal7KIH(payload.id) };
+      case "deleteJurnal7KAIH":
+        response = { status: "success", data: deleteJurnal7KAIH(payload.id) };
         break;
         
       case "addCatatanBimbingan":
@@ -338,7 +338,7 @@ function getDashboard(role, email, nama, waliKelasClass) {
   var sheetRekap = ss.getSheetByName("RekapAbsen");
   var sheetKondisi = ss.getSheetByName("KondisiSiswa");
   var sheetSiswaGW = ss.getSheetByName("SiswaGuruWali");
-  var sheetJurnal7KIH = ss.getSheetByName("Jurnal7KIH");
+  var sheetJurnal7KAIH = ss.getSheetByName("Jurnal7KAIH");
   var sheetCatatanBimbingan = ss.getSheetByName("CatatanBimbingan");
   var sheetSiswa = ss.getSheetByName("Siswa");
   
@@ -350,7 +350,7 @@ function getDashboard(role, email, nama, waliKelasClass) {
   var rekapRaw = (sheetRekap && sheetRekap.getLastRow() > 0) ? sheetRekap.getDataRange().getValues() : [["ID", "Bulan", "Tahun", "WaliKelas", "Kelas", "NamaSiswa", "Hadir", "Sakit", "Izin", "Alpa"]];
   var kondisiRaw = (sheetKondisi && sheetKondisi.getLastRow() > 0) ? sheetKondisi.getDataRange().getValues() : [["ID", "Bulan", "Tahun", "WaliKelas", "Kelas", "NamaSiswa", "Kehadiran", "PrestasiAkademik", "PrestasiNonAkademik", "TujuanSetelahLulus"]];
   var siswaGWRaw = (sheetSiswaGW && sheetSiswaGW.getLastRow() > 0) ? sheetSiswaGW.getDataRange().getValues() : [["ID", "NIS", "NamaSiswa", "Kelas", "GuruWali"]];
-  var jurnal7KIHRaw = (sheetJurnal7KIH && sheetJurnal7KIH.getLastRow() > 0) ? sheetJurnal7KIH.getDataRange().getValues() : [["ID", "Tanggal", "NIS", "NamaSiswa", "BangunPagi", "Beribadah", "Berolahraga", "MakanSehat", "GemarBelajar", "Bermasyarakat", "TidurCepat"]];
+  var jurnal7KAIHRaw = (sheetJurnal7KAIH && sheetJurnal7KAIH.getLastRow() > 0) ? sheetJurnal7KAIH.getDataRange().getValues() : [["ID", "Tanggal", "NIS", "NamaSiswa", "BangunPagi", "Beribadah", "Berolahraga", "MakanSehat", "GemarBelajar", "Bermasyarakat", "TidurCepat"]];
   var catatanBimbinganRaw = (sheetCatatanBimbingan && sheetCatatanBimbingan.getLastRow() > 0) ? sheetCatatanBimbingan.getDataRange().getValues() : [["ID", "Tanggal", "GuruWali", "NamaSiswa", "CatatanPerkembangan"]];
   var siswaRaw = (sheetSiswa && sheetSiswa.getLastRow() > 0) ? sheetSiswa.getDataRange().getValues() : [["ID", "NIS", "NamaSiswa", "Kelas"]];
   
@@ -365,7 +365,7 @@ function getDashboard(role, email, nama, waliKelasClass) {
     rekapAbsenList: [],
     kondisiSiswaList: [],
     siswaGuruWaliList: [],
-    jurnal7KIHList: [],
+    jurnal7KAIHList: [],
     catatanBimbinganList: [],
     studentList: []
   };
@@ -485,10 +485,10 @@ function getDashboard(role, email, nama, waliKelasClass) {
     });
   }
 
-  // Format Jurnal 7KIH list
-  for (var i = 1; i < jurnal7KIHRaw.length; i++) {
-    var row = jurnal7KIHRaw[i];
-    result.jurnal7KIHList.push({
+  // Format Jurnal 7KAIH list
+  for (var i = 1; i < jurnal7KAIHRaw.length; i++) {
+    var row = jurnal7KAIHRaw[i];
+    result.jurnal7KAIHList.push({
       id: row[0],
       tanggal: row[1],
       nis: row[2],
@@ -537,7 +537,7 @@ function getDashboard(role, email, nama, waliKelasClass) {
   result.rekapAbsenList.reverse();
   result.kondisiSiswaList.reverse();
   result.siswaGuruWaliList.reverse();
-  result.jurnal7KIHList.reverse();
+  result.jurnal7KAIHList.reverse();
   result.catatanBimbinganList.reverse();
   result.studentList.reverse();
 
@@ -703,7 +703,7 @@ function getDashboard(role, email, nama, waliKelasClass) {
     result.rekapAbsenList = result.rekapAbsenList; // Do not clear, so Guru can use as fallback for student names
     result.kondisiSiswaList = [];
     result.siswaGuruWaliList = result.siswaGuruWaliList; // Do not clear, so Guru can use as fallback for student names
-    result.jurnal7KIHList = [];
+    result.jurnal7KAIHList = [];
   }
   else if (role === "Wali Kelas") {
     var myRekap = result.rekapAbsenList.filter(function(ra) {
@@ -734,7 +734,7 @@ function getDashboard(role, email, nama, waliKelasClass) {
     result.laporanWaliList = [];
     result.kondisiSiswaList = [];
     result.siswaGuruWaliList = [];
-    result.jurnal7KIHList = [];
+    result.jurnal7KAIHList = [];
   }
   else if (role === "Guru Wali") {
     var myStudents = result.siswaGuruWaliList.filter(function(s) {
@@ -744,7 +744,7 @@ function getDashboard(role, email, nama, waliKelasClass) {
     var myStudentNisList = myStudents.map(function(s) { return s.nis ? s.nis.toString().trim() : ""; });
     var myStudentNamesList = myStudents.map(function(s) { return s.namaSiswa ? s.namaSiswa.toLowerCase().trim() : ""; });
     
-    var myJurnal7KIH = result.jurnal7KIHList.filter(function(j) {
+    var myJurnal7KAIH = result.jurnal7KAIHList.filter(function(j) {
       var isMatchNis = j.nis && myStudentNisList.indexOf(j.nis.toString().trim()) !== -1;
       var isMatchName = j.namaSiswa && myStudentNamesList.indexOf(j.namaSiswa.toLowerCase().trim()) !== -1;
       var isMatchGW = j.guruWali && (j.guruWali.toLowerCase().indexOf(nama.toLowerCase()) !== -1 || j.guruWali.toLowerCase().indexOf(email.toLowerCase()) !== -1);
@@ -757,12 +757,12 @@ function getDashboard(role, email, nama, waliKelasClass) {
     
     result.stats = {
       totalSiswaBimbingan: myStudents.length,
-      totalJurnal7KIH: myJurnal7KIH.length,
+      totalJurnal7KAIH: myJurnal7KAIH.length,
       totalCatatanBimbingan: myCatatanBimbingan.length
     };
     
     result.siswaGuruWaliList = myStudents;
-    result.jurnal7KIHList = myJurnal7KIH;
+    result.jurnal7KAIHList = myJurnal7KAIH;
     result.catatanBimbinganList = myCatatanBimbingan;
     
     result.jurnalList = [];
@@ -795,14 +795,14 @@ function getDashboard(role, email, nama, waliKelasClass) {
       approvedPerangkat: approvedPerangkat,
       avgNilaiSekolah: avgNilai,
       totalLaporanWali: result.laporanWaliList.length,
-      totalJurnal7KIH: result.jurnal7KIHList.length,
+      totalJurnal7KAIH: result.jurnal7KAIHList.length,
       totalCatatanBimbingan: result.catatanBimbinganList.length
     };
   }
   else if (role === "Guru BK") {
     result.stats = {
       totalSiswaBimbingan: result.studentList.length,
-      totalJurnal7KIH: result.jurnal7KIHList.length,
+      totalJurnal7KAIH: result.jurnal7KAIHList.length,
       totalCatatanBimbingan: result.catatanBimbinganList.length
     };
     
@@ -1604,13 +1604,13 @@ function deleteSiswaGuruWali(id) {
   }
 }
 
-// 16. Menambah Jurnal 7KIH (Siswa Publik)
-// 16. Menambah Jurnal 7KIH (Siswa Publik)
-function addJurnal7KIH(payload) {
+// 16. Menambah Jurnal 7KAIH (Siswa Publik)
+// 16. Menambah Jurnal 7KAIH (Siswa Publik)
+function addJurnal7KAIH(payload) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName("Jurnal7KIH");
+  var sheet = ss.getSheetByName("Jurnal7KAIH");
   if (!sheet) {
-    sheet = ss.insertSheet("Jurnal7KIH");
+    sheet = ss.insertSheet("Jurnal7KAIH");
     sheet.appendRow(["ID", "Tanggal", "NIS", "NamaSiswa", "BangunPagi", "Beribadah", "Berolahraga", "MakanSehat", "GemarBelajar", "Bermasyarakat", "TidurCepat", "GuruWali", "Kelas"]);
   }
   
@@ -1665,11 +1665,11 @@ function addJurnal7KIH(payload) {
   return { id: id, success: true, guruWali: guruWali, kelas: kelas };
 }
 
-// 17. Hapus Jurnal 7KIH (Guru Wali/Wakasek)
-function deleteJurnal7KIH(id) {
+// 17. Hapus Jurnal 7KAIH (Guru Wali/Wakasek)
+function deleteJurnal7KAIH(id) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName("Jurnal7KIH");
-  if (!sheet) throw new Error("Sheet Jurnal7KIH tidak ditemukan.");
+  var sheet = ss.getSheetByName("Jurnal7KAIH");
+  if (!sheet) throw new Error("Sheet Jurnal7KAIH tidak ditemukan.");
   
   var data = sheet.getDataRange().getValues();
   for (var i = 1; i < data.length; i++) {
@@ -1679,7 +1679,7 @@ function deleteJurnal7KIH(id) {
       return { success: true };
     }
   }
-  throw new Error("Jurnal 7KIH tidak ditemukan.");
+  throw new Error("Jurnal 7KAIH tidak ditemukan.");
 }
 
 // 18. Menambah Catatan Perkembangan Bimbingan (Guru Wali)
@@ -1765,7 +1765,7 @@ function deleteSiswaMapelPilihan(payload) {
   throw new Error("Siswa mapel pilihan tidak ditemukan.");
 }
 
-// Mengambil Data Siswa & Setelan untuk Form Publik Jurnal 7KIH
+// Mengambil Data Siswa & Setelan untuk Form Publik Jurnal 7KAIH
 function getSiswaPublic() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheetSiswa = ss.getSheetByName("Siswa");

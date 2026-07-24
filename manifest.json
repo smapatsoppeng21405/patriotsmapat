@@ -25,10 +25,10 @@
   ],
   "shortcuts": [
     {
-      "name": "Form 7KIH Siswa",
-      "short_name": "Jurnal 7KIH",
+      "name": "Form 7KAIH Siswa",
+      "short_name": "Jurnal 7KAIH",
       "description": "Isi Jurnal 7 Kebiasaan Anak Indonesia Hebat Siswa",
-      "url": "./index.html#jurnal7kih-siswa",
+      "url": "./index.html#jurnal7kaih-siswa",
       "icons": [{ "src": "./icon.png", "sizes": "192x192" }]
     }
   ]

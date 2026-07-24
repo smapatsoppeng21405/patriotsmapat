@@ -1119,8 +1119,8 @@
         </button>
 
         <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.5rem;">Siswa ingin mengisi jurnal harian karakter?</p>
-        <button type="button" class="btn" style="background: rgba(16, 185, 129, 0.1); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.2); width: 100%; padding: 0.75rem;" onclick="showStudent7KIHView(true)">
-          <i class="fa-solid fa-heart-pulse"></i> Portal Pengisian 7KIH Siswa
+        <button type="button" class="btn" style="background: rgba(16, 185, 129, 0.1); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.2); width: 100%; padding: 0.75rem;" onclick="showStudent7KAIHView(true)">
+          <i class="fa-solid fa-heart-pulse"></i> Portal Pengisian 7KAIH Siswa
         </button>
       </div>
 
@@ -1132,17 +1132,17 @@
 
     </div>
 
-    <!-- KARTU PENGISIAN JURNAL 7KIH SISWA -->
-    <div class="auth-card glass-effect" id="student7KIHCard" style="display: none; max-width: 600px;">
+    <!-- KARTU PENGISIAN JURNAL 7KAIH SISWA -->
+    <div class="auth-card glass-effect" id="student7KAIHCard" style="display: none; max-width: 600px;">
       <div class="auth-header">
         <div class="auth-logo" style="background: transparent; border: none; box-shadow: none; width: auto; height: auto; margin-bottom: 0.75rem;">
           <img src="./icon.png" alt="Logo SMAN 4 SOPPENG PATRIOT SMAPAT" style="width: 95px; height: 95px; object-fit: contain; filter: drop-shadow(0 6px 16px rgba(0,0,0,0.4));">
         </div>
-        <h1>Jurnal 7KIH PATRIOT</h1>
+        <h1>Jurnal 7KAIH PATRIOT</h1>
         <p>Jurnal 7 Kebiasaan Anak Indonesia Hebat (Isi Mandiri)</p>
       </div>
 
-      <form id="formStudent7KIH" onsubmit="submitStudent7KIHForm(event)">
+      <form id="formStudent7KAIH" onsubmit="submitStudent7KAIHForm(event)">
         <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
           <div class="form-group">
             <label for="studentKelas">Kelas</label>
@@ -1275,10 +1275,10 @@
         </div>
 
         <button type="submit" class="btn btn-success" style="width: 100%; font-size: 1rem; padding: 0.8rem; margin-bottom: 1rem;">
-          <i class="fa-solid fa-paper-plane"></i> Kirim Jurnal 7KIH Saya
+          <i class="fa-solid fa-paper-plane"></i> Kirim Jurnal 7KAIH Saya
         </button>
 
-        <button type="button" class="btn" style="width: 100%; padding: 0.8rem; background: rgba(255, 255, 255, 0.03); color: var(--text-muted); border: 1px solid var(--border-color);" onclick="showStudent7KIHView(false)">
+        <button type="button" class="btn" style="width: 100%; padding: 0.8rem; background: rgba(255, 255, 255, 0.03); color: var(--text-muted); border: 1px solid var(--border-color);" onclick="showStudent7KAIHView(false)">
           <i class="fa-solid fa-arrow-left"></i> Kembali ke Form Login
         </button>
       </form>
@@ -2031,7 +2031,7 @@
                     <input type="checkbox" name="teacherRoles" value="Guru Wali" style="width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer;">
                     <div style="display: flex; flex-direction: column;">
                       <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-main);">Guru Wali</span>
-                      <span style="font-size: 0.7rem; color: var(--text-muted);">Bimbingan 7KIH</span>
+                      <span style="font-size: 0.7rem; color: var(--text-muted);">Bimbingan 7KAIH</span>
                     </div>
                   </label>
                   <label class="role-checkbox-card" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border-radius: 0.5rem; border: 1px solid var(--border-color); background: rgba(255, 255, 255, 0.02); cursor: pointer; transition: var(--transition);">
@@ -2125,7 +2125,7 @@
           <div class="card glass-effect" style="margin-bottom: 2rem;">
             <div class="card-title">3. Manajemen Siswa Bimbingan Guru Wali</div>
             <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1.5rem; line-height:1.5;">
-              Daftarkan siswa bimbingan dan tentukan Guru Wali (bukan Wali Kelas) yang bertanggung jawab memonitoring kondisi 7KIH mereka.
+              Daftarkan siswa bimbingan dan tentukan Guru Wali (bukan Wali Kelas) yang bertanggung jawab memonitoring kondisi 7KAIH mereka.
             </p>
             <form id="formSiswaGW" onsubmit="submitSiswaGWForm(event)">
               <input type="hidden" id="siswaGWId">
@@ -2290,25 +2290,25 @@
           </div>
         </div>
 
-        <!-- WAKASEK: MONITORING JURNAL 7KIH & BIMBINGAN GURU WALI -->
-        <div id="pane-wakasek-jurnal7kih" class="view-pane">
+        <!-- WAKASEK: MONITORING JURNAL 7KAIH & BIMBINGAN GURU WALI -->
+        <div id="pane-wakasek-jurnal7kaih" class="view-pane">
           <div class="card glass-effect" style="margin-bottom: 2rem;">
             <div class="card-title">
-              <span>Monitoring Jurnal Karakter 7KIH Siswa</span>
-              <button type="button" class="btn btn-secondary" onclick="downloadWakasek7KIH()" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+              <span>Monitoring Jurnal Karakter 7KAIH Siswa</span>
+              <button type="button" class="btn btn-secondary" onclick="downloadWakasek7KAIH()" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.35rem;">
                 <i class="fa-solid fa-download"></i> Unduh Rekap
               </button>
             </div>
             <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
               <div class="form-group">
-                <label for="w-filter-7kih-guru">Filter Guru Wali</label>
-                <select id="w-filter-7kih-guru" class="filter-control" onchange="filterWakasek7KIH()" style="padding: 0.85rem 1rem;">
+                <label for="w-filter-7kaih-guru">Filter Guru Wali</label>
+                <select id="w-filter-7kaih-guru" class="filter-control" onchange="filterWakasek7KAIH()" style="padding: 0.85rem 1rem;">
                   <option value="">Semua Guru Wali</option>
                 </select>
               </div>
               <div class="form-group">
-                <label for="w-filter-7kih-nama">Cari Nama/NIS Siswa</label>
-                <input type="text" id="w-filter-7kih-nama" class="filter-control" placeholder="Ketik nama atau NIS siswa..." oninput="filterWakasek7KIH()" style="padding: 0.85rem 1rem;">
+                <label for="w-filter-7kaih-nama">Cari Nama/NIS Siswa</label>
+                <input type="text" id="w-filter-7kaih-nama" class="filter-control" placeholder="Ketik nama atau NIS siswa..." oninput="filterWakasek7KAIH()" style="padding: 0.85rem 1rem;">
               </div>
             </div>
             <div class="table-container">
@@ -2330,7 +2330,7 @@
                     <th>Aksi</th>
                   </tr>
                 </thead>
-                <tbody id="w-jurnal7kih-table-body">
+                <tbody id="w-jurnal7kaih-table-body">
                   <tr><td colspan="13" style="text-align: center; color: var(--text-muted);">Memuat...</td></tr>
                 </tbody>
               </table>
@@ -3139,8 +3139,8 @@
             
             <div class="stat-card glass-effect">
               <div class="stat-info">
-                <h3>Jurnal 7KIH Terisi</h3>
-                <div class="stat-number" id="gw-stat-jurnal7kih">0</div>
+                <h3>Jurnal 7KAIH Terisi</h3>
+                <div class="stat-number" id="gw-stat-jurnal7kaih">0</div>
               </div>
               <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--success);">
                 <i class="fa-solid fa-heart-pulse"></i>
@@ -3151,18 +3151,18 @@
           <div class="card glass-effect" style="margin-top: 2rem;">
             <div class="card-title">Akses Cepat & Tautan Bagikan</div>
             <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-              <button class="btn btn-success" onclick="copyStudent7KIHLink()">
-                <i class="fa-solid fa-link"></i> Salin Link Form 7KIH Siswa
+              <button class="btn btn-success" onclick="copyStudent7KAIHLink()">
+                <i class="fa-solid fa-link"></i> Salin Link Form 7KAIH Siswa
               </button>
-              <button class="btn btn-primary" onclick="switchPane('pane-guruwali-jurnal7kih')">
-                <i class="fa-solid fa-list-check"></i> Tinjau Jurnal 7KIH & Bimbingan
+              <button class="btn btn-primary" onclick="switchPane('pane-guruwali-jurnal7kaih')">
+                <i class="fa-solid fa-list-check"></i> Tinjau Jurnal 7KAIH & Bimbingan
               </button>
             </div>
           </div>
         </div>
 
-        <!-- GURU WALI: JURNAL 7KIH & CATATAN BIMBINGAN -->
-        <div id="pane-guruwali-jurnal7kih" class="view-pane">
+        <!-- GURU WALI: JURNAL 7KAIH & CATATAN BIMBINGAN -->
+        <div id="pane-guruwali-jurnal7kaih" class="view-pane">
           <div class="card glass-effect" style="max-width: 750px; margin: 0 auto 2rem;">
             <div class="card-title">Laporan Perkembangan Bimbingan Perwalian</div>
             <form id="formCatatanBimbingan" onsubmit="submitCatatanBimbinganForm(event)">
@@ -3216,12 +3216,12 @@
 
           <div class="card glass-effect">
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
-              <div class="card-title" style="margin-bottom: 0;">Riwayat Jurnal 7KIH Siswa Bimbingan (Diisi Mandiri oleh Siswa)</div>
+              <div class="card-title" style="margin-bottom: 0;">Riwayat Jurnal 7KAIH Siswa Bimbingan (Diisi Mandiri oleh Siswa)</div>
               <div style="display: flex; gap: 0.5rem; align-items: center;">
-                <button type="button" class="btn btn-success" onclick="copyStudent7KIHLink()" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+                <button type="button" class="btn btn-success" onclick="copyStudent7KAIHLink()" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
                   <i class="fa-solid fa-share-nodes"></i> Bagikan Link Ke Siswa
                 </button>
-                <button type="button" class="btn btn-secondary" onclick="downloadGuruWali7KIH()" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+                <button type="button" class="btn btn-secondary" onclick="downloadGuruWali7KAIH()" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.35rem;">
                   <i class="fa-solid fa-download"></i> Unduh Rekap
                 </button>
               </div>
@@ -3244,8 +3244,8 @@
                     <th>Aksi</th>
                   </tr>
                 </thead>
-                <tbody id="gw-jurnal7kih-table-body">
-                  <tr><td colspan="9" style="text-align: center; color: var(--text-muted);">Belum ada riwayat jurnal 7KIH dari siswa.</td></tr>
+                <tbody id="gw-jurnal7kaih-table-body">
+                  <tr><td colspan="9" style="text-align: center; color: var(--text-muted);">Belum ada riwayat jurnal 7KAIH dari siswa.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -3288,8 +3288,8 @@
 
             <div class="stat-card glass-effect">
               <div class="stat-info">
-                <h3>Jurnal 7KIH Siswa</h3>
-                <div class="stat-number" id="ks-stat-jurnal7kih">0</div>
+                <h3>Jurnal 7KAIH Siswa</h3>
+                <div class="stat-number" id="ks-stat-jurnal7kaih">0</div>
               </div>
               <div class="stat-icon" style="background: rgba(139, 92, 246, 0.1); color: var(--accent);">
                 <i class="fa-solid fa-heart-pulse"></i>
@@ -3557,30 +3557,30 @@
           </div>
         </div>
 
-        <!-- KEPALA SEKOLAH: MONITORING 7KIH -->
-        <div id="pane-kepala-jurnal7kih" class="view-pane">
+        <!-- KEPALA SEKOLAH: MONITORING 7KAIH -->
+        <div id="pane-kepala-jurnal7kaih" class="view-pane">
           <div class="card glass-effect" style="margin-bottom: 2rem;">
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
-              <div class="card-title" style="margin-bottom: 0;">Monitoring Jurnal Karakter 7KIH Siswa</div>
+              <div class="card-title" style="margin-bottom: 0;">Monitoring Jurnal Karakter 7KAIH Siswa</div>
               <div style="display: flex; gap: 0.5rem; align-items: center;">
-                <button type="button" class="btn btn-success" onclick="copyStudent7KIHLink()" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
-                  <i class="fa-solid fa-link"></i> Salin Link Pengisian 7KIH Siswa
+                <button type="button" class="btn btn-success" onclick="copyStudent7KAIHLink()" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+                  <i class="fa-solid fa-link"></i> Salin Link Pengisian 7KAIH Siswa
                 </button>
-                <button type="button" class="btn btn-secondary" onclick="downloadKepala7KIH()" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+                <button type="button" class="btn btn-secondary" onclick="downloadKepala7KAIH()" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.35rem;">
                   <i class="fa-solid fa-download"></i> Unduh Rekap
                 </button>
               </div>
             </div>
             <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
               <div class="form-group">
-                <label for="ks-filter-7kih-guru">Filter Guru Wali</label>
-                <select id="ks-filter-7kih-guru" class="filter-control" onchange="filterKepala7KIH()" style="padding: 0.85rem 1rem;">
+                <label for="ks-filter-7kaih-guru">Filter Guru Wali</label>
+                <select id="ks-filter-7kaih-guru" class="filter-control" onchange="filterKepala7KAIH()" style="padding: 0.85rem 1rem;">
                   <option value="">Semua Guru Wali</option>
                 </select>
               </div>
               <div class="form-group">
-                <label for="ks-filter-7kih-nama">Cari Nama/NIS Siswa</label>
-                <input type="text" id="ks-filter-7kih-nama" class="filter-control" placeholder="Ketik nama atau NIS siswa..." oninput="filterKepala7KIH()" style="padding: 0.85rem 1rem;">
+                <label for="ks-filter-7kaih-nama">Cari Nama/NIS Siswa</label>
+                <input type="text" id="ks-filter-7kaih-nama" class="filter-control" placeholder="Ketik nama atau NIS siswa..." oninput="filterKepala7KAIH()" style="padding: 0.85rem 1rem;">
               </div>
             </div>
             <div class="table-container">
@@ -3600,7 +3600,7 @@
                     <th>Tidur Cepat</th>
                   </tr>
                 </thead>
-                <tbody id="ks-jurnal7kih-table-body">
+                <tbody id="ks-jurnal7kaih-table-body">
                   <tr><td colspan="9" style="text-align: center; color: var(--text-muted);">Memuat...</td></tr>
                 </tbody>
               </table>
@@ -3936,10 +3936,10 @@
         showAuthView(true);
       }
       
-      // Cek apakah diakses via Tautan / Link Publik Jurnal 7KIH Siswa
-      if (window.location.hash.includes('7kih') || window.location.search.includes('7kih')) {
+      // Cek apakah diakses via Tautan / Link Publik Jurnal 7KAIH Siswa
+      if (window.location.hash.includes('7kaih') || window.location.search.includes('7kaih')) {
         showAuthView(true);
-        showStudent7KIHView(true);
+        showStudent7KAIHView(true);
       }
       
       // Update badge antrean offline
@@ -4339,8 +4339,8 @@
       exportData("Monitoring Rekap Absensi Bulanan Kelas (Kepala Sekolah)", headers, rows, `Rekap_Absensi_Sekolah_${new Date().toISOString().substring(0, 10)}`);
     }
 
-    function downloadGuruWali7KIH() {
-      const list = appState.jurnal7KIHList || [];
+    function downloadGuruWali7KAIH() {
+      const list = appState.jurnal7KAIHList || [];
       const headers = ["Tanggal", "NIS", "Nama Siswa", "Kelas", "Bangun Pagi", "Beribadah", "Berolahraga", "Makan Sehat", "Gemar Belajar", "Bermasyarakat", "Tidur Cepat"];
       const rows = list.map(item => [
         new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
@@ -4357,7 +4357,7 @@
       ]);
       
       const teacherName = (appState.user && appState.user.nama) || 'Guru_Wali';
-      exportData(`Rekap Jurnal Karakter 7KIH Siswa Bimbingan - ${teacherName}`, headers, rows, `Rekap_Jurnal_7KIH_Perwalian_${teacherName.replace(/\s+/g, '_')}_${new Date().toISOString().substring(0, 10)}`);
+      exportData(`Rekap Jurnal Karakter 7KAIH Siswa Bimbingan - ${teacherName}`, headers, rows, `Rekap_Jurnal_7KAIH_Perwalian_${teacherName.replace(/\s+/g, '_')}_${new Date().toISOString().substring(0, 10)}`);
     }
 
     // KEPALA SEKOLAH & GURU WALI: REKAP ABSENSI DAN LAPORAN GURU WALI & WALI KELAS
@@ -4374,11 +4374,11 @@
       exportData(`Riwayat Catatan Bimbingan Perwalian Saya - ${teacherName}`, headers, rows, `Rekap_Bimbingan_Perwalian_${teacherName.replace(/\s+/g, '_')}_${new Date().toISOString().substring(0, 10)}`);
     }
 
-    function downloadWakasek7KIH() {
-      const filterGuru = document.getElementById('w-filter-7kih-guru').value;
-      const filterNama = document.getElementById('w-filter-7kih-nama').value.toLowerCase();
+    function downloadWakasek7KAIH() {
+      const filterGuru = document.getElementById('w-filter-7kaih-guru').value;
+      const filterNama = document.getElementById('w-filter-7kaih-nama').value.toLowerCase();
       
-      const filtered = (appState.jurnal7KIHList || []).filter(item => {
+      const filtered = (appState.jurnal7KAIHList || []).filter(item => {
         const matchGuru = !filterGuru || (item.guruWali && item.guruWali === filterGuru);
         const matchNama = !filterNama || 
                           (item.namaSiswa && item.namaSiswa.toLowerCase().includes(filterNama)) || 
@@ -4402,7 +4402,7 @@
         item.tidurCepat || "Tidak"
       ]);
       
-      exportData("Monitoring Jurnal Karakter 7KIH Siswa (Kurikulum)", headers, rows, `Rekap_Jurnal_7KIH_Sekolah_${new Date().toISOString().substring(0, 10)}`);
+      exportData("Monitoring Jurnal Karakter 7KAIH Siswa (Kurikulum)", headers, rows, `Rekap_Jurnal_7KAIH_Sekolah_${new Date().toISOString().substring(0, 10)}`);
     }
 
     function downloadWakasekBimbingan() {
@@ -4418,11 +4418,11 @@
       exportData("Monitoring Catatan Perkembangan Bimbingan Guru Wali (Kurikulum)", headers, rows, `Rekap_Catatan_Bimbingan_Guru_Wali_Sekolah_${new Date().toISOString().substring(0, 10)}`);
     }
 
-    function downloadKepala7KIH() {
-      const filterGuru = document.getElementById('ks-filter-7kih-guru').value;
-      const filterNama = document.getElementById('ks-filter-7kih-nama').value.toLowerCase();
+    function downloadKepala7KAIH() {
+      const filterGuru = document.getElementById('ks-filter-7kaih-guru').value;
+      const filterNama = document.getElementById('ks-filter-7kaih-nama').value.toLowerCase();
       
-      const filtered = (appState.jurnal7KIHList || []).filter(item => {
+      const filtered = (appState.jurnal7KAIHList || []).filter(item => {
         const matchGuru = !filterGuru || (item.guruWali && item.guruWali === filterGuru);
         const matchNama = !filterNama || 
                           (item.namaSiswa && item.namaSiswa.toLowerCase().includes(filterNama)) || 
@@ -4446,7 +4446,7 @@
         item.tidurCepat || "Tidak"
       ]);
       
-      exportData("Monitoring Jurnal Karakter 7KIH Siswa (Kepala Sekolah)", headers, rows, `Rekap_Jurnal_7KIH_Sekolah_${new Date().toISOString().substring(0, 10)}`);
+      exportData("Monitoring Jurnal Karakter 7KAIH Siswa (Kepala Sekolah)", headers, rows, `Rekap_Jurnal_7KAIH_Sekolah_${new Date().toISOString().substring(0, 10)}`);
     }
 
     function downloadKepalaBimbingan() {
@@ -5103,12 +5103,12 @@
       } else if (role === "Guru Wali") {
         menuItems = [
           { text: "Ringkasan", pane: "pane-guruwali-ringkasan", icon: "fa-chart-pie" },
-          { text: "Jurnal 7KIH", pane: "pane-guruwali-jurnal7kih", icon: "fa-heart-pulse" }
+          { text: "Jurnal 7KAIH", pane: "pane-guruwali-jurnal7kaih", icon: "fa-heart-pulse" }
         ];
       } else if (role === "Guru BK") {
         menuItems = [
           { text: "Ringkasan BK", pane: "pane-guruwali-ringkasan", icon: "fa-chart-pie" },
-          { text: "Bimbingan & 7KIH", pane: "pane-guruwali-jurnal7kih", icon: "fa-heart-pulse" }
+          { text: "Bimbingan & 7KAIH", pane: "pane-guruwali-jurnal7kaih", icon: "fa-heart-pulse" }
         ];
       } else if (role === "Tenaga Kependidikan") {
         menuItems = [
@@ -5125,7 +5125,7 @@
           { text: "Analisis Nilai", pane: "pane-kepala-nilai", icon: "fa-chart-simple" },
           { text: "Rekap Absen Kelas", pane: "pane-kepala-rekapabsen", icon: "fa-calendar-check" },
           { text: "Kondisi Siswa", pane: "pane-kepala-kondisisiswa", icon: "fa-user-graduate" },
-          { text: "Jurnal 7KIH Siswa", pane: "pane-kepala-jurnal7kih", icon: "fa-heart-pulse" }
+          { text: "Jurnal 7KAIH Siswa", pane: "pane-kepala-jurnal7kaih", icon: "fa-heart-pulse" }
         ];
       }
       
@@ -5184,7 +5184,7 @@
         if (paneId.includes("ringkasan")) pageTitle = "Ringkasan Dashboard";
         else if (paneId.includes("gurumaster")) pageTitle = "Data Utama Guru & Jam Pelajaran";
         else if (paneId.includes("siswamaster")) pageTitle = "Data Utama Siswa";
-        else if (paneId.includes("jurnal") && !paneId.includes("walikelas") && !paneId.includes("kepala") && !paneId.includes("7kih")) pageTitle = "Jurnal KBM Kurikulum";
+        else if (paneId.includes("jurnal") && !paneId.includes("walikelas") && !paneId.includes("kepala") && !paneId.includes("7kaih")) pageTitle = "Jurnal KBM Kurikulum";
         else if (paneId.includes("jurnal") && paneId.includes("walikelas")) pageTitle = "Jurnal Kelas Bimbingan";
         else if (paneId.includes("perangkat") && !paneId.includes("kepala")) pageTitle = "Persetujuan Perangkat Ajar";
         else if (paneId.includes("nilai") && !paneId.includes("kepala")) pageTitle = "Analisis Capaian Nilai Akademik";
@@ -5201,14 +5201,14 @@
         else if (paneId === "pane-wakasek-rekapabsen") pageTitle = "Monitoring Rekap Absensi Siswa";
         else if (paneId === "pane-wakasek-kondisisiswa") pageTitle = "Monitoring Kondisi Peserta Didik";
         else if (paneId === "pane-guruwali-ringkasan") pageTitle = "Ringkasan Dasbor Guru Wali";
-        else if (paneId === "pane-guruwali-jurnal7kih") pageTitle = "Jurnal 7KIH Bimbingan";
+        else if (paneId === "pane-guruwali-jurnal7kaih") pageTitle = "Jurnal 7KAIH Bimbingan";
         else if (paneId === "pane-kepala-ringkasan") pageTitle = "Dasbor Kepala Sekolah";
         else if (paneId === "pane-kepala-jurnal") pageTitle = "Monitoring Jurnal KBM";
         else if (paneId === "pane-kepala-perangkat") pageTitle = "Monitoring Perangkat Ajar";
         else if (paneId === "pane-kepala-nilai") pageTitle = "Monitoring Nilai Akademik";
         else if (paneId === "pane-kepala-rekapabsen") pageTitle = "Monitoring Rekap Absensi";
         else if (paneId === "pane-kepala-kondisisiswa") pageTitle = "Monitoring Perkembangan Siswa";
-        else if (paneId === "pane-kepala-jurnal7kih") pageTitle = "Monitoring Jurnal 7KIH";
+        else if (paneId === "pane-kepala-jurnal7kaih") pageTitle = "Monitoring Jurnal 7KAIH";
         
         document.getElementById('pageHeaderTitle').textContent = pageTitle;
       }
@@ -5387,7 +5387,7 @@
           const raObj = root.rekapabsen || {};
           const ksObj = root.kondisisiswa || {};
           const sgwObj = root.siswagw || {};
-          const j7Obj = root.jurnal7kih || {};
+          const j7Obj = root.jurnal7kaih || {};
           const cbObj = root.catatanbimbingan || {};
           const sObj = root.students || {};
           const kmpObj = root.kelasmapelpilihan || {};
@@ -5416,7 +5416,7 @@
           const raRaw = Object.keys(raObj).map(k => ({ id: k, ...raObj[k] }));
           const ksRaw = Object.keys(ksObj).map(k => ({ id: k, ...ksObj[k] }));
           const sgwRaw = Object.keys(sgwObj).map(k => ({ id: k, ...sgwObj[k] }));
-          const j7kihRaw = Object.keys(j7Obj).map(k => ({ id: k, ...j7Obj[k] }));
+          const j7kaihRaw = Object.keys(j7Obj).map(k => ({ id: k, ...j7Obj[k] }));
           const cbRaw = Object.keys(cbObj).map(k => ({ id: k, ...cbObj[k] }));
            const sRaw = Object.keys(sObj).map(k => ({ id: k, ...sObj[k] }));
            const kmpRaw = Object.keys(kmpObj).map(k => ({ id: k, ...kmpObj[k] }));
@@ -5437,7 +5437,7 @@
              rekapAbsenList: [...raRaw],
              kondisiSiswaList: [...ksRaw],
              siswaGuruWaliList: [...sgwRaw],
-             jurnal7KIHList: [...j7kihRaw],
+             jurnal7KAIHList: [...j7kaihRaw],
              catatanBimbinganList: [...cbRaw],
              studentList: [...sRaw],
              kelasMapelPilihanList: [...kmpRaw]
@@ -5456,7 +5456,7 @@
               approvedPerangkat: approved,
               avgNilaiSekolah: nRaw.length > 0 ? (sumRata / nRaw.length).toFixed(1) : "0.0",
               totalLaporanWali: lpRaw.length,
-              totalJurnal7KIH: j7kihRaw.length,
+              totalJurnal7KAIH: j7kaihRaw.length,
               totalCatatanBimbingan: cbRaw.length
             };
           }
@@ -5494,12 +5494,12 @@
             result.laporanWaliList = [];
             result.kondisiSiswaList = [];
             result.siswaGuruWaliList = [];
-            result.jurnal7KIHList = [];
+            result.jurnal7KAIHList = [];
           }
           else if (role === "Guru BK") {
             result.stats = {
               totalSiswaBimbingan: result.studentList.length,
-              totalJurnal7KIH: result.jurnal7KIHList.length,
+              totalJurnal7KAIH: result.jurnal7KAIHList.length,
               totalCatatanBimbingan: result.catatanBimbinganList.length
             };
             result.siswaGuruWaliList = result.studentList.map(s => ({
@@ -5529,7 +5529,7 @@
               approvedPerangkat: approved,
               avgNilaiSekolah: nRaw.length > 0 ? (sumRata / nRaw.length).toFixed(1) : "0.0",
               totalLaporanWali: lpRaw.length,
-              totalJurnal7KIH: j7kihRaw.length,
+              totalJurnal7KAIH: j7kaihRaw.length,
               totalCatatanBimbingan: cbRaw.length
             };
           }
@@ -5538,7 +5538,7 @@
             const myStudentNisList = myStudents.map(s => s.nis ? s.nis.toString().trim() : "");
             const myStudentNames = myStudents.map(s => s.namaSiswa ? s.namaSiswa.toLowerCase().trim() : "");
 
-            const myJurnals = j7kihRaw.filter(j => {
+            const myJurnals = j7kaihRaw.filter(j => {
               const matchGW = j.guruWali && j.guruWali.toLowerCase().includes(nama.toLowerCase());
               const matchNis = j.nis && myStudentNisList.includes(j.nis.toString().trim());
               const matchName = j.namaSiswa && myStudentNames.includes(j.namaSiswa.toLowerCase().trim());
@@ -5548,11 +5548,11 @@
 
             result.stats = {
               totalSiswaBimbingan: myStudents.length,
-              totalJurnal7KIH: myJurnals.length,
+              totalJurnal7KAIH: myJurnals.length,
               totalCatatanBimbingan: myCatatanBimbingan.length
             };
             result.siswaGuruWaliList = myStudents;
-            result.jurnal7KIHList = myJurnals;
+            result.jurnal7KAIHList = myJurnals;
             result.catatanBimbinganList = myCatatanBimbingan;
           }
           else if (role === "Kepala Sekolah") {
@@ -5561,7 +5561,7 @@
               totalGuru: users.filter(u => u.role !== "Kepala Sekolah" && u.role !== "Wakasek" && u.role !== "Admin").length,
               totalJurnal: jRaw.length,
               pendingPerangkat: pending,
-              totalJurnal7KIH: j7kihRaw.length,
+              totalJurnal7KAIH: j7kaihRaw.length,
               totalCatatanBimbingan: cbRaw.length
             };
           }
@@ -5605,7 +5605,7 @@
           return { success: true };
         }
 
-        else if (action === "addJurnal7KIH") {
+        else if (action === "addJurnal7KAIH") {
           let nis = payload.nis ? payload.nis.toString().trim() : "";
           let namaSiswa = payload.namaSiswa ? payload.namaSiswa.trim() : "";
           let kelas = payload.kelas || "";
@@ -5623,7 +5623,7 @@
             });
           }
 
-          const newRef = ref("jurnal7kih").push();
+          const newRef = ref("jurnal7kaih").push();
           await newRef.set({
             tanggal: payload.tanggal,
             nis: nis,
@@ -5641,8 +5641,8 @@
           return { success: true, id: newRef.key, guruWali: guruWali, kelas: kelas };
         }
 
-        else if (action === "deleteJurnal7KIH") {
-          await ref(`jurnal7kih/${payload.id}`).remove();
+        else if (action === "deleteJurnal7KAIH") {
+          await ref(`jurnal7kaih/${payload.id}`).remove();
           return { success: true };
         }
 
@@ -6067,7 +6067,7 @@
             db.collection("rekapabsen").get(),
             db.collection("kondisisiswa").get(),
             db.collection("siswagw").get(),
-            db.collection("jurnal7kih").get(),
+            db.collection("jurnal7kaih").get(),
             db.collection("catatanbimbingan").get(),
             db.collection("students").get(),
             db.collection("kelasmapelpilihan").get(),
@@ -6084,7 +6084,7 @@
           const raRaw = raSnap.docs.map(d => ({ id: d.id, ...d.data() }));
           const ksRaw = ksSnap.docs.map(d => ({ id: d.id, ...d.data() }));
           const sgwRaw = sgwSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-          const j7kihRaw = j7Snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          const j7kaihRaw = j7Snap.docs.map(d => ({ id: d.id, ...d.data() }));
           const cbRaw = cbSnap.docs.map(d => ({ id: d.id, ...d.data() }));
           const sRaw = sSnap.docs.map(d => ({ id: d.id, ...d.data() }));
           const kmpRaw = kmpSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -6119,7 +6119,7 @@
             rekapAbsenList: [...raRaw],
             kondisiSiswaList: [...ksRaw],
             siswaGuruWaliList: [...sgwRaw],
-            jurnal7KIHList: [...j7kihRaw],
+            jurnal7KAIHList: [...j7kaihRaw],
             catatanBimbinganList: [...cbRaw],
             studentList: [...sRaw],
             kelasMapelPilihanList: [...kmpRaw]
@@ -6138,7 +6138,7 @@
               approvedPerangkat: approved,
               avgNilaiSekolah: nRaw.length > 0 ? (sumRata / nRaw.length).toFixed(1) : "0.0",
               totalLaporanWali: lpRaw.length,
-              totalJurnal7KIH: j7kihRaw.length,
+              totalJurnal7KAIH: j7kaihRaw.length,
               totalCatatanBimbingan: cbRaw.length
             };
           }
@@ -6176,12 +6176,12 @@
             result.laporanWaliList = [];
             result.kondisiSiswaList = [];
             result.siswaGuruWaliList = [];
-            result.jurnal7KIHList = [];
+            result.jurnal7KAIHList = [];
           }
           else if (role === "Guru BK") {
             result.stats = {
               totalSiswaBimbingan: result.studentList.length,
-              totalJurnal7KIH: result.jurnal7KIHList.length,
+              totalJurnal7KAIH: result.jurnal7KAIHList.length,
               totalCatatanBimbingan: result.catatanBimbinganList.length
             };
             result.siswaGuruWaliList = result.studentList.map(s => ({
@@ -6211,7 +6211,7 @@
               approvedPerangkat: approved,
               avgNilaiSekolah: nRaw.length > 0 ? (sumRata / nRaw.length).toFixed(1) : "0.0",
               totalLaporanWali: lpRaw.length,
-              totalJurnal7KIH: j7kihRaw.length,
+              totalJurnal7KAIH: j7kaihRaw.length,
               totalCatatanBimbingan: cbRaw.length
             };
           }
@@ -6220,7 +6220,7 @@
             const myStudentNisList = myStudents.map(s => s.nis ? s.nis.toString().trim() : "");
             const myStudentNames = myStudents.map(s => s.namaSiswa ? s.namaSiswa.toLowerCase().trim() : "");
 
-            const myJurnals = j7kihRaw.filter(j => {
+            const myJurnals = j7kaihRaw.filter(j => {
               const matchGW = j.guruWali && j.guruWali.toLowerCase().includes(nama.toLowerCase());
               const matchNis = j.nis && myStudentNisList.includes(j.nis.toString().trim());
               const matchName = j.namaSiswa && myStudentNames.includes(j.namaSiswa.toLowerCase().trim());
@@ -6230,11 +6230,11 @@
 
             result.stats = {
               totalSiswaBimbingan: myStudents.length,
-              totalJurnal7KIH: myJurnals.length,
+              totalJurnal7KAIH: myJurnals.length,
               totalCatatanBimbingan: myCatatanBimbingan.length
             };
             result.siswaGuruWaliList = myStudents;
-            result.jurnal7KIHList = myJurnals;
+            result.jurnal7KAIHList = myJurnals;
             result.catatanBimbinganList = myCatatanBimbingan;
           }
           else if (role === "Kepala Sekolah") {
@@ -6243,7 +6243,7 @@
               totalGuru: users.filter(u => u.role !== "Kepala Sekolah" && u.role !== "Wakasek" && u.role !== "Admin").length,
               totalJurnal: jRaw.length,
               pendingPerangkat: pending,
-              totalJurnal7KIH: j7kihRaw.length,
+              totalJurnal7KAIH: j7kaihRaw.length,
               totalCatatanBimbingan: cbRaw.length
             };
           }
@@ -6287,8 +6287,8 @@
           return { success: true };
         }
 
-        else if (action === "addJurnal7KIH") {
-          const docRef = db.collection("jurnal7kih").doc();
+        else if (action === "addJurnal7KAIH") {
+          const docRef = db.collection("jurnal7kaih").doc();
           let nis = payload.nis ? payload.nis.toString().trim() : "";
           let namaSiswa = payload.namaSiswa ? payload.namaSiswa.trim() : "";
           let kelas = payload.kelas || "";
@@ -6322,8 +6322,8 @@
           return { success: true, id: docRef.id, guruWali: guruWali, kelas: kelas };
         }
 
-        else if (action === "deleteJurnal7KIH") {
-          await db.collection("jurnal7kih").doc(payload.id).delete();
+        else if (action === "deleteJurnal7KAIH") {
+          await db.collection("jurnal7kaih").doc(payload.id).delete();
           return { success: true };
         }
 
@@ -6668,7 +6668,7 @@
         appState.settings = data.settings || { hariBelajar: 5 };
         appState.teacherList = data.teacherList || [];
         appState.siswaGuruWaliList = data.siswaGuruWaliList || [];
-        appState.jurnal7KIHList = data.jurnal7KIHList || [];
+        appState.jurnal7KAIHList = data.jurnal7KAIHList || [];
         appState.studentList = data.studentList || [];
         appState.kelasMapelPilihanList = data.kelasMapelPilihanList || [];
         
@@ -6684,7 +6684,7 @@
         localStorage.setItem(`cache_settings_${appState.user.role}`, JSON.stringify(data.settings || { hariBelajar: 5 }));
         localStorage.setItem(`cache_teachers_${appState.user.role}`, JSON.stringify(data.teacherList || []));
         localStorage.setItem(`cache_siswagw_${appState.user.role}`, JSON.stringify(data.siswaGuruWaliList || []));
-        localStorage.setItem(`cache_jurnal7kih_${appState.user.role}`, JSON.stringify(data.jurnal7KIHList || []));
+        localStorage.setItem(`cache_jurnal7kaih_${appState.user.role}`, JSON.stringify(data.jurnal7KAIHList || []));
         localStorage.setItem(`cache_students_${appState.user.role}`, JSON.stringify(data.studentList || []));
         localStorage.setItem(`cache_kelas_mapel_pilihan_${appState.user.role}`, JSON.stringify(data.kelasMapelPilihanList || []));
         
@@ -6713,7 +6713,7 @@
       appState.settings = JSON.parse(localStorage.getItem(`cache_settings_${appState.user.role}`)) || { hariBelajar: 5 };
       appState.teacherList = JSON.parse(localStorage.getItem(`cache_teachers_${appState.user.role}`)) || [];
       appState.siswaGuruWaliList = JSON.parse(localStorage.getItem(`cache_siswagw_${appState.user.role}`)) || [];
-      appState.jurnal7KIHList = JSON.parse(localStorage.getItem(`cache_jurnal7kih_${appState.user.role}`)) || [];
+      appState.jurnal7KAIHList = JSON.parse(localStorage.getItem(`cache_jurnal7kaih_${appState.user.role}`)) || [];
       appState.studentList = JSON.parse(localStorage.getItem(`cache_students_${appState.user.role}`)) || [];
       appState.kelasMapelPilihanList = JSON.parse(localStorage.getItem(`cache_kelas_mapel_pilihan_${appState.user.role}`)) || [];
       
@@ -6781,7 +6781,7 @@
         renderSiswaGWTable();
         populateSiswaGWFormDropdowns();
         renderActiveClassesList();
-        renderWakasekJurnal7KIHTable();
+        renderWakasekJurnal7KAIHTable();
         renderWakasekCatatanBimbinganTable();
         populateWakasekFilterDropdowns();
         
@@ -6840,9 +6840,9 @@
       else if (role === "Guru Wali" || role === "Guru BK") {
         // Stats
         document.getElementById('gw-stat-bimbingan').textContent = appState.stats.totalSiswaBimbingan || 0;
-        document.getElementById('gw-stat-jurnal7kih').textContent = appState.stats.totalCatatanBimbingan || 0; // Menggunakan jumlah catatan bimbingan sebagai stat utama guru wali
+        document.getElementById('gw-stat-jurnal7kaih').textContent = appState.stats.totalJurnal7KAIH || 0; // Menggunakan jumlah jurnal 7KAIH terisi sebagai stat utama guru wali
         
-        const titleLaporan = document.querySelector('#pane-guruwali-jurnal7kih .card-title');
+        const titleLaporan = document.querySelector('#pane-guruwali-jurnal7kaih .card-title');
         if (titleLaporan) {
           titleLaporan.textContent = role === "Guru BK" 
             ? "Laporan Perkembangan Bimbingan BK" 
@@ -6851,7 +6851,7 @@
         
         // Render dropdowns and tables
         populateGuruWaliSiswaDropdown();
-        renderGuruWaliJurnal7KIHTable();
+        renderGuruWaliJurnal7KAIHTable();
         renderGuruWaliCatatanBimbinganTable();
         
         // Reset form input
@@ -6863,7 +6863,7 @@
         document.getElementById('ks-stat-guru').textContent = appState.stats.totalGuru || 0;
         document.getElementById('ks-stat-jurnal').textContent = appState.stats.totalJurnal || 0;
         document.getElementById('ks-stat-perangkat').textContent = appState.stats.pendingPerangkat || 0;
-        document.getElementById('ks-stat-jurnal7kih').textContent = appState.stats.totalJurnal7KIH || 0;
+        document.getElementById('ks-stat-jurnal7kaih').textContent = appState.stats.totalJurnal7KAIH || 0;
         
         // Render all monitoring tables
         renderKepalaJurnalTable(appState.jurnalList);
@@ -6871,7 +6871,7 @@
         renderKepalaNilaiTable();
         renderKepalaRekapAbsenTable();
         renderKepalaKondisiSiswaTable();
-        renderKepalaJurnal7KIHTable();
+        renderKepalaJurnal7KAIHTable();
         renderKepalaCatatanBimbinganTable();
         populateKepalaFilterDropdowns();
         
@@ -10452,7 +10452,7 @@
              const raRaw = JSON.parse(localStorage.getItem('db_rekap_absen')) || [];
              const ksRaw = JSON.parse(localStorage.getItem('db_kondisi_siswa')) || [];
              const sgwRaw = JSON.parse(localStorage.getItem('db_siswagw')) || [];
-             const j7kihRaw = JSON.parse(localStorage.getItem('db_jurnal7kih')) || [];
+             const j7kaihRaw = JSON.parse(localStorage.getItem('db_jurnal7kaih')) || [];
              const cbRaw = JSON.parse(localStorage.getItem('db_catatanbimbingan')) || [];
              const sRaw = JSON.parse(localStorage.getItem('db_students')) || [];
              const kmpRaw = JSON.parse(localStorage.getItem('db_kelas_mapel_pilihan')) || [];
@@ -10473,7 +10473,7 @@
                rekapAbsenList: [...raRaw],
                kondisiSiswaList: [...ksRaw],
                siswaGuruWaliList: [...sgwRaw],
-               jurnal7KIHList: [...j7kihRaw],
+               jurnal7KAIHList: [...j7kaihRaw],
                catatanBimbinganList: [...cbRaw],
                studentList: [...sRaw],
                kelasMapelPilihanList: [...kmpRaw]
@@ -10530,7 +10530,7 @@
                 approvedPerangkat: approved,
                 avgNilaiSekolah: nRaw.length > 0 ? (sumRata / nRaw.length).toFixed(1) : "0.0",
                 totalLaporanWali: lpRaw.length,
-                totalJurnal7KIH: j7kihRaw.length,
+                totalJurnal7KAIH: j7kaihRaw.length,
                 totalCatatanBimbingan: cbRaw.length
               };
             } 
@@ -10574,12 +10574,12 @@
                result.laporanWaliList = [];
                result.kondisiSiswaList = [];
                result.siswaGuruWaliList = [];
-               result.jurnal7KIHList = [];
+               result.jurnal7KAIHList = [];
              }
              else if (role === "Guru BK") {
                result.stats = {
                  totalSiswaBimbingan: result.studentList.length,
-                 totalJurnal7KIH: result.jurnal7KIHList.length,
+                 totalJurnal7KAIH: result.jurnal7KAIHList.length,
                  totalCatatanBimbingan: result.catatanBimbinganList.length
                };
                result.siswaGuruWaliList = result.studentList.map(s => ({
@@ -10609,7 +10609,7 @@
                  approvedPerangkat: approved,
                  avgNilaiSekolah: nRaw.length > 0 ? (sumRata / nRaw.length).toFixed(1) : "0.0",
                  totalLaporanWali: lpRaw.length,
-                 totalJurnal7KIH: j7kihRaw.length,
+                 totalJurnal7KAIH: j7kaihRaw.length,
                  totalCatatanBimbingan: cbRaw.length
                };
              }
@@ -10618,7 +10618,7 @@
               const myStudentNisList = myStudents.map(s => s.nis ? s.nis.toString().trim() : "");
               const myStudentNames = myStudents.map(s => s.namaSiswa ? s.namaSiswa.toLowerCase().trim() : "");
               
-              const myJurnals = j7kihRaw.filter(j => {
+              const myJurnals = j7kaihRaw.filter(j => {
                  const matchGW = j.guruWali && j.guruWali.toLowerCase().includes(nama.toLowerCase());
                  const matchNis = j.nis && myStudentNisList.includes(j.nis.toString().trim());
                  const matchName = j.namaSiswa && myStudentNames.includes(j.namaSiswa.toLowerCase().trim());
@@ -10629,12 +10629,12 @@
               
               result.stats = {
                 totalSiswaBimbingan: myStudents.length,
-                totalJurnal7KIH: myJurnals.length,
+                totalJurnal7KAIH: myJurnals.length,
                 totalCatatanBimbingan: myCatatanBimbingan.length
               };
               
               result.siswaGuruWaliList = myStudents;
-              result.jurnal7KIHList = myJurnals;
+              result.jurnal7KAIHList = myJurnals;
               result.catatanBimbinganList = myCatatanBimbingan;
               result.jurnalList = [];
               result.perangkatList = [];
@@ -10649,7 +10649,7 @@
                 totalGuru: users.filter(u => u.role !== "Kepala Sekolah" && u.role !== "Wakasek" && u.role !== "Admin").length,
                 totalJurnal: jRaw.length,
                 pendingPerangkat: pending,
-                totalJurnal7KIH: j7kihRaw.length,
+                totalJurnal7KAIH: j7kaihRaw.length,
                 totalCatatanBimbingan: cbRaw.length
               };
             }
@@ -11096,8 +11096,8 @@
             }
           }
 
-          else if (action === "addJurnal7KIH") {
-            const j7kihRaw = JSON.parse(localStorage.getItem('db_jurnal7kih')) || [];
+          else if (action === "addJurnal7KAIH") {
+            const j7kaihRaw = JSON.parse(localStorage.getItem('db_jurnal7kaih')) || [];
             const sgwRaw = JSON.parse(localStorage.getItem('db_siswagw')) || [];
             
             let nis = payload.nis ? payload.nis.toString().trim() : "";
@@ -11117,7 +11117,7 @@
               if (!guruWali) guruWali = matchedStudent.guruWali || "";
             }
             
-            const newJ7kih = {
+            const newJ7kaih = {
               id: "JK-" + new Date().getTime() + "-" + Math.floor(Math.random() * 1000),
               tanggal: payload.tanggal,
               nis: nis,
@@ -11133,20 +11133,20 @@
               tidurCepat: payload.tidurCepat
             };
             
-            j7kihRaw.unshift(newJ7kih);
-            localStorage.setItem('db_jurnal7kih', JSON.stringify(j7kihRaw));
-            resolve({ success: true, id: newJ7kih.id, guruWali: guruWali, kelas: kelas });
+            j7kaihRaw.unshift(newJ7kaih);
+            localStorage.setItem('db_jurnal7kaih', JSON.stringify(j7kaihRaw));
+            resolve({ success: true, id: newJ7kaih.id, guruWali: guruWali, kelas: kelas });
           }
 
-          else if (action === "deleteJurnal7KIH") {
-            const j7kihRaw = JSON.parse(localStorage.getItem('db_jurnal7kih')) || [];
-            const index = j7kihRaw.findIndex(j => j.id === payload.id);
+          else if (action === "deleteJurnal7KAIH") {
+            const j7kaihRaw = JSON.parse(localStorage.getItem('db_jurnal7kaih')) || [];
+            const index = j7kaihRaw.findIndex(j => j.id === payload.id);
             if (index !== -1) {
-              j7kihRaw.splice(index, 1);
-              localStorage.setItem('db_jurnal7kih', JSON.stringify(j7kihRaw));
+              j7kaihRaw.splice(index, 1);
+              localStorage.setItem('db_jurnal7kaih', JSON.stringify(j7kaihRaw));
               resolve({ success: true });
             } else {
-              reject(new Error("Jurnal 7KIH tidak ditemukan."));
+              reject(new Error("Jurnal 7KAIH tidak ditemukan."));
             }
           }
 
@@ -11288,7 +11288,7 @@
         { id: "SGW-3", nis: "12347", namaSiswa: "Citra Lestari", kelas: "10-A", guruWali: "Ibu Rahma (Guru Wali)" }
       ];
 
-      const mockJurnal7KIH = [
+      const mockJurnal7KAIH = [
         { id: "JK-1", tanggal: "2026-07-02", nis: "12345", namaSiswa: "Ahmad Dani", bangunPagi: "Ya", beribadah: "Ya", berolahraga: "Ya", makanSehat: "Ya", gemarBelajar: "Ya", bermasyarakat: "Ya", tidurCepat: "Ya" }
       ];
 
@@ -11313,7 +11313,7 @@
       localStorage.setItem('db_rekap_absen', JSON.stringify(mockRekapAbsen));
       localStorage.setItem('db_kondisi_siswa', JSON.stringify(mockKondisiSiswa));
       localStorage.setItem('db_siswagw', JSON.stringify(mockSiswaGW));
-      localStorage.setItem('db_jurnal7kih', JSON.stringify(mockJurnal7KIH));
+      localStorage.setItem('db_jurnal7kaih', JSON.stringify(mockJurnal7KAIH));
       localStorage.setItem('db_catatanbimbingan', JSON.stringify(mockCatatanBimbingan));
       localStorage.setItem('db_students', JSON.stringify(mockStudents));
     }
@@ -11620,10 +11620,10 @@
       }
     }
 
-    // 3. GURU WALI: JURNAL 7KIH & CATATAN BIMBINGAN
-    async function showStudent7KIHView(show) {
+    // 3. GURU WALI: JURNAL 7KAIH & CATATAN BIMBINGAN
+    async function showStudent7KAIHView(show) {
       const loginCard = document.getElementById('loginCard');
-      const studentCard = document.getElementById('student7KIHCard');
+      const studentCard = document.getElementById('student7KAIHCard');
       if (show) {
         // Reset dropdown and NIS input to default state
         const selectKelas = document.getElementById('studentKelas');
@@ -11708,7 +11708,7 @@
       }
     }
 
-    async function submitStudent7KIHForm(e) {
+    async function submitStudent7KAIHForm(e) {
       e.preventDefault();
       const nis = document.getElementById('studentNIS').value;
       const namaSiswa = document.getElementById('studentNama').value;
@@ -11723,9 +11723,9 @@
       const bermasyarakat = document.getElementById('studentBermasyarakat').checked ? "Ya" : "Tidak";
       const tidurCepat = document.getElementById('studentTidurCepat').checked ? "Ya" : "Tidak";
       
-      showLoading(true, "Mengirim Jurnal 7KIH...");
+      showLoading(true, "Mengirim Jurnal 7KAIH...");
       try {
-        await callApi("addJurnal7KIH", {
+        await callApi("addJurnal7KAIH", {
           nis,
           namaSiswa,
           kelas,
@@ -11738,10 +11738,10 @@
           bermasyarakat,
           tidurCepat
         });
-        showToast("Jurnal 7KIH berhasil dikirim! Terima kasih.", "success");
-        document.getElementById('formStudent7KIH').reset();
+        showToast("Jurnal 7KAIH berhasil dikirim! Terima kasih.", "success");
+        document.getElementById('formStudent7KAIH').reset();
         document.getElementById('studentTanggal').value = new Date().toISOString().substring(0, 10);
-        showStudent7KIHView(false);
+        showStudent7KAIHView(false);
       } catch (err) {
         showToast("Gagal mengirim jurnal: " + err.message, "danger");
       } finally {
@@ -11749,11 +11749,11 @@
       }
     }
 
-    function copyStudent7KIHLink() {
-      const link = window.location.origin + window.location.pathname + '#jurnal7kih-siswa';
+    function copyStudent7KAIHLink() {
+      const link = window.location.origin + window.location.pathname + '#jurnal7kaih-siswa';
       if (navigator.clipboard && window.isSecureContext) {
         navigator.clipboard.writeText(link).then(() => {
-          showToast("Tautan Form Jurnal 7KIH Siswa berhasil disalin! Bagikan ke WhatsApp siswa/orang tua.", "success");
+          showToast("Tautan Form Jurnal 7KAIH Siswa berhasil disalin! Bagikan ke WhatsApp siswa/orang tua.", "success");
         }).catch(err => {
           fallbackCopyText(link);
         });
@@ -11769,21 +11769,21 @@
       textArea.select();
       try {
         document.execCommand('copy');
-        showToast("Tautan Form Jurnal 7KIH Siswa berhasil disalin!", "success");
+        showToast("Tautan Form Jurnal 7KAIH Siswa berhasil disalin!", "success");
       } catch (err) {
         prompt("Salin tautan berikut untuk dibagikan ke siswa:", text);
       }
       document.body.removeChild(textArea);
     }
 
-    async function deleteJurnal7KIH(id) {
-      const confirmed = await showCustomConfirm("Hapus Jurnal 7KIH", "Apakah Anda yakin ingin menghapus data Jurnal 7KIH ini?", "Ya, Hapus", true);
+    async function deleteJurnal7KAIH(id) {
+      const confirmed = await showCustomConfirm("Hapus Jurnal 7KAIH", "Apakah Anda yakin ingin menghapus data Jurnal 7KAIH ini?", "Ya, Hapus", true);
       if (!confirmed) return;
       
-      showLoading(true, "Menghapus data 7KIH...");
+      showLoading(true, "Menghapus data 7KAIH...");
       try {
-        await callApi("deleteJurnal7KIH", { id });
-        showToast("Data Jurnal 7KIH berhasil dihapus.");
+        await callApi("deleteJurnal7KAIH", { id });
+        showToast("Data Jurnal 7KAIH berhasil dihapus.");
         loadDashboardData();
       } catch (err) {
         showToast("Gagal menghapus: " + err.message, "danger");
@@ -11822,14 +11822,14 @@
       });
     }
 
-    function renderGuruWaliJurnal7KIHTable() {
-      const tbody = document.getElementById('gw-jurnal7kih-table-body');
+    function renderGuruWaliJurnal7KAIHTable() {
+      const tbody = document.getElementById('gw-jurnal7kaih-table-body');
       if (!tbody) return;
       tbody.innerHTML = "";
       
-      const list = appState.jurnal7KIHList || [];
+      const list = appState.jurnal7KAIHList || [];
       if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="12" style="text-align: center; color: var(--text-muted);">Belum ada riwayat jurnal 7KIH dari siswa. Klik 'Bagikan Link Ke Siswa' untuk menyebarkan link pengisian.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="12" style="text-align: center; color: var(--text-muted);">Belum ada riwayat jurnal 7KAIH dari siswa. Klik 'Bagikan Link Ke Siswa' untuk menyebarkan link pengisian.</td></tr>`;
         return;
       }
       
@@ -11850,7 +11850,7 @@
           <td>${getStatusKihIcon(item.bermasyarakat)}</td>
           <td>${getStatusKihIcon(item.tidurCepat)}</td>
           <td>
-            <button class="btn btn-danger" onclick="deleteJurnal7KIH('${item.id}')" style="padding:0.25rem 0.5rem; font-size:0.75rem;" title="Hapus Data"><i class="fa-solid fa-trash"></i></button>
+            <button class="btn btn-danger" onclick="deleteJurnal7KAIH('${item.id}')" style="padding:0.25rem 0.5rem; font-size:0.75rem;" title="Hapus Data"><i class="fa-solid fa-trash"></i></button>
           </td>
         `;
         tbody.appendChild(tr);
@@ -12136,14 +12136,14 @@
       renderKepalaKondisiSiswaTable(filtered);
     }
 
-    function renderWakasekJurnal7KIHTable(list = null) {
-      const tbody = document.getElementById('w-jurnal7kih-table-body');
+    function renderWakasekJurnal7KAIHTable(list = null) {
+      const tbody = document.getElementById('w-jurnal7kaih-table-body');
       if (!tbody) return;
       tbody.innerHTML = "";
       
-      const dataToRender = list || appState.jurnal7KIHList || [];
+      const dataToRender = list || appState.jurnal7KAIHList || [];
       if (dataToRender.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="13" style="text-align: center; color: var(--text-muted);">Belum ada riwayat jurnal 7KIH dari siswa.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="13" style="text-align: center; color: var(--text-muted);">Belum ada riwayat jurnal 7KAIH dari siswa.</td></tr>`;
         return;
       }
       
@@ -12165,7 +12165,7 @@
           <td>${getStatusKihIcon(item.bermasyarakat)}</td>
           <td>${getStatusKihIcon(item.tidurCepat)}</td>
           <td>
-            <button class="btn btn-danger" onclick="deleteJurnal7KIH('${item.id}')" style="padding:0.25rem 0.5rem; font-size:0.75rem;" title="Hapus Data"><i class="fa-solid fa-trash"></i></button>
+            <button class="btn btn-danger" onclick="deleteJurnal7KAIH('${item.id}')" style="padding:0.25rem 0.5rem; font-size:0.75rem;" title="Hapus Data"><i class="fa-solid fa-trash"></i></button>
           </td>
         `;
         tbody.appendChild(tr);
@@ -12173,29 +12173,29 @@
     }
 
     function populateWakasekFilterDropdowns() {
-      const selectGuru7KIH = document.getElementById('w-filter-7kih-guru');
-      if (selectGuru7KIH) {
-        const currentVal = selectGuru7KIH.value;
-        selectGuru7KIH.innerHTML = '<option value="">Semua Guru Wali</option>';
+      const selectGuru7KAIH = document.getElementById('w-filter-7kaih-guru');
+      if (selectGuru7KAIH) {
+        const currentVal = selectGuru7KAIH.value;
+        selectGuru7KAIH.innerHTML = '<option value="">Semua Guru Wali</option>';
         const gwList = [];
-        (appState.jurnal7KIHList || []).forEach(j => {
+        (appState.jurnal7KAIHList || []).forEach(j => {
           if (j.guruWali && !gwList.includes(j.guruWali)) gwList.push(j.guruWali);
         });
         gwList.forEach(g => {
           const opt = document.createElement('option');
           opt.value = g;
           opt.textContent = g;
-          selectGuru7KIH.appendChild(opt);
+          selectGuru7KAIH.appendChild(opt);
         });
-        selectGuru7KIH.value = currentVal;
+        selectGuru7KAIH.value = currentVal;
       }
     }
 
-    function filterWakasek7KIH() {
-      const filterGuru = document.getElementById('w-filter-7kih-guru').value;
-      const filterNama = document.getElementById('w-filter-7kih-nama').value.toLowerCase();
+    function filterWakasek7KAIH() {
+      const filterGuru = document.getElementById('w-filter-7kaih-guru').value;
+      const filterNama = document.getElementById('w-filter-7kaih-nama').value.toLowerCase();
       
-      const filtered = (appState.jurnal7KIHList || []).filter(item => {
+      const filtered = (appState.jurnal7KAIHList || []).filter(item => {
         const matchGuru = !filterGuru || (item.guruWali && item.guruWali === filterGuru);
         const matchNama = !filterNama || 
                           (item.namaSiswa && item.namaSiswa.toLowerCase().includes(filterNama)) || 
@@ -12203,7 +12203,7 @@
         return matchGuru && matchNama;
       });
       
-      renderWakasekJurnal7KIHTable(filtered);
+      renderWakasekJurnal7KAIHTable(filtered);
     }
 
     function renderWakasekCatatanBimbinganTable() {
@@ -12256,14 +12256,14 @@
       });
     }
 
-    function renderKepalaJurnal7KIHTable(list = null) {
-      const tbody = document.getElementById('ks-jurnal7kih-table-body');
+    function renderKepalaJurnal7KAIHTable(list = null) {
+      const tbody = document.getElementById('ks-jurnal7kaih-table-body');
       if (!tbody) return;
       tbody.innerHTML = "";
       
-      const dataToRender = list || appState.jurnal7KIHList || [];
+      const dataToRender = list || appState.jurnal7KAIHList || [];
       if (dataToRender.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="11" style="text-align: center; color: var(--text-muted);">Belum ada riwayat jurnal 7KIH dari siswa.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="11" style="text-align: center; color: var(--text-muted);">Belum ada riwayat jurnal 7KAIH dari siswa.</td></tr>`;
         return;
       }
       
@@ -12288,24 +12288,24 @@
       });
     }
 
-    function filterKepala7KIH() {
-      const filterGuru = document.getElementById('ks-filter-7kih-guru').value;
-      const filterNama = document.getElementById('ks-filter-7kih-nama').value.toLowerCase();
+    function filterKepala7KAIH() {
+      const filterGuru = document.getElementById('ks-filter-7kaih-guru').value;
+      const filterNama = document.getElementById('ks-filter-7kaih-nama').value.toLowerCase();
       
-      const filtered = (appState.jurnal7KIHList || []).filter(item => {
+      const filtered = (appState.jurnal7KAIHList || []).filter(item => {
         const matchGuru = !filterGuru || item.guruWali === filterGuru;
         const matchNama = !filterNama || item.namaSiswa.toLowerCase().includes(filterNama);
         return matchGuru && matchNama;
       });
       
-      renderKepalaJurnal7KIHTable(filtered);
+      renderKepalaJurnal7KAIHTable(filtered);
     }
 
     function populateKepalaFilterDropdowns() {
       const selectKelasJurnal = document.getElementById('ks-filter-kelas');
       const selectKelasAbsen = document.getElementById('ks-filter-absen-kelas');
       const selectKelasKondisi = document.getElementById('ks-filter-kondisi-kelas');
-      const selectGuru7KIH = document.getElementById('ks-filter-7kih-guru');
+      const selectGuru7KAIH = document.getElementById('ks-filter-7kaih-guru');
       
       const kelasList = ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"];
       
@@ -12322,20 +12322,20 @@
         sel.value = currentVal;
       });
       
-      if (selectGuru7KIH) {
-        const currentVal = selectGuru7KIH.value;
-        selectGuru7KIH.innerHTML = '<option value="">Semua Guru Wali</option>';
+      if (selectGuru7KAIH) {
+        const currentVal = selectGuru7KAIH.value;
+        selectGuru7KAIH.innerHTML = '<option value="">Semua Guru Wali</option>';
         const gwList = [];
-        (appState.jurnal7KIHList || []).forEach(j => {
+        (appState.jurnal7KAIHList || []).forEach(j => {
           if (!gwList.includes(j.guruWali)) gwList.push(j.guruWali);
         });
         gwList.forEach(g => {
           const opt = document.createElement('option');
           opt.value = g;
           opt.textContent = g;
-          selectGuru7KIH.appendChild(opt);
+          selectGuru7KAIH.appendChild(opt);
         });
-        selectGuru7KIH.value = currentVal;
+        selectGuru7KAIH.value = currentVal;
       }
     }
 
