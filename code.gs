@@ -135,6 +135,10 @@ function doPost(e) {
       case "addJurnal":
         response = { status: "success", data: addJurnal(payload) };
         break;
+
+      case "deleteJurnal":
+        response = { status: "success", data: deleteJurnal(payload) };
+        break;
         
       case "syncOfflineJurnal":
         response = { status: "success", data: syncOfflineJurnal(payload.jurnalList) };

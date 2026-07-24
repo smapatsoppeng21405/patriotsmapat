@@ -1509,10 +1509,11 @@
                     <th>Materi Mengajar</th>
                     <th>Kehadiran</th>
                     <th>Catatan Jurnal</th>
+                    <th>Aksi</th>
                   </tr>
                 </thead>
                 <tbody id="w-jurnal-table-body">
-                  <tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Memuat...</td></tr>
+                  <tr><td colspan="8" style="text-align: center; color: var(--text-muted);">Memuat...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -2315,7 +2316,10 @@
                 <thead>
                   <tr>
                     <th>Tanggal</th>
+                    <th>NIS</th>
+                    <th>Guru Wali</th>
                     <th>Nama Siswa</th>
+                    <th>Kelas</th>
                     <th>Bangun Pagi</th>
                     <th>Beribadah</th>
                     <th>Berolahraga</th>
@@ -2323,10 +2327,11 @@
                     <th>Gemar Belajar</th>
                     <th>Bermasyarakat</th>
                     <th>Tidur Cepat</th>
+                    <th>Aksi</th>
                   </tr>
                 </thead>
                 <tbody id="w-jurnal7kih-table-body">
-                  <tr><td colspan="9" style="text-align: center; color: var(--text-muted);">Memuat...</td></tr>
+                  <tr><td colspan="13" style="text-align: center; color: var(--text-muted);">Memuat...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -6881,7 +6886,7 @@
       tbody.innerHTML = "";
       
       if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted);">Tidak ada aktivitas jurnal mengajar.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-muted);">Tidak ada aktivitas jurnal mengajar.</td></tr>`;
         return;
       }
       
@@ -6897,6 +6902,9 @@
           <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.materi}</td>
           <td><span class="badge badge-success" style="background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.15);">${item.kehadiran}</span></td>
           <td style="color: var(--text-muted); font-size: 0.85rem;">${item.catatan || '-'}</td>
+          <td>
+            <button class="btn btn-danger" onclick="deleteJurnal('${item.id}')" style="padding:0.25rem 0.5rem; font-size:0.75rem;" title="Hapus Jurnal"><i class="fa-solid fa-trash"></i></button>
+          </td>
         `;
         tbody.appendChild(tr);
       });
@@ -11784,6 +11792,22 @@
       }
     }
 
+    async function deleteJurnal(id) {
+      const confirmed = await showCustomConfirm("Hapus Jurnal Mengajar", "Apakah Anda yakin ingin menghapus data Jurnal Mengajar ini?", "Ya, Hapus", true);
+      if (!confirmed) return;
+      
+      showLoading(true, "Menghapus jurnal...");
+      try {
+        await callApi("deleteJurnal", { id });
+        showToast("Data Jurnal Mengajar berhasil dihapus.");
+        loadDashboardData();
+      } catch (err) {
+        showToast("Gagal menghapus: " + err.message, "danger");
+      } finally {
+        showLoading(false);
+      }
+    }
+
     function populateGuruWaliSiswaDropdown() {
       const selectSiswa = document.getElementById('bimbinganSiswa');
       if (!selectSiswa) return;
@@ -12119,7 +12143,7 @@
       
       const dataToRender = list || appState.jurnal7KIHList || [];
       if (dataToRender.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="12" style="text-align: center; color: var(--text-muted);">Belum ada riwayat jurnal 7KIH dari siswa.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="13" style="text-align: center; color: var(--text-muted);">Belum ada riwayat jurnal 7KIH dari siswa.</td></tr>`;
         return;
       }
       
@@ -12140,6 +12164,9 @@
           <td>${getStatusKihIcon(item.gemarBelajar)}</td>
           <td>${getStatusKihIcon(item.bermasyarakat)}</td>
           <td>${getStatusKihIcon(item.tidurCepat)}</td>
+          <td>
+            <button class="btn btn-danger" onclick="deleteJurnal7KIH('${item.id}')" style="padding:0.25rem 0.5rem; font-size:0.75rem;" title="Hapus Data"><i class="fa-solid fa-trash"></i></button>
+          </td>
         `;
         tbody.appendChild(tr);
       });
