@@ -2038,7 +2038,6 @@
                     </div>
                   </label>
                   <label class="role-checkbox-card" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border-radius: 0.5rem; border: 1px solid var(--border-color); background: rgba(255, 255, 255, 0.02); cursor: pointer; transition: var(--transition);">
-                  <label class="role-checkbox-card" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border-radius: 0.5rem; border: 1px solid var(--border-color); background: rgba(255, 255, 255, 0.02); cursor: pointer; transition: var(--transition);">
                     <input type="checkbox" name="teacherRoles" value="Wakasek" style="width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer;">
                     <div style="display: flex; flex-direction: column;">
                       <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-main);">Wakasek Kurikulum</span>
@@ -2057,6 +2056,20 @@
                     <div style="display: flex; flex-direction: column;">
                       <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-main);">Administrator</span>
                       <span style="font-size: 0.7rem; color: var(--text-muted);">Pengelola Sistem</span>
+                    </div>
+                  </label>
+                  <label class="role-checkbox-card" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border-radius: 0.5rem; border: 1px solid var(--border-color); background: rgba(255, 255, 255, 0.02); cursor: pointer; transition: var(--transition);">
+                    <input type="checkbox" name="teacherRoles" value="Guru BK" style="width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer;">
+                    <div style="display: flex; flex-direction: column;">
+                      <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-main);">Guru BK</span>
+                      <span style="font-size: 0.7rem; color: var(--text-muted);">Bimbingan Konseling</span>
+                    </div>
+                  </label>
+                  <label class="role-checkbox-card" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border-radius: 0.5rem; border: 1px solid var(--border-color); background: rgba(255, 255, 255, 0.02); cursor: pointer; transition: var(--transition);">
+                    <input type="checkbox" name="teacherRoles" value="Tenaga Kependidikan" style="width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer;">
+                    <div style="display: flex; flex-direction: column;">
+                      <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-main);">Tenaga Kependidikan</span>
+                      <span style="font-size: 0.7rem; color: var(--text-muted);">Administrasi Sekolah</span>
                     </div>
                   </label>
                 </div>
@@ -4643,6 +4656,8 @@
         else if (p.role === "Kepala Sekolah") iconHtml = '<i class="fa-solid fa-crown" style="color:#f59e0b;"></i>';
         else if (p.role === "Wali Kelas") iconHtml = '<i class="fa-solid fa-chalkboard-user" style="color:var(--success);"></i>';
         else if (p.role === "Guru Wali") iconHtml = '<i class="fa-solid fa-heart" style="color:var(--danger);"></i>';
+        else if (p.role === "Guru BK") iconHtml = '<i class="fa-solid fa-user-doctor" style="color:#d946ef;"></i>';
+        else if (p.role === "Tenaga Kependidikan") iconHtml = '<i class="fa-solid fa-user-tie" style="color:#06b6d4;"></i>';
         
         btn.innerHTML = `
           <div style="width: 2.2rem; height: 2.2rem; border-radius: 50%; background: var(--bg-body); display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0;">
@@ -4735,6 +4750,8 @@
         else if (p.role === "Kepala Sekolah") iconHtml = '<i class="fa-solid fa-crown" style="font-size:0.7rem; color:#f59e0b;"></i>';
         else if (p.role === "Wali Kelas") iconHtml = '<i class="fa-solid fa-chalkboard-user" style="font-size:0.7rem; color:var(--success);"></i>';
         else if (p.role === "Guru Wali") iconHtml = '<i class="fa-solid fa-heart" style="font-size:0.7rem; color:var(--danger);"></i>';
+        else if (p.role === "Guru BK") iconHtml = '<i class="fa-solid fa-user-doctor" style="font-size:0.7rem; color:#d946ef;"></i>';
+        else if (p.role === "Tenaga Kependidikan") iconHtml = '<i class="fa-solid fa-user-tie" style="font-size:0.7rem; color:#06b6d4;"></i>';
         
         item.innerHTML = `${iconHtml} <span>${formatRoleDisplay(p.role)}</span>`;
         dropdown.appendChild(item);
@@ -5087,6 +5104,18 @@
           { text: "Ringkasan", pane: "pane-guruwali-ringkasan", icon: "fa-chart-pie" },
           { text: "Jurnal 7KIH", pane: "pane-guruwali-jurnal7kih", icon: "fa-heart-pulse" }
         ];
+      } else if (role === "Guru BK") {
+        menuItems = [
+          { text: "Ringkasan BK", pane: "pane-guruwali-ringkasan", icon: "fa-chart-pie" },
+          { text: "Bimbingan & 7KIH", pane: "pane-guruwali-jurnal7kih", icon: "fa-heart-pulse" }
+        ];
+      } else if (role === "Tenaga Kependidikan") {
+        menuItems = [
+          { text: "Ringkasan", pane: "pane-wakasek-ringkasan", icon: "fa-chart-pie" },
+          { text: "Data Utama Guru", pane: "pane-wakasek-gurumaster", icon: "fa-user-gear" },
+          { text: "Data Utama Siswa", pane: "pane-wakasek-siswamaster", icon: "fa-users-gear" },
+          { text: "Rekap Absen Kelas", pane: "pane-wakasek-rekapabsen", icon: "fa-calendar-check" }
+        ];
       } else if (role === "Kepala Sekolah") {
         menuItems = [
           { text: "Ringkasan", pane: "pane-kepala-ringkasan", icon: "fa-chart-pie" },
@@ -5209,6 +5238,7 @@
         payload.currentUserEmail = appState.user.email;
         payload.currentUserRole = appState.user.role;
         payload.currentUserName = appState.user.nama;
+        payload.currentUserWaliKelasClass = appState.user.waliKelasClass || "";
       }
       
       // 1. CEK MODE GOOGLE FIREBASE REALTIME DATABASE (100% GRATIS SELAMANYA)
@@ -5286,10 +5316,10 @@
               const rolesList = u.role ? u.role.split(",").map(r => r.trim()).filter(Boolean) : [];
               if (rolesList.length > 1) {
                 rolesList.forEach(r => {
-                  foundUsers.push({ id: key, nama: u.nama, email: u.email, nip: u.nip || "", role: r });
+                  foundUsers.push({ id: key, nama: u.nama, email: u.email, nip: u.nip || "", role: r, waliKelasClass: u.waliKelasClass || "", mapel: u.mapel || "" });
                 });
               } else {
-                foundUsers.push({ id: key, nama: u.nama, email: u.email, nip: u.nip || "", role: u.role || "Guru" });
+                foundUsers.push({ id: key, nama: u.nama, email: u.email, nip: u.nip || "", role: u.role || "Guru", waliKelasClass: u.waliKelasClass || "", mapel: u.mapel || "" });
               }
             }
           });
@@ -5406,15 +5436,62 @@
             result.guruJadwalList = myJadwals;
           }
           else if (role === "Wali Kelas") {
-            const classMatch = nama.match(/Wali\s+Kelas\s+(\d+)([A-Z])/i);
-            const homeroomClass = classMatch ? classMatch[1] + "-" + classMatch[2] : "";
+            let homeroomClass = payload.currentUserWaliKelasClass || "";
+            if (!homeroomClass && nama) {
+              const classMatch = nama.match(/Wali\s+Kelas\s+(\d+)([A-Z])/i);
+              homeroomClass = classMatch ? classMatch[1] + "-" + classMatch[2] : "";
+            }
             if (homeroomClass) {
               result.jurnalList = jRaw.filter(j => j.kelas && j.kelas.toUpperCase() === homeroomClass.toUpperCase());
               result.rekapAbsenList = raRaw.filter(ra => ra.kelas && ra.kelas.toUpperCase() === homeroomClass.toUpperCase());
+            } else {
+              result.jurnalList = [];
+              result.rekapAbsenList = [];
             }
             result.stats = {
               totalJurnalSekolah: result.jurnalList.length,
               totalRekapSaya: result.rekapAbsenList.length
+            };
+            result.laporanWaliList = [];
+            result.kondisiSiswaList = [];
+            result.siswaGuruWaliList = [];
+            result.jurnal7KIHList = [];
+          }
+          else if (role === "Guru BK") {
+            result.stats = {
+              totalSiswaBimbingan: result.studentList.length,
+              totalJurnal7KIH: result.jurnal7KIHList.length,
+              totalCatatanBimbingan: result.catatanBimbinganList.length
+            };
+            result.siswaGuruWaliList = result.studentList.map(s => ({
+              id: s.id,
+              nis: s.nis,
+              namaSiswa: s.namaSiswa,
+              kelas: s.kelas,
+              guruWali: "Guru BK"
+            }));
+            result.jurnalList = [];
+            result.perangkatList = [];
+            result.nilaiList = [];
+            result.laporanWaliList = [];
+            result.rekapAbsenList = [];
+            result.kondisiSiswaList = [];
+          }
+          else if (role === "Tenaga Kependidikan") {
+            const pending = pRaw.filter(p => p.status === "Pending").length;
+            const approved = pRaw.filter(p => p.status === "Disetujui").length;
+            let sumRata = 0;
+            nRaw.forEach(n => sumRata += parseFloat(n.rataNilai) || 0);
+
+            result.stats = {
+              totalGuru: users.filter(u => u.role !== "Wakasek" && u.role !== "Admin" && u.role !== "Kepala Sekolah").length,
+              totalJurnal: jRaw.length,
+              pendingPerangkat: pending,
+              approvedPerangkat: approved,
+              avgNilaiSekolah: nRaw.length > 0 ? (sumRata / nRaw.length).toFixed(1) : "0.0",
+              totalLaporanWali: lpRaw.length,
+              totalJurnal7KIH: j7kihRaw.length,
+              totalCatatanBimbingan: cbRaw.length
             };
           }
           else if (role === "Guru Wali") {
@@ -5547,7 +5624,7 @@
         }
 
         else if (action === "addTeacher") {
-          if (payload.currentUserRole !== "Admin") throw new Error("Akses Ditolak: Hanya Admin yang dapat menambah/mengedit data guru.");
+          if (payload.currentUserRole !== "Admin" && payload.currentUserRole !== "Tenaga Kependidikan") throw new Error("Akses Ditolak: Hanya Admin atau Tenaga Kependidikan yang dapat menambah/mengedit data guru.");
           const key = payload.id || ref("users").push().key;
           await ref(`users/${key}`).update({
             nama: payload.nama,
@@ -5562,7 +5639,7 @@
         }
 
         else if (action === "deleteTeacher") {
-          if (payload.currentUserRole !== "Admin") throw new Error("Akses Ditolak: Hanya Admin yang dapat menghapus data guru.");
+          if (payload.currentUserRole !== "Admin" && payload.currentUserRole !== "Tenaga Kependidikan") throw new Error("Akses Ditolak: Hanya Admin atau Tenaga Kependidikan yang dapat menghapus data guru.");
           const ids = payload.ids || [payload.id];
           for (const id of ids) {
             await ref(`users/${id}`).remove();
@@ -5571,7 +5648,7 @@
         }
 
         else if (action === "addStudent") {
-          if (payload.currentUserRole !== "Admin") throw new Error("Akses Ditolak: Hanya Admin yang dapat menambah/mengedit data siswa.");
+          if (payload.currentUserRole !== "Admin" && payload.currentUserRole !== "Tenaga Kependidikan") throw new Error("Akses Ditolak: Hanya Admin atau Tenaga Kependidikan yang dapat menambah/mengedit data siswa.");
           const key = payload.id || ref("students").push().key;
           await ref(`students/${key}`).update({
             nis: payload.nis || "",
@@ -5583,7 +5660,7 @@
         }
 
         else if (action === "deleteStudent") {
-          if (payload.currentUserRole !== "Admin") throw new Error("Akses Ditolak: Hanya Admin yang dapat menghapus data siswa.");
+          if (payload.currentUserRole !== "Admin" && payload.currentUserRole !== "Tenaga Kependidikan") throw new Error("Akses Ditolak: Hanya Admin atau Tenaga Kependidikan yang dapat menghapus data siswa.");
           const ids = payload.ids || [payload.id];
           for (const id of ids) {
             await ref(`students/${id}`).remove();
@@ -5609,7 +5686,7 @@
         }
 
         else if (action === "importStudents") {
-          if (payload.currentUserRole !== "Admin") throw new Error("Akses Ditolak: Hanya Admin yang dapat mengimpor data siswa.");
+          if (payload.currentUserRole !== "Admin" && payload.currentUserRole !== "Tenaga Kependidikan") throw new Error("Akses Ditolak: Hanya Admin atau Tenaga Kependidikan yang dapat mengimpor data siswa.");
           const list = payload.list || [];
           const updates = {};
           
@@ -5628,7 +5705,7 @@
         }
 
         else if (action === "importTeachers") {
-          if (payload.currentUserRole !== "Admin") throw new Error("Akses Ditolak: Hanya Admin yang dapat mengimpor data guru.");
+          if (payload.currentUserRole !== "Admin" && payload.currentUserRole !== "Tenaga Kependidikan") throw new Error("Akses Ditolak: Hanya Admin atau Tenaga Kependidikan yang dapat mengimpor data guru.");
           const list = payload.list || [];
           const updates = {};
           
@@ -5875,10 +5952,10 @@
               const rolesList = data.role ? data.role.split(",").map(r => r.trim()).filter(Boolean) : [];
               if (rolesList.length > 1) {
                 rolesList.forEach(r => {
-                  foundUsers.push({ id: doc.id, nama: data.nama, email: data.email, role: r });
+                  foundUsers.push({ id: doc.id, nama: data.nama, email: data.email, role: r, waliKelasClass: data.waliKelasClass || "", nip: data.nip || "", mapel: data.mapel || "" });
                 });
               } else {
-                foundUsers.push({ id: doc.id, nama: data.nama, email: data.email, role: data.role || "Guru" });
+                foundUsers.push({ id: doc.id, nama: data.nama, email: data.email, role: data.role || "Guru", waliKelasClass: data.waliKelasClass || "", nip: data.nip || "", mapel: data.mapel || "" });
               }
             }
           });
@@ -5998,15 +6075,62 @@
             result.guruJadwalList = myJadwals;
           }
           else if (role === "Wali Kelas") {
-            const classMatch = nama.match(/Wali\s+Kelas\s+(\d+)([A-Z])/i);
-            const homeroomClass = classMatch ? classMatch[1] + "-" + classMatch[2] : "";
+            let homeroomClass = payload.currentUserWaliKelasClass || "";
+            if (!homeroomClass && nama) {
+              const classMatch = nama.match(/Wali\s+Kelas\s+(\d+)([A-Z])/i);
+              homeroomClass = classMatch ? classMatch[1] + "-" + classMatch[2] : "";
+            }
             if (homeroomClass) {
               result.jurnalList = jRaw.filter(j => j.kelas && j.kelas.toUpperCase() === homeroomClass.toUpperCase());
               result.rekapAbsenList = raRaw.filter(ra => ra.kelas && ra.kelas.toUpperCase() === homeroomClass.toUpperCase());
+            } else {
+              result.jurnalList = [];
+              result.rekapAbsenList = [];
             }
             result.stats = {
               totalJurnalSekolah: result.jurnalList.length,
               totalRekapSaya: result.rekapAbsenList.length
+            };
+            result.laporanWaliList = [];
+            result.kondisiSiswaList = [];
+            result.siswaGuruWaliList = [];
+            result.jurnal7KIHList = [];
+          }
+          else if (role === "Guru BK") {
+            result.stats = {
+              totalSiswaBimbingan: result.studentList.length,
+              totalJurnal7KIH: result.jurnal7KIHList.length,
+              totalCatatanBimbingan: result.catatanBimbinganList.length
+            };
+            result.siswaGuruWaliList = result.studentList.map(s => ({
+              id: s.id,
+              nis: s.nis,
+              namaSiswa: s.namaSiswa,
+              kelas: s.kelas,
+              guruWali: "Guru BK"
+            }));
+            result.jurnalList = [];
+            result.perangkatList = [];
+            result.nilaiList = [];
+            result.laporanWaliList = [];
+            result.rekapAbsenList = [];
+            result.kondisiSiswaList = [];
+          }
+          else if (role === "Tenaga Kependidikan") {
+            const pending = pRaw.filter(p => p.status === "Pending").length;
+            const approved = pRaw.filter(p => p.status === "Disetujui").length;
+            let sumRata = 0;
+            nRaw.forEach(n => sumRata += parseFloat(n.rataNilai) || 0);
+
+            result.stats = {
+              totalGuru: users.filter(u => u.role !== "Wakasek" && u.role !== "Admin" && u.role !== "Kepala Sekolah").length,
+              totalJurnal: jRaw.length,
+              pendingPerangkat: pending,
+              approvedPerangkat: approved,
+              avgNilaiSekolah: nRaw.length > 0 ? (sumRata / nRaw.length).toFixed(1) : "0.0",
+              totalLaporanWali: lpRaw.length,
+              totalJurnal7KIH: j7kihRaw.length,
+              totalCatatanBimbingan: cbRaw.length
             };
           }
           else if (role === "Guru Wali") {
@@ -6138,7 +6262,7 @@
         }
 
         else if (action === "addTeacher") {
-          if (payload.currentUserRole !== "Admin") throw new Error("Akses Ditolak: Hanya Admin yang dapat menambah/mengedit data guru.");
+          if (payload.currentUserRole !== "Admin" && payload.currentUserRole !== "Tenaga Kependidikan") throw new Error("Akses Ditolak: Hanya Admin atau Tenaga Kependidikan yang dapat menambah/mengedit data guru.");
           const id = payload.id || db.collection("users").doc().id;
           await db.collection("users").doc(id).set({
             nama: payload.nama,
@@ -6152,7 +6276,7 @@
         }
 
         else if (action === "deleteTeacher") {
-          if (payload.currentUserRole !== "Admin") throw new Error("Akses Ditolak: Hanya Admin yang dapat menghapus data guru.");
+          if (payload.currentUserRole !== "Admin" && payload.currentUserRole !== "Tenaga Kependidikan") throw new Error("Akses Ditolak: Hanya Admin atau Tenaga Kependidikan yang dapat menghapus data guru.");
           const ids = payload.ids || [payload.id];
           const batch = db.batch();
           for (const id of ids) {
@@ -6163,7 +6287,7 @@
         }
 
         else if (action === "addStudent") {
-          if (payload.currentUserRole !== "Admin") throw new Error("Akses Ditolak: Hanya Admin yang dapat menambah/mengedit data siswa.");
+          if (payload.currentUserRole !== "Admin" && payload.currentUserRole !== "Tenaga Kependidikan") throw new Error("Akses Ditolak: Hanya Admin atau Tenaga Kependidikan yang dapat menambah/mengedit data siswa.");
           const id = payload.id || db.collection("students").doc().id;
           await db.collection("students").doc(id).set({
             nis: payload.nis || "",
@@ -6175,7 +6299,7 @@
         }
 
         else if (action === "deleteStudent") {
-          if (payload.currentUserRole !== "Admin") throw new Error("Akses Ditolak: Hanya Admin yang dapat menghapus data siswa.");
+          if (payload.currentUserRole !== "Admin" && payload.currentUserRole !== "Tenaga Kependidikan") throw new Error("Akses Ditolak: Hanya Admin atau Tenaga Kependidikan yang dapat menghapus data siswa.");
           const ids = payload.ids || [payload.id];
           const batch = db.batch();
           for (const id of ids) {
@@ -6203,7 +6327,7 @@
         }
 
         else if (action === "importStudents") {
-          if (payload.currentUserRole !== "Admin") throw new Error("Akses Ditolak: Hanya Admin yang dapat mengimpor data siswa.");
+          if (payload.currentUserRole !== "Admin" && payload.currentUserRole !== "Tenaga Kependidikan") throw new Error("Akses Ditolak: Hanya Admin atau Tenaga Kependidikan yang dapat mengimpor data siswa.");
           const list = payload.list || [];
           const batch = db.batch();
           for (const item of list) {
@@ -6221,7 +6345,7 @@
         }
 
         else if (action === "importTeachers") {
-          if (payload.currentUserRole !== "Admin") throw new Error("Akses Ditolak: Hanya Admin yang dapat mengimpor data guru.");
+          if (payload.currentUserRole !== "Admin" && payload.currentUserRole !== "Tenaga Kependidikan") throw new Error("Akses Ditolak: Hanya Admin atau Tenaga Kependidikan yang dapat mengimpor data guru.");
           const list = payload.list || [];
           const batch = db.batch();
           for (const item of list) {
@@ -6521,8 +6645,8 @@
       // Populate all class select dropdowns dynamically
       populateClassDropdowns();
       
-      if (role === "Wakasek" || role === "Admin") {
-        const isAdmin = (role === "Admin");
+      if (role === "Wakasek" || role === "Admin" || role === "Tenaga Kependidikan") {
+        const isAdmin = (role === "Admin" || role === "Tenaga Kependidikan");
 
         // Toggle teacher master data entry visibilities
         const formTeacher = document.getElementById('formTeacher');
@@ -6631,10 +6755,17 @@
         // Populate names of students in that class for conditions dropdown
         populateKondisiSiswaNames();
       }
-      else if (role === "Guru Wali") {
+      else if (role === "Guru Wali" || role === "Guru BK") {
         // Stats
         document.getElementById('gw-stat-bimbingan').textContent = appState.stats.totalSiswaBimbingan || 0;
         document.getElementById('gw-stat-jurnal7kih').textContent = appState.stats.totalCatatanBimbingan || 0; // Menggunakan jumlah catatan bimbingan sebagai stat utama guru wali
+        
+        const titleLaporan = document.querySelector('#pane-guruwali-jurnal7kih .card-title');
+        if (titleLaporan) {
+          titleLaporan.textContent = role === "Guru BK" 
+            ? "Laporan Perkembangan Bimbingan BK" 
+            : "Laporan Perkembangan Bimbingan Perwalian";
+        }
         
         // Render dropdowns and tables
         populateGuruWaliSiswaDropdown();
@@ -8198,7 +8329,7 @@
         'nilaiKelas', 'kondisiKelas', 'studentMasterKelas', 'siswaGWKelas', 'w-filter-kelas',
         'w-filter-absen-kelas', 'w-filter-kondisi-kelas', 'rosterKelasSelect',
         'ks-filter-kelas', 'ks-filter-absen-kelas', 'ks-filter-kondisi-kelas', 'filterStudentKelas',
-        'teacherWaliKelasClass', 'guruJadwalKelas'
+        'teacherWaliKelasClass', 'guruJadwalKelas', 'studentKelas'
       ];
 
       dropdownIds.forEach(id => {
@@ -8651,8 +8782,8 @@
      async function submitTeacherForm(e) {
        e.preventDefault();
        
-       if (!appState.user || appState.user.role !== "Admin") {
-         showToast("Akses Ditolak: Hanya Admin yang dapat menambah/mengedit data guru.", "danger");
+       if (!appState.user || (appState.user.role !== "Admin" && appState.user.role !== "Tenaga Kependidikan")) {
+         showToast("Akses Ditolak: Hanya Admin atau Tenaga Kependidikan yang dapat menambah/mengedit data guru.", "danger");
          return;
        }
 
@@ -8723,8 +8854,8 @@
 
     // Hapus Akun Guru
     async function deleteTeacher(id) {
-      if (!appState.user || appState.user.role !== "Admin") {
-        showToast("Akses Ditolak: Hanya Admin yang dapat menghapus data guru.", "danger");
+      if (!appState.user || (appState.user.role !== "Admin" && appState.user.role !== "Tenaga Kependidikan")) {
+        showToast("Akses Ditolak: Hanya Admin atau Tenaga Kependidikan yang dapat menghapus data guru.", "danger");
         return;
       }
       if (!confirm("Apakah Anda yakin ingin menghapus akun guru ini? Menghapus guru dapat berdampak pada roster dan tugas mengajar yang sudah terdaftar.")) return;
@@ -8767,8 +8898,8 @@
     }
 
     async function deleteSelectedTeachers() {
-      if (!appState.user || appState.user.role !== "Admin") {
-        showToast("Akses Ditolak: Hanya Admin yang dapat menghapus data guru.", "danger");
+      if (!appState.user || (appState.user.role !== "Admin" && appState.user.role !== "Tenaga Kependidikan")) {
+        showToast("Akses Ditolak: Hanya Admin atau Tenaga Kependidikan yang dapat menghapus data guru.", "danger");
         return;
       }
       const checkboxes = document.querySelectorAll('.teacher-select-chk');
@@ -8805,8 +8936,8 @@
     }
 
     async function deleteAllTeachers() {
-      if (!appState.user || appState.user.role !== "Admin") {
-        showToast("Akses Ditolak: Hanya Admin yang dapat menghapus data guru.", "danger");
+      if (!appState.user || (appState.user.role !== "Admin" && appState.user.role !== "Tenaga Kependidikan")) {
+        showToast("Akses Ditolak: Hanya Admin atau Tenaga Kependidikan yang dapat menghapus data guru.", "danger");
         return;
       }
       const confirmed = await showCustomConfirm(
@@ -8891,6 +9022,8 @@
               else if (r === "Wali Kelas") { bgColor = "rgba(16, 185, 129, 0.15)"; textColor = "var(--success)"; }
               else if (r === "Guru Wali") { bgColor = "rgba(239, 68, 68, 0.15)"; textColor = "var(--danger)"; }
               else if (r === "Admin") { bgColor = "rgba(16, 185, 129, 0.15)"; textColor = "var(--success)"; }
+              else if (r === "Guru BK") { bgColor = "rgba(217, 70, 239, 0.15)"; textColor = "#d946ef"; }
+              else if (r === "Tenaga Kependidikan") { bgColor = "rgba(6, 182, 212, 0.15)"; textColor = "#06b6d4"; }
               
               return `<span class="badge" style="background: ${bgColor}; color: ${textColor}; border: 1px solid rgba(255,255,255,0.05); margin-right: 0.25rem; margin-bottom: 0.25rem; display: inline-block; padding: 0.25rem 0.5rem; border-radius: 0.35rem; font-size: 0.75rem; font-weight: 600;">${displayRole}</span>`;
             }).join("")}
@@ -8907,8 +9040,8 @@
     async function submitStudentForm(e) {
       e.preventDefault();
       
-      if (!appState.user || appState.user.role !== "Admin") {
-        showToast("Akses Ditolak: Hanya Admin yang dapat menambah/mengedit data siswa.", "danger");
+      if (!appState.user || (appState.user.role !== "Admin" && appState.user.role !== "Tenaga Kependidikan")) {
+        showToast("Akses Ditolak: Hanya Admin atau Tenaga Kependidikan yang dapat menambah/mengedit data siswa.", "danger");
         return;
       }
       
@@ -8955,8 +9088,8 @@
     }
 
     async function deleteStudent(id) {
-      if (!appState.user || appState.user.role !== "Admin") {
-        showToast("Akses Ditolak: Hanya Admin yang dapat menghapus data siswa.", "danger");
+      if (!appState.user || (appState.user.role !== "Admin" && appState.user.role !== "Tenaga Kependidikan")) {
+        showToast("Akses Ditolak: Hanya Admin atau Tenaga Kependidikan yang dapat menghapus data siswa.", "danger");
         return;
       }
       if (!confirm("Apakah Anda yakin ingin menghapus data siswa ini?")) return;
@@ -9057,8 +9190,8 @@
     }
 
     async function deleteSelectedStudents() {
-      if (!appState.user || appState.user.role !== "Admin") {
-        showToast("Akses Ditolak: Hanya Admin yang dapat menghapus data siswa.", "danger");
+      if (!appState.user || (appState.user.role !== "Admin" && appState.user.role !== "Tenaga Kependidikan")) {
+        showToast("Akses Ditolak: Hanya Admin atau Tenaga Kependidikan yang dapat menghapus data siswa.", "danger");
         return;
       }
       const checkboxes = document.querySelectorAll('.student-select-chk');
@@ -9095,8 +9228,8 @@
     }
 
     async function deleteAllStudents() {
-      if (!appState.user || appState.user.role !== "Admin") {
-        showToast("Akses Ditolak: Hanya Admin yang dapat menghapus data siswa.", "danger");
+      if (!appState.user || (appState.user.role !== "Admin" && appState.user.role !== "Tenaga Kependidikan")) {
+        showToast("Akses Ditolak: Hanya Admin atau Tenaga Kependidikan yang dapat menghapus data siswa.", "danger");
         return;
       }
       const confirmed = await showCustomConfirm(
@@ -9335,8 +9468,8 @@
     }
 
     async function submitStudentImport(list) {
-      if (!appState.user || appState.user.role !== "Admin") {
-        showToast("Akses Ditolak: Hanya Admin yang dapat mengimpor data siswa.", "danger");
+      if (!appState.user || (appState.user.role !== "Admin" && appState.user.role !== "Tenaga Kependidikan")) {
+        showToast("Akses Ditolak: Hanya Admin atau Tenaga Kependidikan yang dapat mengimpor data siswa.", "danger");
         return;
       }
       if (list.length === 0) {
@@ -9357,8 +9490,8 @@
     }
 
     function handleTeacherExcelImport(e) {
-      if (!appState.user || appState.user.role !== "Admin") {
-        showToast("Akses Ditolak: Hanya Admin yang dapat mengimpor data guru.", "danger");
+      if (!appState.user || (appState.user.role !== "Admin" && appState.user.role !== "Tenaga Kependidikan")) {
+        showToast("Akses Ditolak: Hanya Admin atau Tenaga Kependidikan yang dapat mengimpor data guru.", "danger");
         return;
       }
       const file = e.target.files[0];
@@ -9441,8 +9574,8 @@
     }
 
     async function submitTeacherImport(list) {
-      if (!appState.user || appState.user.role !== "Admin") {
-        showToast("Akses Ditolak: Hanya Admin yang dapat mengimpor data guru.", "danger");
+      if (!appState.user || (appState.user.role !== "Admin" && appState.user.role !== "Tenaga Kependidikan")) {
+        showToast("Akses Ditolak: Hanya Admin atau Tenaga Kependidikan yang dapat mengimpor data guru.", "danger");
         return;
       }
       if (list.length === 0) {
@@ -10162,10 +10295,10 @@
                 const rolesList = u.role ? u.role.split(",").map(r => r.trim()).filter(Boolean) : [];
                 if (rolesList.length > 1) {
                   rolesList.forEach(r => {
-                    foundUsers.push({ id: u.id, nama: u.nama, email: u.email, role: r });
+                    foundUsers.push({ id: u.id, nama: u.nama, email: u.email, role: r, waliKelasClass: u.waliKelasClass || "", nip: u.nip || "", mapel: u.mapel || "" });
                   });
                 } else {
-                  foundUsers.push({ id: u.id, nama: u.nama, email: u.email, role: u.role || "Guru" });
+                  foundUsers.push({ id: u.id, nama: u.nama, email: u.email, role: u.role || "Guru", waliKelasClass: u.waliKelasClass || "", nip: u.nip || "", mapel: u.mapel || "" });
                 }
               }
             });
@@ -10307,27 +10440,67 @@
               result.kondisiSiswaList = [];
             } 
             else if (role === "Wali Kelas") {
-              const classMatch = nama.match(/Wali\s+Kelas\s+(\d+)([A-Z])/i);
-              const homeroomClass = classMatch ? classMatch[1] + "-" + classMatch[2] : "";
-              
-              if (homeroomClass) {
-                result.jurnalList = jRaw.filter(j => j.kelas.toUpperCase() === homeroomClass.toUpperCase());
-                result.rekapAbsenList = raRaw.filter(ra => ra.kelas.toUpperCase() === homeroomClass.toUpperCase());
-              } else {
-                result.jurnalList = [];
-                result.rekapAbsenList = [];
-              }
-              
-              result.stats = {
-                totalJurnalSekolah: result.jurnalList.length,
-                totalRekapSaya: result.rekapAbsenList.length
-              };
-              
-              result.laporanWaliList = [];
-              result.kondisiSiswaList = [];
-              result.siswaGuruWaliList = [];
-              result.jurnal7KIHList = [];
-            }
+               let homeroomClass = payload.currentUserWaliKelasClass || "";
+               if (!homeroomClass && nama) {
+                 const classMatch = nama.match(/Wali\s+Kelas\s+(\d+)([A-Z])/i);
+                 homeroomClass = classMatch ? classMatch[1] + "-" + classMatch[2] : "";
+               }
+               
+               if (homeroomClass) {
+                 result.jurnalList = jRaw.filter(j => j.kelas.toUpperCase() === homeroomClass.toUpperCase());
+                 result.rekapAbsenList = raRaw.filter(ra => ra.kelas.toUpperCase() === homeroomClass.toUpperCase());
+               } else {
+                 result.jurnalList = [];
+                 result.rekapAbsenList = [];
+               }
+               
+               result.stats = {
+                 totalJurnalSekolah: result.jurnalList.length,
+                 totalRekapSaya: result.rekapAbsenList.length
+               };
+               
+               result.laporanWaliList = [];
+               result.kondisiSiswaList = [];
+               result.siswaGuruWaliList = [];
+               result.jurnal7KIHList = [];
+             }
+             else if (role === "Guru BK") {
+               result.stats = {
+                 totalSiswaBimbingan: result.studentList.length,
+                 totalJurnal7KIH: result.jurnal7KIHList.length,
+                 totalCatatanBimbingan: result.catatanBimbinganList.length
+               };
+               result.siswaGuruWaliList = result.studentList.map(s => ({
+                 id: s.id,
+                 nis: s.nis,
+                 namaSiswa: s.namaSiswa,
+                 kelas: s.kelas,
+                 guruWali: "Guru BK"
+               }));
+               result.jurnalList = [];
+               result.perangkatList = [];
+               result.nilaiList = [];
+               result.laporanWaliList = [];
+               result.rekapAbsenList = [];
+               result.kondisiSiswaList = [];
+             }
+             else if (role === "Tenaga Kependidikan") {
+               const pending = pRaw.filter(p => p.status === "Pending").length;
+               const approved = pRaw.filter(p => p.status === "Disetujui").length;
+               let sumRata = 0;
+               nRaw.forEach(n => sumRata += parseFloat(n.rataNilai) || 0);
+
+               result.stats = {
+                 totalGuru: users.filter(u => u.role !== "Wakasek" && u.role !== "Admin" && u.role !== "Kepala Sekolah").length,
+                 totalJurnal: jRaw.length,
+                 pendingPerangkat: pending,
+                 approvedPerangkat: approved,
+                 avgNilaiSekolah: nRaw.length > 0 ? (sumRata / nRaw.length).toFixed(1) : "0.0",
+                 totalLaporanWali: lpRaw.length,
+                 totalJurnal7KIH: j7kihRaw.length,
+                 totalCatatanBimbingan: cbRaw.length
+               };
+             }
             else if (role === "Guru Wali") {
               const myStudents = sgwRaw.filter(s => s.guruWali.toLowerCase() === nama.toLowerCase());
               const myStudentNisList = myStudents.map(s => s.nis ? s.nis.toString().trim() : "");
@@ -10621,7 +10794,7 @@
           }
 
           else if (action === "addTeacher") {
-            if (payload.currentUserRole !== "Admin") return reject(new Error("Akses Ditolak: Hanya Admin yang dapat menambah/mengedit data guru."));
+            if (payload.currentUserRole !== "Admin" && payload.currentUserRole !== "Tenaga Kependidikan") return reject(new Error("Akses Ditolak: Hanya Admin atau Tenaga Kependidikan yang dapat menambah/mengedit data guru."));
             const users = JSON.parse(localStorage.getItem('db_users')) || [];
             const id = payload.id || "USR-" + new Date().getTime();
             const index = users.findIndex(u => u.id === id);
@@ -10647,7 +10820,7 @@
           }
 
           else if (action === "deleteTeacher") {
-            if (payload.currentUserRole !== "Admin") return reject(new Error("Akses Ditolak: Hanya Admin yang dapat menghapus data guru."));
+            if (payload.currentUserRole !== "Admin" && payload.currentUserRole !== "Tenaga Kependidikan") return reject(new Error("Akses Ditolak: Hanya Admin atau Tenaga Kependidikan yang dapat menghapus data guru."));
             const users = JSON.parse(localStorage.getItem('db_users')) || [];
             const ids = payload.ids || [payload.id];
             const updated = users.filter(u => !ids.includes(u.id));
@@ -10656,7 +10829,7 @@
           }
 
           else if (action === "addStudent") {
-            if (payload.currentUserRole !== "Admin") return reject(new Error("Akses Ditolak: Hanya Admin yang dapat menambah/mengedit data siswa."));
+            if (payload.currentUserRole !== "Admin" && payload.currentUserRole !== "Tenaga Kependidikan") return reject(new Error("Akses Ditolak: Hanya Admin atau Tenaga Kependidikan yang dapat menambah/mengedit data siswa."));
             const students = JSON.parse(localStorage.getItem('db_students')) || [];
             const id = payload.id || "SIS-" + new Date().getTime();
             const index = students.findIndex(s => s.id === id);
@@ -10680,7 +10853,7 @@
           }
 
           else if (action === "deleteStudent") {
-            if (payload.currentUserRole !== "Admin") return reject(new Error("Akses Ditolak: Hanya Admin yang dapat menghapus data siswa."));
+            if (payload.currentUserRole !== "Admin" && payload.currentUserRole !== "Tenaga Kependidikan") return reject(new Error("Akses Ditolak: Hanya Admin atau Tenaga Kependidikan yang dapat menghapus data siswa."));
             const students = JSON.parse(localStorage.getItem('db_students')) || [];
             const ids = payload.ids || [payload.id];
             const updated = students.filter(s => !ids.includes(s.id));
@@ -10720,7 +10893,7 @@
           }
 
           else if (action === "importStudents") {
-            if (payload.currentUserRole !== "Admin") return reject(new Error("Akses Ditolak: Hanya Admin yang dapat mengimpor data siswa."));
+            if (payload.currentUserRole !== "Admin" && payload.currentUserRole !== "Tenaga Kependidikan") return reject(new Error("Akses Ditolak: Hanya Admin atau Tenaga Kependidikan yang dapat mengimpor data siswa."));
             const students = JSON.parse(localStorage.getItem('db_students')) || [];
             const list = payload.list || [];
             
@@ -10747,7 +10920,7 @@
           }
 
           else if (action === "importTeachers") {
-            if (payload.currentUserRole !== "Admin") return reject(new Error("Akses Ditolak: Hanya Admin yang dapat mengimpor data guru."));
+            if (payload.currentUserRole !== "Admin" && payload.currentUserRole !== "Tenaga Kependidikan") return reject(new Error("Akses Ditolak: Hanya Admin atau Tenaga Kependidikan yang dapat mengimpor data guru."));
             const users = JSON.parse(localStorage.getItem('db_users')) || [];
             const list = payload.list || [];
             
@@ -11339,6 +11512,15 @@
       const loginCard = document.getElementById('loginCard');
       const studentCard = document.getElementById('student7KIHCard');
       if (show) {
+        // Load settings from local storage to populate dropdown options dynamically
+        const localSettings = JSON.parse(localStorage.getItem('db_settings'));
+        if (localSettings) {
+          appState.settings = {
+            hariBelajar: localSettings.hari_belajar || localSettings.hariBelajar || 5,
+            daftarKelas: localSettings.daftar_kelas || localSettings.daftarKelas || ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"]
+          };
+        }
+        populateClassDropdowns();
         loginCard.style.display = "none";
         studentCard.style.display = "block";
         document.getElementById('studentTanggal').value = new Date().toISOString().substring(0, 10);

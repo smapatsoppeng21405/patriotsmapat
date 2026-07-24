@@ -129,7 +129,7 @@ function doPost(e) {
         break;
         
       case "getDashboard":
-        response = { status: "success", data: getDashboard(payload.currentUserRole, payload.currentUserEmail, payload.currentUserName) };
+        response = { status: "success", data: getDashboard(payload.currentUserRole, payload.currentUserEmail, payload.currentUserName, payload.currentUserWaliKelasClass) };
         break;
         
       case "addJurnal":
@@ -189,32 +189,32 @@ function doPost(e) {
         break;
 
       case "addTeacher":
-        if (payload.currentUserRole !== "Admin") throw new Error("Akses ditolak. Pengisian data guru hanya dapat dilakukan oleh Admin.");
+        if (payload.currentUserRole !== "Admin" && payload.currentUserRole !== "Tenaga Kependidikan") throw new Error("Akses ditolak. Pengisian data guru hanya dapat dilakukan oleh Admin atau Tenaga Kependidikan.");
         response = { status: "success", data: addTeacher(payload) };
         break;
 
       case "deleteTeacher":
-        if (payload.currentUserRole !== "Admin") throw new Error("Akses ditolak. Penghapusan data guru hanya dapat dilakukan oleh Admin.");
+        if (payload.currentUserRole !== "Admin" && payload.currentUserRole !== "Tenaga Kependidikan") throw new Error("Akses ditolak. Penghapusan data guru hanya dapat dilakukan oleh Admin atau Tenaga Kependidikan.");
         response = { status: "success", data: deleteTeacher(payload) };
         break;
 
       case "addStudent":
-        if (payload.currentUserRole !== "Admin") throw new Error("Akses ditolak. Pengisian data siswa hanya dapat dilakukan oleh Admin.");
+        if (payload.currentUserRole !== "Admin" && payload.currentUserRole !== "Tenaga Kependidikan") throw new Error("Akses ditolak. Pengisian data siswa hanya dapat dilakukan oleh Admin atau Tenaga Kependidikan.");
         response = { status: "success", data: addStudent(payload) };
         break;
 
       case "deleteStudent":
-        if (payload.currentUserRole !== "Admin") throw new Error("Akses ditolak. Penghapusan data siswa hanya dapat dilakukan oleh Admin.");
+        if (payload.currentUserRole !== "Admin" && payload.currentUserRole !== "Tenaga Kependidikan") throw new Error("Akses ditolak. Penghapusan data siswa hanya dapat dilakukan oleh Admin atau Tenaga Kependidikan.");
         response = { status: "success", data: deleteStudent(payload) };
         break;
 
       case "importStudents":
-        if (payload.currentUserRole !== "Admin") throw new Error("Akses ditolak. Impor data siswa hanya dapat dilakukan oleh Admin.");
+        if (payload.currentUserRole !== "Admin" && payload.currentUserRole !== "Tenaga Kependidikan") throw new Error("Akses ditolak. Impor data siswa hanya dapat dilakukan oleh Admin atau Tenaga Kependidikan.");
         response = { status: "success", data: importStudents(payload) };
         break;
 
       case "importTeachers":
-        if (payload.currentUserRole !== "Admin") throw new Error("Akses ditolak. Impor data guru hanya dapat dilakukan oleh Admin.");
+        if (payload.currentUserRole !== "Admin" && payload.currentUserRole !== "Tenaga Kependidikan") throw new Error("Akses ditolak. Impor data guru hanya dapat dilakukan oleh Admin atau Tenaga Kependidikan.");
         response = { status: "success", data: importTeachers(payload) };
         break;
         
@@ -318,7 +318,7 @@ function login(email, password) {
 }
 
 // 2. Mengambil Seluruh Data Dashboard Sesuai Role
-function getDashboard(role, email, nama) {
+function getDashboard(role, email, nama, waliKelasClass) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   
   var sheetJurnal = ss.getSheetByName("JurnalMengajar");
@@ -621,7 +621,7 @@ function getDashboard(role, email, nama) {
     var roleStr = row[3] ? row[3].toString() : "";
     var roles = roleStr.split(",").map(function(r) { return r.trim(); });
     var isTeacher = roles.some(function(r) {
-      return r === "Guru" || r === "Wali Kelas" || r === "Guru Wali" || r === "Kepala Sekolah" || r === "Wakasek";
+      return r === "Guru" || r === "Wali Kelas" || r === "Guru Wali" || r === "Kepala Sekolah" || r === "Wakasek" || r === "Guru BK" || r === "Tenaga Kependidikan";
     });
     if (isTeacher) {
       result.teacherList.push({
@@ -710,10 +710,12 @@ function getDashboard(role, email, nama) {
     result.rekapAbsenList = myRekap;
     
     // Filter journals to class bimbingan if possible
-    var myClass = "";
-    var matchClass = nama.match(/Wali Kelas\s+([A-Za-zA-Z0-9\-]+)/i);
-    if (matchClass && matchClass[1]) {
-      myClass = matchClass[1].trim().replace(/^(\d+)([a-zA-Z])$/, "$1-$2");
+    var myClass = waliKelasClass || "";
+    if (!myClass) {
+      var matchClass = nama.match(/Wali Kelas\s+([A-Za-zA-Z0-9\-]+)/i);
+      if (matchClass && matchClass[1]) {
+        myClass = matchClass[1].trim().replace(/^(\d+)([a-zA-Z])$/, "$1-$2");
+      }
     }
     if (myClass) {
       result.jurnalList = result.jurnalList.filter(function(j) {
@@ -786,6 +788,56 @@ function getDashboard(role, email, nama) {
       totalLaporanWali: result.laporanWaliList.length,
       totalJurnal7KIH: result.jurnal7KIHList.length,
       totalCatatanBimbingan: result.catatanBimbinganList.length
+    };
+  }
+  else if (role === "Guru BK") {
+    result.stats = {
+      totalSiswaBimbingan: result.studentList.length,
+      totalJurnal7KIH: result.jurnal7KIHList.length,
+      totalCatatanBimbingan: result.catatanBimbinganList.length
+    };
+    
+    // Guru BK can guide any student in the school
+    result.siswaGuruWaliList = result.studentList.map(function(s) {
+      return {
+        id: s.id,
+        nis: s.nis,
+        namaSiswa: s.namaSiswa,
+        kelas: s.kelas,
+        guruWali: "Guru BK"
+      };
+    });
+    
+    result.jurnalList = [];
+    result.perangkatList = [];
+    result.nilaiList = [];
+    result.laporanWaliList = [];
+    result.rekapAbsenList = [];
+    result.kondisiSiswaList = [];
+  }
+  else if (role === "Tenaga Kependidikan") {
+    var totalGuru = sheetUsers.getDataRange().getValues().length - 1;
+    var totalJurnal = result.jurnalList.length;
+    var pendingPerangkat = 0;
+    var approvedPerangkat = 0;
+    result.perangkatList.forEach(function(item) {
+      if (item.status === "Pending") pendingPerangkat++;
+      else if (item.status === "Disetujui") approvedPerangkat++;
+    });
+    
+    var sumRata = 0;
+    result.nilaiList.forEach(function(item) {
+      sumRata += parseFloat(item.rataNilai) || 0;
+    });
+    var avgNilai = result.nilaiList.length > 0 ? (sumRata / result.nilaiList.length).toFixed(1) : "0.0";
+    
+    result.stats = {
+      totalGuru: totalGuru,
+      totalJurnal: totalJurnal,
+      pendingPerangkat: pendingPerangkat,
+      approvedPerangkat: approvedPerangkat,
+      avgNilaiSekolah: avgNilai,
+      totalLaporanWali: result.laporanWaliList.length
     };
   }
   
