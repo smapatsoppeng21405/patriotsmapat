@@ -16,8 +16,8 @@ function initSheets() {
   
   // Define sheets and headers
   var sheetsDef = {
-    "Users": ["ID", "Nama", "Email", "Role", "Password", "WaliKelasClass"],
-    "JurnalMengajar": ["ID", "Tanggal", "Guru", "Kelas", "Materi", "Kehadiran", "Catatan", "Mode"],
+    "Users": ["ID", "Nama", "Email", "Role", "Password", "WaliKelasClass", "MapelX", "MapelXI", "MapelXII"],
+    "JurnalMengajar": ["ID", "Tanggal", "Guru", "Kelas", "Materi", "Kehadiran", "Catatan", "Mode", "Mapel"],
     "PerangkatAjar": ["ID", "Nama_Guru", "Jenis_Dokumen", "Link_Drive", "Status", "Catatan"],
     "AnalisisNilai": ["ID", "Kelas", "Mapel", "Rata_Nilai", "Jumlah_Siswa_Remidial"],
     "Jadwal": ["ID", "Hari", "JamKe", "Kelas", "Guru", "Mapel"],
@@ -367,7 +367,8 @@ function getDashboard(role, email, nama) {
       materi: row[4],
       kehadiran: row[5],
       catatan: row[6],
-      mode: row[7] || "Tatap Muka"
+      mode: row[7] || "Tatap Muka",
+      mapel: row[8] || ""
     });
   }
   
@@ -623,7 +624,10 @@ function getDashboard(role, email, nama) {
         email: row[2],
         role: row[3],
         password: row[4],
-        waliKelasClass: row[5] || ""
+        waliKelasClass: row[5] || "",
+        mapelX: row[6] || "",
+        mapelXI: row[7] || "",
+        mapelXII: row[8] || ""
       });
     }
   }
@@ -798,12 +802,13 @@ function addJurnal(payload) {
   var kehadiran = payload.kehadiran || "";
   var catatan = payload.catatan || "";
   var mode = payload.mode || "Tatap Muka";
+  var mapel = payload.mapel || "";
   
   // Jika ID dikirim, update baris yang sudah ada
   if (id) {
     for (var i = 1; i < data.length; i++) {
       if (data[i][0].toString() === id.toString()) {
-        sheet.getRange(i + 1, 2, 1, 7).setValues([[tanggal, guru, kelas, materi, kehadiran, catatan, mode]]);
+        sheet.getRange(i + 1, 2, 1, 8).setValues([[tanggal, guru, kelas, materi, kehadiran, catatan, mode, mapel]]);
         SpreadsheetApp.flush();
         return { id: id, success: true };
       }
@@ -811,7 +816,7 @@ function addJurnal(payload) {
   }
   
   var newId = "JR-" + new Date().getTime() + "-" + Math.floor(Math.random() * 1000);
-  sheet.appendRow([newId, tanggal, guru, kelas, materi, kehadiran, catatan, mode]);
+  sheet.appendRow([newId, tanggal, guru, kelas, materi, kehadiran, catatan, mode, mapel]);
   SpreadsheetApp.flush();
   
   return { id: newId, success: true };
@@ -1192,6 +1197,9 @@ function addTeacher(payload) {
   var role = payload.role || "Guru"; 
   var password = payload.password;
   var waliKelasClass = payload.waliKelasClass || "";
+  var mapelX = payload.mapelX || "";
+  var mapelXI = payload.mapelXI || "";
+  var mapelXII = payload.mapelXII || "";
   
   var data = sheet.getDataRange().getValues();
   var index = -1;
@@ -1209,9 +1217,12 @@ function addTeacher(payload) {
     sheet.getRange(index + 1, 4).setValue(role);
     sheet.getRange(index + 1, 5).setValue(password);
     sheet.getRange(index + 1, 6).setValue(waliKelasClass);
+    sheet.getRange(index + 1, 7).setValue(mapelX);
+    sheet.getRange(index + 1, 8).setValue(mapelXI);
+    sheet.getRange(index + 1, 9).setValue(mapelXII);
   } else {
     // Tambah Baru
-    sheet.appendRow([id, nama, email, role, password, waliKelasClass]);
+    sheet.appendRow([id, nama, email, role, password, waliKelasClass, mapelX, mapelXI, mapelXII]);
   }
   
   SpreadsheetApp.flush();

@@ -1453,6 +1453,20 @@
               </div>
             </div>
           </div>
+          <div class="charts-row" style="grid-template-columns: 1fr 1fr; margin-top: 1.5rem;">
+            <div class="card glass-effect">
+              <div class="card-title">Aktivitas Mengajar per Mata Pelajaran</div>
+              <div style="position: relative; height:250px;">
+                <canvas id="chartWakasekMapel"></canvas>
+              </div>
+            </div>
+            <div class="card glass-effect">
+              <div class="card-title">Frekuensi Pengisian Jurnal oleh Guru</div>
+              <div style="position: relative; height:250px;">
+                <canvas id="chartWakasekGuruJurnal"></canvas>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- WAKASEK: MONITORING JURNAL -->
@@ -1495,13 +1509,14 @@
                     <th>Tanggal</th>
                     <th>Nama Guru</th>
                     <th>Kelas</th>
+                    <th>Mata Pelajaran</th>
                     <th>Materi Mengajar</th>
                     <th>Kehadiran</th>
                     <th>Catatan Jurnal</th>
                   </tr>
                 </thead>
                 <tbody id="w-jurnal-table-body">
-                  <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Memuat...</td></tr>
+                  <tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Memuat...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -2042,6 +2057,20 @@
                 </select>
                 <span style="font-size: 0.7rem; color: var(--text-muted);">Pilih kelas bimbingan guru (Wajib diisi jika peran Wali Kelas dipilih).</span>
               </div>
+              <div class="form-grid" style="margin-bottom: 1.5rem; gap: 1rem;">
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label for="teacherMapelX">Mapel Diajar Tingkat X</label>
+                  <input type="text" id="teacherMapelX" class="form-control" style="padding-left: 1rem;" placeholder="E.g., Matematika, Fisika (pisahkan koma)">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label for="teacherMapelXI">Mapel Diajar Tingkat XI</label>
+                  <input type="text" id="teacherMapelXI" class="form-control" style="padding-left: 1rem;" placeholder="E.g., Matematika, Kimia">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label for="teacherMapelXII">Mapel Diajar Tingkat XII</label>
+                  <input type="text" id="teacherMapelXII" class="form-control" style="padding-left: 1rem;" placeholder="E.g., Matematika Peminatan">
+                </div>
+              </div>
               <div style="display:flex; gap:1rem;">
                 <button type="submit" class="btn btn-primary" style="flex:1;">
                   <i class="fa-solid fa-user-plus"></i> Simpan Akun Guru
@@ -2059,12 +2088,15 @@
                     <th>Nama Guru</th>
                     <th>Email</th>
                     <th>Role</th>
+                    <th>Mapel Kelas X</th>
+                    <th>Mapel Kelas XI</th>
+                    <th>Mapel Kelas XII</th>
                     <th>Password</th>
                     <th>Aksi</th>
                   </tr>
                 </thead>
                 <tbody id="w-teacher-table-body">
-                  <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Memuat daftar guru...</td></tr>
+                  <tr><td colspan="8" style="text-align: center; color: var(--text-muted);">Memuat daftar guru...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -2367,7 +2399,7 @@
                 </div>
                 <div class="form-group">
                   <label for="jurnalKelas">Kelas</label>
-                  <select id="jurnalKelas" class="form-control" style="padding-left: 1rem;" required>
+                  <select id="jurnalKelas" class="form-control" style="padding-left: 1rem;" required onchange="handleJurnalKelasChange()">
                     <option value="">Pilih Kelas</option>
                     <option value="10-A">10-A</option>
                     <option value="10-B">10-B</option>
@@ -2376,6 +2408,19 @@
                     <option value="12-A">12-A</option>
                     <option value="12-B">12-B</option>
                   </select>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="jurnalMapelSelect">Mata Pelajaran</label>
+                <div style="position: relative; display: flex; gap: 0.5rem;">
+                  <select id="jurnalMapelSelect" class="form-control" style="padding-left: 1rem; flex: 1;">
+                    <option value="">Pilih Kelas Dulu</option>
+                  </select>
+                  <input type="text" id="jurnalMapelInput" class="form-control" style="padding-left: 1rem; display: none; flex: 1;" placeholder="Ketik Mata Pelajaran...">
+                  <button type="button" id="btnToggleMapelInput" class="btn btn-secondary" onclick="toggleMapelInputMode()" style="padding: 0 0.85rem; font-size: 0.85rem; display: none;">
+                    Ketik Manual
+                  </button>
                 </div>
               </div>
 
@@ -2539,6 +2584,7 @@
                   <tr>
                     <th>Tanggal</th>
                     <th>Kelas</th>
+                    <th>Mata Pelajaran</th>
                     <th>Materi Mengajar</th>
                     <th>Kehadiran</th>
                     <th>Catatan</th>
@@ -2546,7 +2592,7 @@
                   </tr>
                 </thead>
                 <tbody id="g-jurnal-table-body">
-                  <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Belum ada data.</td></tr>
+                  <tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Belum ada data.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -3246,6 +3292,20 @@
               </div>
             </div>
           </div>
+          <div class="charts-row" style="grid-template-columns: 1fr 1fr; margin-top: 1.5rem;">
+            <div class="card glass-effect">
+              <div class="card-title">Aktivitas Mengajar per Mata Pelajaran</div>
+              <div style="position: relative; height:250px;">
+                <canvas id="chartKepalaMapel"></canvas>
+              </div>
+            </div>
+            <div class="card glass-effect">
+              <div class="card-title">Frekuensi Pengisian Jurnal oleh Guru</div>
+              <div style="position: relative; height:250px;">
+                <canvas id="chartKepalaGuruJurnal"></canvas>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- KEPALA SEKOLAH: MONITORING JURNAL -->
@@ -3283,13 +3343,14 @@
                     <th>Tanggal</th>
                     <th>Nama Guru</th>
                     <th>Kelas</th>
+                    <th>Mata Pelajaran</th>
                     <th>Materi Mengajar</th>
                     <th>Kehadiran</th>
                     <th>Catatan Jurnal</th>
                   </tr>
                 </thead>
                 <tbody id="ks-jurnal-table-body">
-                  <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Memuat...</td></tr>
+                  <tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Memuat...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -3820,6 +3881,8 @@
     let barChartInstance = null;
     let pieChartInstance = null;
     let modeChartInstance = null;
+    let mapelChartInstance = null;
+    let guruJurnalChartInstance = null;
 
     // INITIALIZATION RUN
     window.addEventListener('DOMContentLoaded', () => {
@@ -5387,6 +5450,7 @@
               tanggal: payload.tanggal,
               guru: payload.guru,
               kelas: payload.kelas,
+              mapel: payload.mapel || "",
               materi: payload.materi,
               kehadiran: payload.kehadiran,
               catatan: payload.catatan || "",
@@ -5399,6 +5463,7 @@
               tanggal: payload.tanggal,
               guru: payload.guru,
               kelas: payload.kelas,
+              mapel: payload.mapel || "",
               materi: payload.materi,
               kehadiran: payload.kehadiran,
               catatan: payload.catatan || "",
@@ -5477,7 +5542,11 @@
             nip: payload.nip || "",
             email: payload.email,
             role: payload.role,
-            password: payload.password
+            password: payload.password,
+            waliKelasClass: payload.waliKelasClass || "",
+            mapelX: payload.mapelX || "",
+            mapelXI: payload.mapelXI || "",
+            mapelXII: payload.mapelXII || ""
           });
           return { success: true, id: key };
         }
@@ -5964,6 +6033,7 @@
               tanggal: payload.tanggal,
               guru: payload.guru,
               kelas: payload.kelas,
+              mapel: payload.mapel || "",
               materi: payload.materi,
               kehadiran: payload.kehadiran,
               catatan: payload.catatan || "",
@@ -5976,6 +6046,7 @@
               tanggal: payload.tanggal,
               guru: payload.guru,
               kelas: payload.kelas,
+              mapel: payload.mapel || "",
               materi: payload.materi,
               kehadiran: payload.kehadiran,
               catatan: payload.catatan || "",
@@ -6052,7 +6123,11 @@
             nama: payload.nama,
             email: payload.email,
             role: payload.role,
-            password: payload.password
+            password: payload.password,
+            waliKelasClass: payload.waliKelasClass || "",
+            mapelX: payload.mapelX || "",
+            mapelXI: payload.mapelXI || "",
+            mapelXII: payload.mapelXII || ""
           }, { merge: true });
           return { success: true, id: id };
         }
@@ -6549,7 +6624,7 @@
       tbody.innerHTML = "";
       
       if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">Tidak ada aktivitas jurnal mengajar.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted);">Tidak ada aktivitas jurnal mengajar.</td></tr>`;
         return;
       }
       
@@ -6561,6 +6636,7 @@
           <td style="font-weight: 500;">${formattedDate}</td>
           <td style="color: #cbd5e1; font-weight: 600;"><i class="fa-regular fa-user" style="margin-right: 0.35rem; font-size:0.8rem; color:var(--primary);"></i> ${item.guru}</td>
           <td><span class="badge badge-primary">${item.kelas}</span></td>
+          <td style="font-weight: 600; color: #cbd5e1;">${item.mapel || '-'}</td>
           <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.materi}</td>
           <td><span class="badge badge-success" style="background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.15);">${item.kehadiran}</span></td>
           <td style="color: var(--text-muted); font-size: 0.85rem;">${item.catatan || '-'}</td>
@@ -6772,6 +6848,94 @@
           cutout: '65%'
         }
       });
+
+      // Bar Chart - Aktivitas Jurnal per Mapel
+      const mapelCounts = {};
+      appState.jurnalList.forEach(j => {
+        const m = j.mapel || "Tidak Diketahui";
+        mapelCounts[m] = (mapelCounts[m] || 0) + 1;
+      });
+      const mapelLabels = Object.keys(mapelCounts);
+      const mapelData = Object.values(mapelCounts);
+      
+      const ctxMapel = document.getElementById('chartWakasekMapel').getContext('2d');
+      if (mapelChartInstance) mapelChartInstance.destroy();
+      
+      mapelChartInstance = new Chart(ctxMapel, {
+        type: 'bar',
+        data: {
+          labels: mapelLabels.length > 0 ? mapelLabels : ["Belum ada data"],
+          datasets: [{
+            label: 'Jumlah Tatap Muka KBM',
+            data: mapelData.length > 0 ? mapelData : [0],
+            backgroundColor: 'rgba(16, 185, 129, 0.6)',
+            borderColor: 'rgba(16, 185, 129, 1)',
+            borderWidth: 1.5,
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: {
+              grid: { color: 'rgba(255, 255, 255, 0.05)' },
+              ticks: { color: '#94a3b8', stepSize: 1 }
+            },
+            x: {
+              grid: { display: false },
+              ticks: { color: '#94a3b8' }
+            }
+          }
+        }
+      });
+      
+      // Bar Chart - Frekuensi Pengisian Jurnal oleh Guru
+      const guruCounts = {};
+      appState.jurnalList.forEach(j => {
+        const g = j.guru || "Tidak Diketahui";
+        guruCounts[g] = (guruCounts[g] || 0) + 1;
+      });
+      const guruLabels = Object.keys(guruCounts);
+      const guruData = Object.values(guruCounts);
+      
+      const ctxGuruJurnal = document.getElementById('chartWakasekGuruJurnal').getContext('2d');
+      if (guruJurnalChartInstance) guruJurnalChartInstance.destroy();
+      
+      guruJurnalChartInstance = new Chart(ctxGuruJurnal, {
+        type: 'bar',
+        data: {
+          labels: guruLabels.length > 0 ? guruLabels : ["Belum ada data"],
+          datasets: [{
+            label: 'Jumlah Jurnal Diisi',
+            data: guruData.length > 0 ? guruData : [0],
+            backgroundColor: 'rgba(245, 158, 11, 0.6)',
+            borderColor: 'rgba(245, 158, 11, 1)',
+            borderWidth: 1.5,
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: {
+              grid: { color: 'rgba(255, 255, 255, 0.05)' },
+              ticks: { color: '#94a3b8', stepSize: 1 }
+            },
+            x: {
+              grid: { display: false },
+              ticks: { color: '#94a3b8' }
+            }
+          }
+        }
+      });
     }
 
     // OPEN/CLOSE VALIDASI MODAL PERANGKAT
@@ -6807,6 +6971,73 @@
     }
 
     // ==================== GURU RENDERERS & ACTIONS ====================
+    function handleJurnalKelasChange() {
+      const kelasVal = document.getElementById('jurnalKelas').value;
+      const mapelSelect = document.getElementById('jurnalMapelSelect');
+      const mapelInput = document.getElementById('jurnalMapelInput');
+      const btnToggle = document.getElementById('btnToggleMapelInput');
+      
+      if (!kelasVal) {
+        mapelSelect.innerHTML = '<option value="">Pilih Kelas Dulu</option>';
+        mapelSelect.style.display = "block";
+        mapelInput.style.display = "none";
+        mapelInput.value = "";
+        if (btnToggle) btnToggle.style.display = "none";
+        return;
+      }
+      
+      let tingkatan = "";
+      if (kelasVal.startsWith("10")) tingkatan = "X";
+      else if (kelasVal.startsWith("11")) tingkatan = "XI";
+      else if (kelasVal.startsWith("12")) tingkatan = "XII";
+      
+      const currentEmail = appState.user ? appState.user.email : "";
+      const teacher = (appState.teacherList || []).find(t => t.email === currentEmail) || appState.user || {};
+      
+      let mapelStr = "";
+      if (tingkatan === "X") mapelStr = teacher.mapelX || "";
+      else if (tingkatan === "XI") mapelStr = teacher.mapelXI || "";
+      else if (tingkatan === "XII") mapelStr = teacher.mapelXII || "";
+      
+      const mapelList = mapelStr.split(",").map(s => s.trim()).filter(Boolean);
+      
+      if (mapelList.length > 0) {
+        mapelSelect.innerHTML = '<option value="">Pilih Mata Pelajaran</option>' + 
+          mapelList.map(m => `<option value="${m}">${m}</option>`).join("");
+        mapelSelect.style.display = "block";
+        mapelInput.style.display = "none";
+        mapelInput.value = "";
+        if (btnToggle) {
+          btnToggle.style.display = "block";
+          btnToggle.innerText = "Ketik Manual";
+        }
+      } else {
+        mapelSelect.innerHTML = '<option value="">Tidak ada mapel terdaftar</option>';
+        mapelSelect.style.display = "none";
+        mapelInput.style.display = "block";
+        mapelInput.value = "";
+        if (btnToggle) btnToggle.style.display = "none";
+      }
+    }
+    
+    function toggleMapelInputMode() {
+      const mapelSelect = document.getElementById('jurnalMapelSelect');
+      const mapelInput = document.getElementById('jurnalMapelInput');
+      const btnToggle = document.getElementById('btnToggleMapelInput');
+      
+      if (mapelSelect.style.display !== "none") {
+        mapelSelect.style.display = "none";
+        mapelInput.style.display = "block";
+        mapelInput.focus();
+        btnToggle.innerText = "Pilih dari Daftar";
+      } else {
+        mapelSelect.style.display = "block";
+        mapelInput.style.display = "none";
+        mapelInput.value = "";
+        btnToggle.innerText = "Ketik Manual";
+      }
+    }
+
     function renderGuruHistoryTables() {
       // Jurnal Table
       const jtBody = document.getElementById('g-jurnal-table-body');
@@ -6814,7 +7045,7 @@
         jtBody.innerHTML = "";
         
         if (appState.jurnalList.length === 0) {
-          jtBody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">Belum ada riwayat mengajar Anda.</td></tr>`;
+          jtBody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted);">Belum ada riwayat mengajar Anda.</td></tr>`;
         } else {
           appState.jurnalList.forEach(item => {
             const tr = document.createElement('tr');
@@ -6822,6 +7053,7 @@
             tr.innerHTML = `
               <td style="font-weight: 500;">${formattedDate}</td>
               <td><span class="badge badge-primary">${item.kelas}</span></td>
+              <td style="font-weight: 600; color: #cbd5e1;">${item.mapel || '-'}</td>
               <td>${item.materi}</td>
               <td><span class="badge badge-success" style="background: rgba(16,185,129,0.08);">${item.kehadiran}</span></td>
               <td style="color:var(--text-muted); font-size:0.85rem;">${item.catatan || '-'}</td>
@@ -6892,9 +7124,20 @@
       e.preventDefault();
       
       const id = document.getElementById('jurnalId').value;
+      
+      let mapel = "";
+      const mapelSelect = document.getElementById('jurnalMapelSelect');
+      const mapelInput = document.getElementById('jurnalMapelInput');
+      if (mapelInput.style.display !== "none") {
+        mapel = mapelInput.value.trim();
+      } else {
+        mapel = mapelSelect.value;
+      }
+      
       const data = {
         tanggal: document.getElementById('jurnalTanggal').value,
         kelas: document.getElementById('jurnalKelas').value,
+        mapel: mapel,
         materi: document.getElementById('jurnalMateri').value,
         kehadiran: document.getElementById('jurnalKehadiran').value,
         catatan: document.getElementById('jurnalCatatan').value,
@@ -6935,6 +7178,38 @@
       document.getElementById('jurnalId').value = item.id;
       document.getElementById('jurnalTanggal').value = item.tanggal;
       document.getElementById('jurnalKelas').value = item.kelas;
+      
+      // Populate Mapel options
+      handleJurnalKelasChange();
+      const mapelSelect = document.getElementById('jurnalMapelSelect');
+      const mapelInput = document.getElementById('jurnalMapelInput');
+      const btnToggle = document.getElementById('btnToggleMapelInput');
+      
+      const itemMapel = item.mapel || "";
+      let exists = false;
+      for (let i = 0; i < mapelSelect.options.length; i++) {
+        if (mapelSelect.options[i].value === itemMapel) {
+          exists = true;
+          break;
+        }
+      }
+      
+      if (exists && itemMapel !== "") {
+        mapelSelect.value = itemMapel;
+        mapelSelect.style.display = "block";
+        mapelInput.style.display = "none";
+        mapelInput.value = "";
+        if (btnToggle) btnToggle.style.display = "block";
+      } else {
+        mapelSelect.style.display = "none";
+        mapelInput.style.display = "block";
+        mapelInput.value = itemMapel;
+        if (btnToggle) {
+          btnToggle.style.display = "block";
+          btnToggle.innerText = "Pilih dari Daftar";
+        }
+      }
+      
       document.getElementById('jurnalMateri').value = item.materi;
       document.getElementById('jurnalKehadiran').value = item.kehadiran;
       document.getElementById('jurnalCatatan').value = item.catatan || "";
@@ -6953,6 +7228,7 @@
       document.getElementById('titleFormInputJurnal').innerText = "Form Input Jurnal Mengajar";
       document.getElementById('btnSubmitJurnal').innerHTML = '<i class="fa-solid fa-paper-plane"></i> Simpan Jurnal Mengajar';
       document.getElementById('btnCancelEditJurnal').style.display = "none";
+      handleJurnalKelasChange();
     }
 
     async function deleteJurnal(id) {
@@ -8320,7 +8596,11 @@
        showLoading(true, "Menyimpan akun guru...");
        try {
          const waliKelasClass = document.getElementById('teacherWaliKelasClass').value;
-         const payload = { nama, nip, email, password, role, waliKelasClass };
+         const mapelX = document.getElementById('teacherMapelX') ? document.getElementById('teacherMapelX').value.trim() : "";
+         const mapelXI = document.getElementById('teacherMapelXI') ? document.getElementById('teacherMapelXI').value.trim() : "";
+         const mapelXII = document.getElementById('teacherMapelXII') ? document.getElementById('teacherMapelXII').value.trim() : "";
+         
+         const payload = { nama, nip, email, password, role, waliKelasClass, mapelX, mapelXI, mapelXII };
          if (id) payload.id = id;
          
          await callApi("addTeacher", payload);
@@ -8340,6 +8620,9 @@
        document.getElementById('teacherId').value = "";
        if (document.getElementById('teacherNip')) document.getElementById('teacherNip').value = "";
        document.getElementById('teacherWaliKelasClass').value = "";
+       if (document.getElementById('teacherMapelX')) document.getElementById('teacherMapelX').value = "";
+       if (document.getElementById('teacherMapelXI')) document.getElementById('teacherMapelXI').value = "";
+       if (document.getElementById('teacherMapelXII')) document.getElementById('teacherMapelXII').value = "";
        document.querySelectorAll('input[name="teacherRoles"]').forEach(cb => cb.checked = false);
        document.getElementById('btnCancelEditTeacher').style.display = "none";
      }
@@ -8355,6 +8638,9 @@
        document.getElementById('teacherEmail').value = item.email;
        document.getElementById('teacherPassword').value = item.password;
        document.getElementById('teacherWaliKelasClass').value = item.waliKelasClass || "";
+       if (document.getElementById('teacherMapelX')) document.getElementById('teacherMapelX').value = item.mapelX || "";
+       if (document.getElementById('teacherMapelXI')) document.getElementById('teacherMapelXI').value = item.mapelXI || "";
+       if (document.getElementById('teacherMapelXII')) document.getElementById('teacherMapelXII').value = item.mapelXII || "";
        
        const roles = item.role ? item.role.split(',').map(r => r.trim()) : [];
        document.querySelectorAll('input[name="teacherRoles"]').forEach(cb => {
@@ -8381,7 +8667,6 @@
       }
     }
 
-    // Render Tabel Daftar Guru
     function renderTeacherTable() {
       const tbody = document.getElementById('w-teacher-table-body');
       if (!tbody) return;
@@ -8389,29 +8674,11 @@
       
       const list = appState.teacherList || [];
       if (list.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Belum ada guru terdaftar.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted);">Belum ada guru terdaftar.</td></tr>';
         return;
       }
       
       list.forEach(item => {
-        // Query beban mengajar guru ini dari master list
-        const assignments = (appState.guruMasterList || []).filter(gm => {
-          return gm.guru.toLowerCase().startsWith(item.nama.toLowerCase());
-        });
-        
-        let assignmentHtml = "";
-        let totalJp = 0;
-        if (assignments.length === 0) {
-          assignmentHtml = '<span style="color:var(--text-muted); font-size:0.8rem; font-style:italic;">Belum ditugaskan</span>';
-        } else {
-          assignmentHtml = '<ul style="margin:0; padding-left:1.2rem; font-size:0.85rem; line-height:1.4; color:#cbd5e1; list-style-type:square;">';
-          assignments.forEach(a => {
-            totalJp += parseInt(a.jumlahJam) || 0;
-            assignmentHtml += `<li><strong>${a.mapel}</strong> (Kelas ${a.kelas}, ${a.jumlahJam} JP)</li>`;
-          });
-          assignmentHtml += `</ul><div style="font-size:0.8rem; margin-top:0.35rem; color:var(--accent);"><strong>Total Beban: ${totalJp} JP / Pekan</strong></div>`;
-        }
-
         const nipDisplay = item.nip ? `<div style="font-size:0.75rem; color:var(--primary); font-family:monospace;">NIP: ${item.nip}</div>` : '';
 
         const tr = document.createElement('tr');
@@ -8434,6 +8701,9 @@
               return `<span class="badge" style="background: ${bgColor}; color: ${textColor}; border: 1px solid rgba(255,255,255,0.05); margin-right: 0.25rem; margin-bottom: 0.25rem; display: inline-block; padding: 0.25rem 0.5rem; border-radius: 0.35rem; font-size: 0.75rem; font-weight: 600;">${displayRole}</span>`;
             }).join("")}
           </td>
+          <td>${item.mapelX || '-'}</td>
+          <td>${item.mapelXI || '-'}</td>
+          <td>${item.mapelXII || '-'}</td>
           <td style="font-family: monospace;">${item.password}</td>
           <td>
             <button type="button" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-right: 0.25rem;" onclick="editTeacher('${item.id}')">
@@ -9884,6 +10154,7 @@
                   tanggal: payload.tanggal,
                   guru: payload.guru,
                   kelas: payload.kelas,
+                  mapel: payload.mapel || "",
                   materi: payload.materi,
                   kehadiran: payload.kehadiran,
                   catatan: payload.catatan || "",
@@ -9898,12 +10169,13 @@
                 tanggal: payload.tanggal,
                 guru: payload.guru,
                 kelas: payload.kelas,
+                mapel: payload.mapel || "",
                 materi: payload.materi,
                 kehadiran: payload.kehadiran,
                 catatan: payload.catatan,
                 mode: payload.mode || "Tatap Muka"
               };
-              jRaw.unshift(newJurnal);
+              jRaw.push(newJurnal);
               localStorage.setItem('db_jurnals', JSON.stringify(jRaw));
               resolve({ success: true, id: newJurnal.id });
             }
@@ -11058,7 +11330,7 @@
       tbody.innerHTML = "";
       
       if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">Tidak ada aktivitas jurnal mengajar.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted);">Tidak ada aktivitas jurnal mengajar.</td></tr>`;
         return;
       }
       
@@ -11070,6 +11342,7 @@
           <td style="font-weight: 500;">${formattedDate}</td>
           <td style="color: #cbd5e1; font-weight: 600;"><i class="fa-regular fa-user" style="margin-right: 0.35rem; font-size:0.8rem; color:var(--primary);"></i> ${item.guru}</td>
           <td><span class="badge badge-primary">${item.kelas}</span></td>
+          <td style="font-weight: 600; color: #cbd5e1;">${item.mapel || '-'}</td>
           <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.materi}</td>
           <td><span class="badge badge-success" style="background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.15);">${item.kehadiran}</span></td>
           <td style="color: var(--text-muted); font-size: 0.85rem;">${item.catatan || '-'}</td>
@@ -11562,6 +11835,94 @@
             }
           },
           cutout: '65%'
+        }
+      });
+
+      // Bar Chart - Aktivitas Jurnal per Mapel
+      const mapelCounts = {};
+      appState.jurnalList.forEach(j => {
+        const m = j.mapel || "Tidak Diketahui";
+        mapelCounts[m] = (mapelCounts[m] || 0) + 1;
+      });
+      const mapelLabels = Object.keys(mapelCounts);
+      const mapelData = Object.values(mapelCounts);
+
+      const ctxMapel = document.getElementById('chartKepalaMapel').getContext('2d');
+      if (mapelChartInstance) mapelChartInstance.destroy();
+
+      mapelChartInstance = new Chart(ctxMapel, {
+        type: 'bar',
+        data: {
+          labels: mapelLabels.length > 0 ? mapelLabels : ["Belum ada data"],
+          datasets: [{
+            label: 'Jumlah Tatap Muka KBM',
+            data: mapelData.length > 0 ? mapelData : [0],
+            backgroundColor: 'rgba(16, 185, 129, 0.6)',
+            borderColor: 'rgba(16, 185, 129, 1)',
+            borderWidth: 1.5,
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: {
+              grid: { color: 'rgba(255, 255, 255, 0.05)' },
+              ticks: { color: '#94a3b8', stepSize: 1, font: { family: 'Outfit' } }
+            },
+            x: {
+              grid: { display: false },
+              ticks: { color: '#94a3b8', font: { family: 'Outfit' } }
+            }
+          }
+        }
+      });
+
+      // Bar Chart - Frekuensi Pengisian Jurnal oleh Guru
+      const guruCounts = {};
+      appState.jurnalList.forEach(j => {
+        const g = j.guru || "Tidak Diketahui";
+        guruCounts[g] = (guruCounts[g] || 0) + 1;
+      });
+      const guruLabels = Object.keys(guruCounts);
+      const guruData = Object.values(guruCounts);
+
+      const ctxGuruJurnal = document.getElementById('chartKepalaGuruJurnal').getContext('2d');
+      if (guruJurnalChartInstance) guruJurnalChartInstance.destroy();
+
+      guruJurnalChartInstance = new Chart(ctxGuruJurnal, {
+        type: 'bar',
+        data: {
+          labels: guruLabels.length > 0 ? guruLabels : ["Belum ada data"],
+          datasets: [{
+            label: 'Jumlah Jurnal Diisi',
+            data: guruData.length > 0 ? guruData : [0],
+            backgroundColor: 'rgba(245, 158, 11, 0.6)',
+            borderColor: 'rgba(245, 158, 11, 1)',
+            borderWidth: 1.5,
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: {
+              grid: { color: 'rgba(255, 255, 255, 0.05)' },
+              ticks: { color: '#94a3b8', stepSize: 1, font: { family: 'Outfit' } }
+            },
+            x: {
+              grid: { display: false },
+              ticks: { color: '#94a3b8', font: { family: 'Outfit' } }
+            }
+          }
         }
       });
     }
