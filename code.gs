@@ -16,7 +16,7 @@ function initSheets() {
   
   // Define sheets and headers
   var sheetsDef = {
-    "Users": ["ID", "Nama", "Email", "Role", "Password", "WaliKelasClass", "MapelX", "MapelXI", "MapelXII"],
+    "Users": ["ID", "Nama", "Email", "Role", "Password", "WaliKelasClass", "Mapel"],
     "JurnalMengajar": ["ID", "Tanggal", "Guru", "Kelas", "Materi", "Kehadiran", "Catatan", "Mode", "Mapel"],
     "PerangkatAjar": ["ID", "Nama_Guru", "Jenis_Dokumen", "Link_Drive", "Status", "Catatan"],
     "AnalisisNilai": ["ID", "Kelas", "Mapel", "Rata_Nilai", "Jumlah_Siswa_Remidial"],
@@ -625,15 +625,13 @@ function getDashboard(role, email, nama) {
         role: row[3],
         password: row[4],
         waliKelasClass: row[5] || "",
-        mapelX: row[6] || "",
-        mapelXI: row[7] || "",
-        mapelXII: row[8] || ""
+        mapel: row[6] || ""
       });
     }
   }
   
   // Create stats based on role
-  if (role === "Wakasek") {
+  if (role === "Wakasek" || role === "Admin") {
     var totalGuru = sheetUsers.getDataRange().getValues().length - 1;
     var totalJurnal = result.jurnalList.length;
     
@@ -1197,9 +1195,7 @@ function addTeacher(payload) {
   var role = payload.role || "Guru"; 
   var password = payload.password;
   var waliKelasClass = payload.waliKelasClass || "";
-  var mapelX = payload.mapelX || "";
-  var mapelXI = payload.mapelXI || "";
-  var mapelXII = payload.mapelXII || "";
+  var mapel = payload.mapel || "";
   
   var data = sheet.getDataRange().getValues();
   var index = -1;
@@ -1217,12 +1213,10 @@ function addTeacher(payload) {
     sheet.getRange(index + 1, 4).setValue(role);
     sheet.getRange(index + 1, 5).setValue(password);
     sheet.getRange(index + 1, 6).setValue(waliKelasClass);
-    sheet.getRange(index + 1, 7).setValue(mapelX);
-    sheet.getRange(index + 1, 8).setValue(mapelXI);
-    sheet.getRange(index + 1, 9).setValue(mapelXII);
+    sheet.getRange(index + 1, 7).setValue(mapel);
   } else {
     // Tambah Baru
-    sheet.appendRow([id, nama, email, role, password, waliKelasClass, mapelX, mapelXI, mapelXII]);
+    sheet.appendRow([id, nama, email, role, password, waliKelasClass, mapel]);
   }
   
   SpreadsheetApp.flush();

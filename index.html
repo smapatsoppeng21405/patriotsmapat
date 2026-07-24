@@ -2035,6 +2035,7 @@
                     </div>
                   </label>
                   <label class="role-checkbox-card" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border-radius: 0.5rem; border: 1px solid var(--border-color); background: rgba(255, 255, 255, 0.02); cursor: pointer; transition: var(--transition);">
+                  <label class="role-checkbox-card" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border-radius: 0.5rem; border: 1px solid var(--border-color); background: rgba(255, 255, 255, 0.02); cursor: pointer; transition: var(--transition);">
                     <input type="checkbox" name="teacherRoles" value="Wakasek" style="width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer;">
                     <div style="display: flex; flex-direction: column;">
                       <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-main);">Wakasek Kurikulum</span>
@@ -2048,6 +2049,13 @@
                       <span style="font-size: 0.7rem; color: var(--text-muted);">Pimpinan Sekolah</span>
                     </div>
                   </label>
+                  <label class="role-checkbox-card" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border-radius: 0.5rem; border: 1px solid var(--border-color); background: rgba(255, 255, 255, 0.02); cursor: pointer; transition: var(--transition);">
+                    <input type="checkbox" name="teacherRoles" value="Admin" style="width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer;">
+                    <div style="display: flex; flex-direction: column;">
+                      <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-main);">Administrator</span>
+                      <span style="font-size: 0.7rem; color: var(--text-muted);">Pengelola Sistem</span>
+                    </div>
+                  </label>
                 </div>
               </div>
               <div class="form-group" style="margin-bottom: 1.5rem; max-width: 350px;">
@@ -2057,19 +2065,9 @@
                 </select>
                 <span style="font-size: 0.7rem; color: var(--text-muted);">Pilih kelas bimbingan guru (Wajib diisi jika peran Wali Kelas dipilih).</span>
               </div>
-              <div class="form-grid" style="margin-bottom: 1.5rem; gap: 1rem;">
-                <div class="form-group" style="margin-bottom: 0;">
-                  <label for="teacherMapelX">Mapel Diajar Tingkat X</label>
-                  <input type="text" id="teacherMapelX" class="form-control" style="padding-left: 1rem;" placeholder="E.g., Matematika, Fisika (pisahkan koma)">
-                </div>
-                <div class="form-group" style="margin-bottom: 0;">
-                  <label for="teacherMapelXI">Mapel Diajar Tingkat XI</label>
-                  <input type="text" id="teacherMapelXI" class="form-control" style="padding-left: 1rem;" placeholder="E.g., Matematika, Kimia">
-                </div>
-                <div class="form-group" style="margin-bottom: 0;">
-                  <label for="teacherMapelXII">Mapel Diajar Tingkat XII</label>
-                  <input type="text" id="teacherMapelXII" class="form-control" style="padding-left: 1rem;" placeholder="E.g., Matematika Peminatan">
-                </div>
+              <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label for="teacherMapel">Mata Pelajaran yang Diajar (Bisa lebih dari satu, pisahkan dengan koma)</label>
+                <input type="text" id="teacherMapel" class="form-control" style="padding-left: 1rem;" placeholder="E.g., Matematika, Fisika, IPA">
               </div>
               <div style="display:flex; gap:1rem;">
                 <button type="submit" class="btn btn-primary" style="flex:1;">
@@ -2088,15 +2086,13 @@
                     <th>Nama Guru</th>
                     <th>Email</th>
                     <th>Role</th>
-                    <th>Mapel Kelas X</th>
-                    <th>Mapel Kelas XI</th>
-                    <th>Mapel Kelas XII</th>
+                    <th>Mata Pelajaran</th>
                     <th>Password</th>
                     <th>Aksi</th>
                   </tr>
                 </thead>
                 <tbody id="w-teacher-table-body">
-                  <tr><td colspan="8" style="text-align: center; color: var(--text-muted);">Memuat daftar guru...</td></tr>
+                  <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Memuat daftar guru...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -3823,7 +3819,7 @@
           id: "u_admin",
           nama: "Admin SMAN 4 Soppeng",
           email: "sman4soppeng@gmail.com",
-          role: "Wakasek",
+          role: "Admin",
           password: "Smapatjaya_21405"
         };
         if (adminIdx !== -1) {
@@ -3842,7 +3838,7 @@
           await rtdb.ref("users/u_admin").set({
             nama: "Admin SMAN 4 Soppeng",
             email: "sman4soppeng@gmail.com",
-            role: "Wakasek",
+            role: "Admin",
             password: "Smapatjaya_21405"
           });
           console.log("🔥 Admin account verified/created in RTDB.");
@@ -3857,7 +3853,7 @@
           await db.collection("users").doc("u_admin").set({
             nama: "Admin SMAN 4 Soppeng",
             email: "sman4soppeng@gmail.com",
-            role: "Wakasek",
+            role: "Admin",
             password: "Smapatjaya_21405"
           }, { merge: true });
           console.log("🔥 Admin account verified/created in Firestore.");
@@ -4628,7 +4624,7 @@
         btn.onclick = () => selectRoleProfile(idx);
         
         let iconHtml = '<i class="fa-solid fa-graduation-cap"></i>';
-        if (p.role === "Wakasek") iconHtml = '<i class="fa-solid fa-user-shield" style="color:var(--accent);"></i>';
+        if (p.role === "Wakasek" || p.role === "Admin") iconHtml = '<i class="fa-solid fa-user-shield" style="color:var(--accent);"></i>';
         else if (p.role === "Kepala Sekolah") iconHtml = '<i class="fa-solid fa-crown" style="color:#f59e0b;"></i>';
         else if (p.role === "Wali Kelas") iconHtml = '<i class="fa-solid fa-chalkboard-user" style="color:var(--success);"></i>';
         else if (p.role === "Guru Wali") iconHtml = '<i class="fa-solid fa-heart" style="color:var(--danger);"></i>';
@@ -4720,7 +4716,7 @@
         };
         
         let iconHtml = '<i class="fa-solid fa-graduation-cap" style="font-size:0.7rem;"></i>';
-        if (p.role === "Wakasek") iconHtml = '<i class="fa-solid fa-user-shield" style="font-size:0.7rem; color:var(--accent);"></i>';
+        if (p.role === "Wakasek" || p.role === "Admin") iconHtml = '<i class="fa-solid fa-user-shield" style="font-size:0.7rem; color:var(--accent);"></i>';
         else if (p.role === "Kepala Sekolah") iconHtml = '<i class="fa-solid fa-crown" style="font-size:0.7rem; color:#f59e0b;"></i>';
         else if (p.role === "Wali Kelas") iconHtml = '<i class="fa-solid fa-chalkboard-user" style="font-size:0.7rem; color:var(--success);"></i>';
         else if (p.role === "Guru Wali") iconHtml = '<i class="fa-solid fa-heart" style="font-size:0.7rem; color:var(--danger);"></i>';
@@ -5043,7 +5039,7 @@
       const role = appState.user.role;
       let menuItems = [];
       
-      if (role === "Wakasek") {
+      if (role === "Wakasek" || role === "Admin") {
         menuItems = [
           { text: "Ringkasan", pane: "pane-wakasek-ringkasan", icon: "fa-chart-pie" },
           { text: "Data Utama Guru", pane: "pane-wakasek-gurumaster", icon: "fa-user-gear" },
@@ -5363,14 +5359,14 @@
              kelasMapelPilihanList: [...kmpRaw]
            };
 
-          if (role === "Wakasek") {
+          if (role === "Wakasek" || role === "Admin") {
             const pending = pRaw.filter(p => p.status === "Pending").length;
             const approved = pRaw.filter(p => p.status === "Disetujui").length;
             let sumRata = 0;
             nRaw.forEach(n => sumRata += parseFloat(n.rataNilai) || 0);
 
             result.stats = {
-              totalGuru: users.filter(u => u.role !== "Wakasek" && u.role !== "Kepala Sekolah").length,
+              totalGuru: users.filter(u => u.role !== "Wakasek" && u.role !== "Admin" && u.role !== "Kepala Sekolah").length,
               totalJurnal: jRaw.length,
               pendingPerangkat: pending,
               approvedPerangkat: approved,
@@ -5431,7 +5427,7 @@
           else if (role === "Kepala Sekolah") {
             const pending = pRaw.filter(p => p.status === "Pending").length;
             result.stats = {
-              totalGuru: users.filter(u => u.role !== "Kepala Sekolah" && u.role !== "Wakasek").length,
+              totalGuru: users.filter(u => u.role !== "Kepala Sekolah" && u.role !== "Wakasek" && u.role !== "Admin").length,
               totalJurnal: jRaw.length,
               pendingPerangkat: pending,
               totalJurnal7KIH: j7kihRaw.length,
@@ -5544,9 +5540,7 @@
             role: payload.role,
             password: payload.password,
             waliKelasClass: payload.waliKelasClass || "",
-            mapelX: payload.mapelX || "",
-            mapelXI: payload.mapelXI || "",
-            mapelXII: payload.mapelXII || ""
+            mapel: payload.mapel || ""
           });
           return { success: true, id: key };
         }
@@ -5946,7 +5940,7 @@
             kelasMapelPilihanList: [...kmpRaw]
           };
 
-          if (role === "Wakasek") {
+          if (role === "Wakasek" || role === "Admin") {
             const pending = pRaw.filter(p => p.status === "Pending").length;
             const approved = pRaw.filter(p => p.status === "Disetujui").length;
             let sumRata = 0;
@@ -6014,7 +6008,7 @@
           else if (role === "Kepala Sekolah") {
             const pending = pRaw.filter(p => p.status === "Pending").length;
             result.stats = {
-              totalGuru: users.filter(u => u.role !== "Kepala Sekolah" && u.role !== "Wakasek").length,
+              totalGuru: users.filter(u => u.role !== "Kepala Sekolah" && u.role !== "Wakasek" && u.role !== "Admin").length,
               totalJurnal: jRaw.length,
               pendingPerangkat: pending,
               totalJurnal7KIH: j7kihRaw.length,
@@ -6125,9 +6119,7 @@
             role: payload.role,
             password: payload.password,
             waliKelasClass: payload.waliKelasClass || "",
-            mapelX: payload.mapelX || "",
-            mapelXI: payload.mapelXI || "",
-            mapelXII: payload.mapelXII || ""
+            mapel: payload.mapel || ""
           }, { merge: true });
           return { success: true, id: id };
         }
@@ -6490,7 +6482,7 @@
       // Populate all class select dropdowns dynamically
       populateClassDropdowns();
       
-      if (role === "Wakasek") {
+      if (role === "Wakasek" || role === "Admin") {
         // Show class selection dropdown groups for Wakasek
         ['absenKelasGroup', 'kondisiKelasGroup', 'laporanKelasGroup'].forEach(gId => {
           const el = document.getElementById(gId);
@@ -6986,19 +6978,10 @@
         return;
       }
       
-      let tingkatan = "";
-      if (kelasVal.startsWith("10")) tingkatan = "X";
-      else if (kelasVal.startsWith("11")) tingkatan = "XI";
-      else if (kelasVal.startsWith("12")) tingkatan = "XII";
-      
       const currentEmail = appState.user ? appState.user.email : "";
       const teacher = (appState.teacherList || []).find(t => t.email === currentEmail) || appState.user || {};
       
-      let mapelStr = "";
-      if (tingkatan === "X") mapelStr = teacher.mapelX || "";
-      else if (tingkatan === "XI") mapelStr = teacher.mapelXI || "";
-      else if (tingkatan === "XII") mapelStr = teacher.mapelXII || "";
-      
+      const mapelStr = teacher.mapel || "";
       const mapelList = mapelStr.split(",").map(s => s.trim()).filter(Boolean);
       
       if (mapelList.length > 0) {
@@ -8495,7 +8478,7 @@
 
         days.forEach(day => {
           const match = classSchedules.find(j => j.hari === day && j.jamKe.toString() === slot.toString());
-          const isWakasek = (appState.user && appState.user.role === "Wakasek");
+          const isWakasek = (appState.user && (appState.user.role === "Wakasek" || appState.user.role === "Admin"));
           const cellClass = (isWakasek ? "roster-interactive-cell" : "") + (match ? "" : " roster-cell-empty");
           const clickHandler = isWakasek ? `onclick="openRosterModal('${day}', ${slot}, '${kelas}')"` : "";
           
@@ -8596,11 +8579,9 @@
        showLoading(true, "Menyimpan akun guru...");
        try {
          const waliKelasClass = document.getElementById('teacherWaliKelasClass').value;
-         const mapelX = document.getElementById('teacherMapelX') ? document.getElementById('teacherMapelX').value.trim() : "";
-         const mapelXI = document.getElementById('teacherMapelXI') ? document.getElementById('teacherMapelXI').value.trim() : "";
-         const mapelXII = document.getElementById('teacherMapelXII') ? document.getElementById('teacherMapelXII').value.trim() : "";
+         const mapel = document.getElementById('teacherMapel') ? document.getElementById('teacherMapel').value.trim() : "";
          
-         const payload = { nama, nip, email, password, role, waliKelasClass, mapelX, mapelXI, mapelXII };
+         const payload = { nama, nip, email, password, role, waliKelasClass, mapel };
          if (id) payload.id = id;
          
          await callApi("addTeacher", payload);
@@ -8613,43 +8594,39 @@
          showLoading(false);
        }
      }
- 
-     // Reset Form Guru
-     function resetTeacherForm() {
-       document.getElementById('formTeacher').reset();
-       document.getElementById('teacherId').value = "";
-       if (document.getElementById('teacherNip')) document.getElementById('teacherNip').value = "";
-       document.getElementById('teacherWaliKelasClass').value = "";
-       if (document.getElementById('teacherMapelX')) document.getElementById('teacherMapelX').value = "";
-       if (document.getElementById('teacherMapelXI')) document.getElementById('teacherMapelXI').value = "";
-       if (document.getElementById('teacherMapelXII')) document.getElementById('teacherMapelXII').value = "";
-       document.querySelectorAll('input[name="teacherRoles"]').forEach(cb => cb.checked = false);
-       document.getElementById('btnCancelEditTeacher').style.display = "none";
-     }
- 
-     // Edit Akun Guru
-     function editTeacher(id) {
-       const item = appState.teacherList.find(t => t.id === id);
-       if (!item) return;
-       
-       document.getElementById('teacherId').value = item.id;
-       document.getElementById('teacherNama').value = item.nama;
-       if (document.getElementById('teacherNip')) document.getElementById('teacherNip').value = item.nip || "";
-       document.getElementById('teacherEmail').value = item.email;
-       document.getElementById('teacherPassword').value = item.password;
-       document.getElementById('teacherWaliKelasClass').value = item.waliKelasClass || "";
-       if (document.getElementById('teacherMapelX')) document.getElementById('teacherMapelX').value = item.mapelX || "";
-       if (document.getElementById('teacherMapelXI')) document.getElementById('teacherMapelXI').value = item.mapelXI || "";
-       if (document.getElementById('teacherMapelXII')) document.getElementById('teacherMapelXII').value = item.mapelXII || "";
-       
-       const roles = item.role ? item.role.split(',').map(r => r.trim()) : [];
-       document.querySelectorAll('input[name="teacherRoles"]').forEach(cb => {
-         cb.checked = roles.includes(cb.value);
-       });
-       
-       document.getElementById('btnCancelEditTeacher').style.display = "inline-block";
-       document.getElementById('teacherNama').focus();
-     }
+  
+      // Reset Form Guru
+      function resetTeacherForm() {
+        document.getElementById('formTeacher').reset();
+        document.getElementById('teacherId').value = "";
+        if (document.getElementById('teacherNip')) document.getElementById('teacherNip').value = "";
+        document.getElementById('teacherWaliKelasClass').value = "";
+        if (document.getElementById('teacherMapel')) document.getElementById('teacherMapel').value = "";
+        document.querySelectorAll('input[name="teacherRoles"]').forEach(cb => cb.checked = false);
+        document.getElementById('btnCancelEditTeacher').style.display = "none";
+      }
+  
+      // Edit Akun Guru
+      function editTeacher(id) {
+        const item = appState.teacherList.find(t => t.id === id);
+        if (!item) return;
+        
+        document.getElementById('teacherId').value = item.id;
+        document.getElementById('teacherNama').value = item.nama;
+        if (document.getElementById('teacherNip')) document.getElementById('teacherNip').value = item.nip || "";
+        document.getElementById('teacherEmail').value = item.email;
+        document.getElementById('teacherPassword').value = item.password;
+        document.getElementById('teacherWaliKelasClass').value = item.waliKelasClass || "";
+        if (document.getElementById('teacherMapel')) document.getElementById('teacherMapel').value = item.mapel || "";
+        
+        const roles = item.role ? item.role.split(',').map(r => r.trim()) : [];
+        document.querySelectorAll('input[name="teacherRoles"]').forEach(cb => {
+          cb.checked = roles.includes(cb.value);
+        });
+        
+        document.getElementById('btnCancelEditTeacher').style.display = "inline-block";
+        document.getElementById('teacherNama').focus();
+      }
 
     // Hapus Akun Guru
     async function deleteTeacher(id) {
@@ -8674,7 +8651,7 @@
       
       const list = appState.teacherList || [];
       if (list.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted);">Belum ada guru terdaftar.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Belum ada guru terdaftar.</td></tr>';
         return;
       }
       
@@ -8697,13 +8674,12 @@
               else if (r === "Kepala Sekolah") { bgColor = "rgba(245, 158, 11, 0.15)"; textColor = "#f59e0b"; }
               else if (r === "Wali Kelas") { bgColor = "rgba(16, 185, 129, 0.15)"; textColor = "var(--success)"; }
               else if (r === "Guru Wali") { bgColor = "rgba(239, 68, 68, 0.15)"; textColor = "var(--danger)"; }
+              else if (r === "Admin") { bgColor = "rgba(16, 185, 129, 0.15)"; textColor = "var(--success)"; }
               
               return `<span class="badge" style="background: ${bgColor}; color: ${textColor}; border: 1px solid rgba(255,255,255,0.05); margin-right: 0.25rem; margin-bottom: 0.25rem; display: inline-block; padding: 0.25rem 0.5rem; border-radius: 0.35rem; font-size: 0.75rem; font-weight: 600;">${displayRole}</span>`;
             }).join("")}
           </td>
-          <td>${item.mapelX || '-'}</td>
-          <td>${item.mapelXI || '-'}</td>
-          <td>${item.mapelXII || '-'}</td>
+          <td>${item.mapel || '-'}</td>
           <td style="font-family: monospace;">${item.password}</td>
           <td>
             <button type="button" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-right: 0.25rem;" onclick="editTeacher('${item.id}')">
@@ -10041,7 +10017,7 @@
                }
              });
             
-            if (role === "Wakasek") {
+            if (role === "Wakasek" || role === "Admin") {
               const pending = pRaw.filter(p => p.status === "Pending").length;
               const approved = pRaw.filter(p => p.status === "Disetujui").length;
               
@@ -10051,7 +10027,7 @@
               });
               
               result.stats = {
-                totalGuru: users.filter(u => u.role !== "Wakasek" && u.role !== "Kepala Sekolah").length,
+                totalGuru: users.filter(u => u.role !== "Wakasek" && u.role !== "Admin" && u.role !== "Kepala Sekolah").length,
                 totalJurnal: jRaw.length,
                 pendingPerangkat: pending,
                 approvedPerangkat: approved,
@@ -10132,7 +10108,7 @@
               const pending = pRaw.filter(p => p.status === "Pending").length;
               
               result.stats = {
-                totalGuru: users.filter(u => u.role !== "Kepala Sekolah" && u.role !== "Wakasek").length,
+                totalGuru: users.filter(u => u.role !== "Kepala Sekolah" && u.role !== "Wakasek" && u.role !== "Admin").length,
                 totalJurnal: jRaw.length,
                 pendingPerangkat: pending,
                 totalJurnal7KIH: j7kihRaw.length,
@@ -10403,7 +10379,8 @@
               email: payload.email,
               role: payload.role,
               password: payload.password,
-              waliKelasClass: payload.waliKelasClass || ""
+              waliKelasClass: payload.waliKelasClass || "",
+              mapel: payload.mapel || ""
             };
             
             if (index !== -1) {
@@ -10711,8 +10688,8 @@
       
       const mockUsers = [
         { id: "USR001", nama: "Pak Budi (Wakasek)", email: "wakasek@sekolah.com", role: "Wakasek", password: "wakasek123" },
-        { id: "USR002", nama: "Bu Siti (Guru Matematika)", email: "guru@sekolah.com", role: "Guru", password: "guru123" },
-        { id: "USR003", nama: "Pak Joko (Wali Kelas 10A)", email: "walikelas@sekolah.com", role: "Wali Kelas", password: "walikelas123", waliKelasClass: "10-A" },
+        { id: "USR002", nama: "Bu Siti (Guru Matematika)", email: "guru@sekolah.com", role: "Guru", password: "guru123", mapel: "Matematika Aljabar, Matematika Peminatan" },
+        { id: "USR003", nama: "Pak Joko (Wali Kelas 10A)", email: "walikelas@sekolah.com", role: "Wali Kelas", password: "walikelas123", waliKelasClass: "10-A", mapel: "Fisika Mekanika" },
         { id: "USR004", nama: "Ibu Rahma (Guru Wali)", email: "guruwali@sekolah.com", role: "Guru Wali", password: "wali123" },
         { id: "USR005", nama: "Drs. H. Mulyono (Kepala Sekolah)", email: "kepala@sekolah.com", role: "Kepala Sekolah", password: "kepala123" }
       ];
