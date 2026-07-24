@@ -7453,6 +7453,37 @@
       }
     }
 
+    function loadClassStudentsToAbsen(silent = false) {
+      const kelasVal = document.getElementById('absenKelas').value;
+      const tbody = document.getElementById('absen-input-tbody');
+      if (!tbody) return;
+      
+      if (!kelasVal) {
+        if (!silent) showToast("Pilih kelas bimbingan terlebih dahulu!", "warning");
+        return;
+      }
+      
+      const allStudents = appState.studentList || [];
+      const classStudents = allStudents.filter(s => s.kelas === kelasVal);
+      
+      // Sort alphabetically by student name
+      classStudents.sort((a, b) => (a.namaSiswa || "").localeCompare(b.namaSiswa || ""));
+      
+      tbody.innerHTML = "";
+      if (classStudents.length === 0) {
+        if (!silent) showToast(`Tidak ada data siswa terdaftar untuk kelas ${kelasVal} di database admin.`, "warning");
+        // Pre-populate with one blank row
+        addAbsenRow("", 20, 0, 0, 0);
+        return;
+      }
+      
+      classStudents.forEach(student => {
+        addAbsenRow(student.namaSiswa, 20, 0, 0, 0);
+      });
+      
+      if (!silent) showToast(`Berhasil memuat ${classStudents.length} siswa kelas ${kelasVal}!`, "success");
+    }
+
     // Dynamic row helpers for Rekap Absen
     function addAbsenRow(name = "", hadir = 20, sakit = 0, izin = 0, alpa = 0) {
       const tbody = document.getElementById('absen-input-tbody');
@@ -7491,7 +7522,7 @@
         tbody.innerHTML = "";
         if (appState.user && appState.user.role === "Wali Kelas" && appState.user.waliKelasClass) {
           // Auto load student list instead of blank rows
-          loadClassStudentsToAbsen();
+          loadClassStudentsToAbsen(true);
         } else {
           // Pre-populate with 3 rows for Wakasek or other manually input roles
           addAbsenRow("", 20, 0, 0, 0);
