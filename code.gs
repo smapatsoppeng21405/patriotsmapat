@@ -968,7 +968,7 @@ function downloadPerangkatFile(payload) {
   };
 }
 
-// 6. Validasi/Pembaruan Status Perangkat Ajar oleh Wakasek
+// 6. Validasi/Pembaruan Status Perangkat Ajar oleh Kepala Sekolah
 function updatePerangkatStatus(id, status, catatan) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName("PerangkatAjar");

@@ -1508,10 +1508,10 @@
           </div>
         </div>
 
-        <!-- WAKASEK: PERSETUJUAN PERANGKAT AJAR -->
+        <!-- WAKASEK: DAFTAR PERANGKAT AJAR -->
         <div id="pane-wakasek-perangkat" class="view-pane">
           <div class="card glass-effect">
-            <div class="card-title">Validasi Dokumen Perangkat Ajar</div>
+            <div class="card-title">Daftar Dokumen Perangkat Ajar</div>
             <div class="table-container">
               <table class="data-table">
                 <thead>
@@ -1520,12 +1520,11 @@
                     <th>Nama Berkas</th>
                     <th>Unduh Perangkat</th>
                     <th>Status</th>
-                    <th>Catatan Kurikulum</th>
-                    <th>Aksi</th>
+                    <th>Catatan Kepala Sekolah</th>
                   </tr>
                 </thead>
                 <tbody id="w-perangkat-table-body">
-                  <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Memuat...</td></tr>
+                  <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Memuat...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -2562,7 +2561,7 @@
                     <th>Nama Berkas</th>
                     <th>Dokumen Perangkat</th>
                     <th>Status Validasi</th>
-                    <th>Catatan Kurikulum</th>
+                    <th>Catatan Kepala Sekolah</th>
                     <th>Aksi</th>
                   </tr>
                 </thead>
@@ -3297,10 +3296,10 @@
           </div>
         </div>
 
-        <!-- KEPALA SEKOLAH: MONITORING PERANGKAT -->
+        <!-- KEPALA SEKOLAH: VALIDASI PERANGKAT -->
         <div id="pane-kepala-perangkat" class="view-pane">
           <div class="card glass-effect">
-            <div class="card-title">Daftar Dokumen Perangkat Ajar</div>
+            <div class="card-title">Validasi Dokumen Perangkat Ajar</div>
             <div class="table-container">
               <table class="data-table">
                 <thead>
@@ -3309,11 +3308,12 @@
                     <th>Nama Berkas</th>
                     <th>Unduh Berkas</th>
                     <th>Status</th>
-                    <th>Catatan Kurikulum</th>
+                    <th>Catatan Kepala Sekolah</th>
+                    <th>Aksi</th>
                   </tr>
                 </thead>
                 <tbody id="ks-perangkat-table-body">
-                  <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Memuat...</td></tr>
+                  <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Memuat...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -3570,7 +3570,7 @@
         </div>
 
         <div class="form-group">
-          <label>Catatan Wakasek (Catatan/Feedback)</label>
+          <label>Catatan Kepala Sekolah (Catatan/Feedback)</label>
           <textarea id="modalPerangkatCatatan" class="form-control" style="padding-left: 1rem;" placeholder="Tulis catatan umpan balik atau alasan jika dokumen direvisi..."></textarea>
         </div>
       </div>
@@ -4986,7 +4986,7 @@
           { text: "Data Utama Guru", pane: "pane-wakasek-gurumaster", icon: "fa-user-gear" },
           { text: "Data Utama Siswa", pane: "pane-wakasek-siswamaster", icon: "fa-users-gear" },
           { text: "Monitoring Jurnal", pane: "pane-wakasek-jurnal", icon: "fa-book-open" },
-          { text: "Validasi Perangkat", pane: "pane-wakasek-perangkat", icon: "fa-file-shield" },
+          { text: "Daftar Perangkat", pane: "pane-wakasek-perangkat", icon: "fa-file-shield" },
           { text: "Laporan Wali Kelas", pane: "pane-wakasek-laporanwali", icon: "fa-envelope-open-text" },
           { text: "Analisis Nilai", pane: "pane-wakasek-nilai", icon: "fa-chart-simple" },
           { text: "Rekap Absen Kelas", pane: "pane-wakasek-rekapabsen", icon: "fa-calendar-check" },
@@ -5017,7 +5017,7 @@
         menuItems = [
           { text: "Ringkasan", pane: "pane-kepala-ringkasan", icon: "fa-chart-pie" },
           { text: "Monitoring Jurnal", pane: "pane-kepala-jurnal", icon: "fa-book-open" },
-          { text: "Daftar Perangkat", pane: "pane-kepala-perangkat", icon: "fa-file-shield" },
+          { text: "Validasi Perangkat", pane: "pane-kepala-perangkat", icon: "fa-file-shield" },
           { text: "Analisis Nilai", pane: "pane-kepala-nilai", icon: "fa-chart-simple" },
           { text: "Rekap Absen Kelas", pane: "pane-kepala-rekapabsen", icon: "fa-calendar-check" },
           { text: "Kondisi Siswa", pane: "pane-kepala-kondisisiswa", icon: "fa-user-graduate" },
@@ -6595,7 +6595,7 @@
       tbody.innerHTML = "";
       
       if (appState.perangkatList.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">Tidak ada berkas perangkat diajukan.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">Tidak ada berkas perangkat diajukan.</td></tr>`;
         return;
       }
       
@@ -6625,11 +6625,6 @@
           </td>
           <td>${statusBadge}</td>
           <td style="color: var(--text-muted); font-size: 0.85rem; max-width: 180px;">${item.catatan || '-'}</td>
-          <td>
-            <button class="btn btn-primary" style="padding: 0.35rem 0.75rem; font-size: 0.75rem;" onclick="openPerangkatModal('${item.id}', '${item.status}', '${item.catatan}')">
-              <i class="fa-solid fa-pen-to-square"></i> Validasi
-            </button>
-          </td>
         `;
         tbody.appendChild(tr);
       });
@@ -11110,15 +11105,19 @@
       
       const list = appState.perangkatList || [];
       if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Tidak ada perangkat ajar diajukan.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Tidak ada perangkat ajar diajukan.</td></tr>`;
         return;
       }
       
       list.forEach(item => {
         const tr = document.createElement('tr');
-        let badgeColor = "warning";
-        if (item.status === "Disetujui") badgeColor = "success";
-        else if (item.status.includes("Ditolak")) badgeColor = "danger";
+        
+        let statusBadge = `<span class="badge badge-warning"><i class="fa-solid fa-hourglass-start"></i> Pending</span>`;
+        if (item.status === "Disetujui") {
+          statusBadge = `<span class="badge badge-success"><i class="fa-solid fa-circle-check"></i> Disetujui</span>`;
+        } else if (item.status === "Ditolak / Revisi" || item.status === "Ditolak") {
+          statusBadge = `<span class="badge badge-danger"><i class="fa-solid fa-circle-xmark"></i> Revisi</span>`;
+        }
         
         let fileNameDisplay = "Bundel Perangkat (ZIP/RAR)";
         if (item.catatan && item.catatan.includes("Nama File: ")) {
@@ -11129,9 +11128,18 @@
         tr.innerHTML = `
           <td style="font-weight: 600;">${item.namaGuru}</td>
           <td style="color: #cbd5e1;">${fileNameDisplay}</td>
-          <td><button type="button" class="btn btn-primary" onclick="downloadFileDirectly('${item.id}', '${fileNameDisplay}')" style="padding:0.3rem 0.6rem; font-size:0.8rem; font-weight:600;"><i class="fa-solid fa-download" style="margin-right:0.3rem;"></i> Unduh Berkas</button></td>
-          <td><span class="badge badge-${badgeColor}">${item.status}</span></td>
-          <td style="color: var(--text-muted); font-size: 0.85rem;">${item.catatan || '-'}</td>
+          <td>
+            <button type="button" class="btn btn-primary" onclick="downloadFileDirectly('${item.id}', '${fileNameDisplay}')" style="padding:0.3rem 0.6rem; font-size:0.8rem; font-weight:600; display: inline-flex; align-items: center; gap: 0.35rem;">
+              <i class="fa-solid fa-download"></i> Unduh Berkas
+            </button>
+          </td>
+          <td>${statusBadge}</td>
+          <td style="color: var(--text-muted); font-size: 0.85rem; max-width: 180px;">${item.catatan || '-'}</td>
+          <td>
+            <button class="btn btn-primary" style="padding: 0.35rem 0.75rem; font-size: 0.75rem;" onclick="openPerangkatModal('${item.id}', '${item.status}', '${item.catatan}')">
+              <i class="fa-solid fa-pen-to-square"></i> Validasi
+            </button>
+          </td>
         `;
         tbody.appendChild(tr);
       });
