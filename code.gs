@@ -195,7 +195,7 @@ function doPost(e) {
 
       case "deleteTeacher":
         if (payload.currentUserRole !== "Admin") throw new Error("Akses ditolak. Penghapusan data guru hanya dapat dilakukan oleh Admin.");
-        response = { status: "success", data: deleteTeacher(payload.id) };
+        response = { status: "success", data: deleteTeacher(payload) };
         break;
 
       case "addStudent":
@@ -1229,27 +1229,35 @@ function addTeacher(payload) {
   return { success: true, id: id };
 }
 
-// 11. Hapus Guru / Wali Kelas (Manajemen Guru)
-function deleteTeacher(id) {
+// 11. Hapus Guru / Wali Kelas (Manajemen Guru) (Mendukung ID Tunggal maupun Massal)
+function deleteTeacher(payload) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName("Users");
+  if (!sheet) throw new Error("Sheet Users tidak ditemukan.");
+  
+  var ids = [];
+  if (payload && payload.ids) {
+    ids = payload.ids;
+  } else if (payload && payload.id) {
+    ids = [payload.id];
+  } else if (typeof payload === "string") {
+    ids = [payload];
+  } else if (payload && typeof payload === "object") {
+    ids = [payload.id];
+  }
   
   var data = sheet.getDataRange().getValues();
-  var index = -1;
-  for (var i = 1; i < data.length; i++) {
-    if (data[i][0] === id) {
-      index = i;
-      break;
+  var count = 0;
+  // Hapus baris dari bawah ke atas agar indeks baris tidak bergeser
+  for (var i = data.length - 1; i >= 1; i--) {
+    if (ids.indexOf(data[i][0].toString()) !== -1) {
+      sheet.deleteRow(i + 1);
+      count++;
     }
   }
   
-  if (index !== -1) {
-    sheet.deleteRow(index + 1);
-    SpreadsheetApp.flush();
-    return { success: true };
-  } else {
-    throw new Error("Guru tidak ditemukan.");
-  }
+  SpreadsheetApp.flush();
+  return { success: true, count: count };
 }
 
 // Tambah/Edit Data Siswa

@@ -1989,7 +1989,10 @@
               <button type="button" class="btn btn-secondary" onclick="downloadTeacherTemplate()" style="padding: 0.5rem 1rem; font-size: 0.85rem; background-color: rgba(99, 102, 241, 0.08); border: 1px solid var(--primary); display: flex; align-items: center; gap: 0.5rem; color: var(--primary);">
                 <i class="fa-solid fa-file-arrow-down"></i> Unduh Template Excel
               </button>
-              <span style="font-size: 0.75rem; color: var(--text-muted);">(Format Kolom: Nama, Email, Role, Password, WaliKelasClass, Mapel)</span>
+              <button type="button" class="btn btn-secondary" id="btnDeleteAllTeachers" onclick="deleteAllTeachers()" style="padding: 0.5rem 1rem; font-size: 0.85rem; background-color: rgba(239, 68, 68, 0.08); border: 1px solid var(--danger); display: flex; align-items: center; gap: 0.5rem; color: var(--danger);">
+                <i class="fa-solid fa-trash-can"></i> Hapus Keseluruhan Guru
+              </button>
+              <span style="font-size: 0.75rem; color: var(--text-muted);">(Format Kolom: Nama, NIP, Role, Password, WaliKelasClass, Mapel)</span>
             </div>
             
             <form id="formTeacher" onsubmit="submitTeacherForm(event)" style="margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 2rem;">
@@ -2000,18 +2003,14 @@
                   <input type="text" id="teacherNama" class="form-control" style="padding-left: 1rem;" placeholder="E.g., Bu Siti, Pak Joko" required>
                 </div>
                 <div class="form-group">
-                  <label for="teacherNip">NIP (Opsional - Untuk Login)</label>
-                  <input type="text" id="teacherNip" class="form-control" style="padding-left: 1rem;" placeholder="E.g., 198501012010011001">
+                  <label for="teacherEmail">NIP Guru (Untuk Login)</label>
+                  <input type="text" id="teacherEmail" class="form-control" style="padding-left: 1rem;" placeholder="E.g., 198501012010011001" required>
                 </div>
               </div>
               <div class="form-grid">
-                <div class="form-group">
-                  <label for="teacherEmail">Email Login</label>
-                  <input type="email" id="teacherEmail" class="form-control" style="padding-left: 1rem;" placeholder="E.g., siti@sekolah.com" required>
-                </div>
-                <div class="form-group">
+                <div class="form-group" style="max-width: 50%;">
                   <label for="teacherPassword">Password</label>
-                  <input type="text" id="teacherPassword" class="form-control" style="padding-left: 1rem;" placeholder="E.g., siti123" required>
+                  <input type="text" id="teacherPassword" class="form-control" style="padding-left: 1rem;" placeholder="E.g., guru123" required>
                 </div>
               </div>
               <div class="form-group" style="margin-bottom: 1.5rem;">
@@ -2083,12 +2082,20 @@
               </div>
             </form>
 
+            <div id="bulkDeleteTeacherContainer" style="display: none; align-items: center; justify-content: space-between; margin-bottom: 1rem; padding: 0.75rem 1rem; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 6px;">
+              <span id="bulkDeleteTeacherCount" style="font-size: 0.85rem; font-weight: 600; color: #f87171;">0 guru terpilih</span>
+              <button type="button" class="btn btn-danger" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="deleteSelectedTeachers()">
+                <i class="fa-solid fa-trash-can"></i> Hapus Semua Terpilih
+              </button>
+            </div>
+
             <div class="table-container">
               <table class="data-table">
                 <thead>
                   <tr>
+                    <th><input type="checkbox" id="selectAllTeachers" onchange="toggleSelectAllTeachers(this)"></th>
                     <th>Nama Guru</th>
-                    <th>Email</th>
+                    <th>NIP (Login)</th>
                     <th>Role</th>
                     <th>Mata Pelajaran</th>
                     <th>Password</th>
@@ -2096,7 +2103,7 @@
                   </tr>
                 </thead>
                 <tbody id="w-teacher-table-body">
-                  <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Memuat daftar guru...</td></tr>
+                  <tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Memuat daftar guru...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -5556,7 +5563,10 @@
 
         else if (action === "deleteTeacher") {
           if (payload.currentUserRole !== "Admin") throw new Error("Akses Ditolak: Hanya Admin yang dapat menghapus data guru.");
-          await ref(`users/${payload.id}`).remove();
+          const ids = payload.ids || [payload.id];
+          for (const id of ids) {
+            await ref(`users/${id}`).remove();
+          }
           return { success: true };
         }
 
@@ -6143,7 +6153,12 @@
 
         else if (action === "deleteTeacher") {
           if (payload.currentUserRole !== "Admin") throw new Error("Akses Ditolak: Hanya Admin yang dapat menghapus data guru.");
-          await db.collection("users").doc(payload.id).delete();
+          const ids = payload.ids || [payload.id];
+          const batch = db.batch();
+          for (const id of ids) {
+            batch.delete(db.collection("users").doc(id));
+          }
+          await batch.commit();
           return { success: true };
         }
 
@@ -8695,23 +8710,129 @@
       }
     }
 
+    function toggleSelectAllTeachers(headerCheckbox) {
+      const checkboxes = document.querySelectorAll('.teacher-select-chk');
+      checkboxes.forEach(chk => {
+        chk.checked = headerCheckbox.checked;
+      });
+      updateBulkDeleteTeacherButton();
+    }
+
+    function updateBulkDeleteTeacherButton() {
+      const checkboxes = document.querySelectorAll('.teacher-select-chk');
+      const checkedBoxes = Array.from(checkboxes).filter(chk => chk.checked);
+      const container = document.getElementById('bulkDeleteTeacherContainer');
+      const countSpan = document.getElementById('bulkDeleteTeacherCount');
+      const selectAllHeader = document.getElementById('selectAllTeachers');
+      
+      if (checkedBoxes.length > 0) {
+        container.style.display = "flex";
+        countSpan.textContent = `${checkedBoxes.length} guru terpilih`;
+        if (selectAllHeader) selectAllHeader.checked = (checkedBoxes.length === checkboxes.length);
+      } else {
+        container.style.display = "none";
+        if (selectAllHeader) selectAllHeader.checked = false;
+      }
+    }
+
+    async function deleteSelectedTeachers() {
+      if (!appState.user || appState.user.role !== "Admin") {
+        showToast("Akses Ditolak: Hanya Admin yang dapat menghapus data guru.", "danger");
+        return;
+      }
+      const checkboxes = document.querySelectorAll('.teacher-select-chk');
+      const checkedBoxes = Array.from(checkboxes).filter(chk => chk.checked);
+      if (checkedBoxes.length === 0) return;
+      
+      const confirmed = await showCustomConfirm(
+        "Hapus Terpilih", 
+        `Apakah Anda yakin ingin menghapus ${checkedBoxes.length} guru terpilih sekaligus?`, 
+        "Hapus", 
+        true
+      );
+      if (!confirmed) return;
+      
+      const ids = checkedBoxes.map(chk => chk.value);
+      
+      showLoading(true, `Menghapus ${ids.length} guru...`);
+      try {
+        await callApi("deleteTeacher", { ids });
+        showToast(`Berhasil menghapus ${ids.length} guru.`);
+        
+        // Reset select all checkbox
+        const selectAllHeader = document.getElementById('selectAllTeachers');
+        if (selectAllHeader) selectAllHeader.checked = false;
+        
+        document.getElementById('bulkDeleteTeacherContainer').style.display = "none";
+        
+        await loadDashboardData();
+      } catch (err) {
+        showToast("Gagal menghapus guru: " + err.message, "danger");
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    async function deleteAllTeachers() {
+      if (!appState.user || appState.user.role !== "Admin") {
+        showToast("Akses Ditolak: Hanya Admin yang dapat menghapus data guru.", "danger");
+        return;
+      }
+      const confirmed = await showCustomConfirm(
+        "Hapus Keseluruhan Guru", 
+        "PERINGATAN: Apakah Anda yakin ingin menghapus seluruh data guru dari database? Tindakan ini tidak dapat dibatalkan.", 
+        "Hapus Semua", 
+        true
+      );
+      if (!confirmed) return;
+      
+      const doubleConfirmed = confirm("Konfirmasi Terakhir: Anda benar-benar yakin ingin menghapus SEMUA data guru?");
+      if (!doubleConfirmed) return;
+      
+      showLoading(true, "Menghapus keseluruhan guru...");
+      try {
+        const allIds = (appState.teacherList || []).map(t => t.id);
+        if (allIds.length === 0) {
+          showToast("Tidak ada data guru untuk dihapus.", "warning");
+          return;
+        }
+        
+        await callApi("deleteTeacher", { ids: allIds });
+        showToast("Seluruh data guru berhasil dihapus.");
+        await loadDashboardData();
+      } catch (err) {
+        showToast("Gagal menghapus seluruh guru: " + err.message, "danger");
+      } finally {
+        showLoading(false);
+      }
+    }
+
     function renderTeacherTable() {
       const tbody = document.getElementById('w-teacher-table-body');
       if (!tbody) return;
       tbody.innerHTML = "";
       
+      const isAdmin = (appState.user && appState.user.role === "Admin");
+
+      // Reset select all header
+      const selectAllHeader = document.getElementById('selectAllTeachers');
+      if (selectAllHeader) {
+        selectAllHeader.checked = false;
+        selectAllHeader.disabled = !isAdmin;
+      }
+      const bulkDeleteContainer = document.getElementById('bulkDeleteTeacherContainer');
+      if (bulkDeleteContainer) bulkDeleteContainer.style.display = "none";
+      
       const list = appState.teacherList || [];
       if (list.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Belum ada guru terdaftar.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Belum ada guru terdaftar.</td></tr>';
         return;
       }
       
-      const isAdmin = (appState.user && appState.user.role === "Admin");
-
       list.forEach(item => {
-        const nipDisplay = item.nip ? `<div style="font-size:0.75rem; color:var(--primary); font-family:monospace;">NIP: ${item.nip}</div>` : '';
-
         const tr = document.createElement('tr');
+        
+        const chkHtml = isAdmin ? `<input type="checkbox" class="teacher-select-chk" value="${item.id}" onchange="updateBulkDeleteTeacherButton()">` : `<input type="checkbox" disabled>`;
         
         const actionsHtml = isAdmin ? `
           <button type="button" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-right: 0.25rem;" onclick="editTeacher('${item.id}')">
@@ -8723,8 +8844,9 @@
         ` : `<span style="color: var(--text-muted); font-size: 0.75rem; font-style: italic;">Akses Terbatas</span>`;
 
         tr.innerHTML = `
-          <td style="font-weight:600; color:#cbd5e1;">${item.nama}${nipDisplay}</td>
-          <td>${item.email}</td>
+          <td>${chkHtml}</td>
+          <td style="font-weight:600; color:#cbd5e1;">${item.nama}</td>
+          <td style="font-family: monospace; font-weight: 600; color: var(--primary);">${item.email || "-"}</td>
           <td>
             ${(item.role || "").split(",").map(r => r.trim()).filter(Boolean).map(r => {
               let displayRole = r === "Guru" ? "Guru Mata Pelajaran" : r;
@@ -9025,11 +9147,11 @@
     }
 
     function generateTeacherTemplateFile() {
-      const headers = [["Nama Lengkap", "Email", "Role", "Password", "WaliKelasClass", "Mata Pelajaran"]];
+      const headers = [["Nama Lengkap", "NIP", "Role", "Password", "WaliKelasClass", "Mata Pelajaran"]];
       const sampleData = [
-        ["Ahmad Dahlan", "dahlan@sekolah.com", "Guru", "guru123", "", "Fisika Dasar"],
-        ["Siti Khadijah", "siti@sekolah.com", "Guru, Wali Kelas", "guru123", "10-A", "Matematika Aljabar, Matematika Peminatan"],
-        ["Mulyadi", "mulyadi@sekolah.com", "Wakasek", "admin123", "", ""]
+        ["Ahmad Dahlan", "198001012005011001", "Guru", "guru123", "", "Fisika Dasar"],
+        ["Siti Khadijah", "198502022010022002", "Guru, Wali Kelas", "guru123", "10-A", "Matematika Aljabar, Matematika Peminatan"],
+        ["Mulyadi", "197503032000031003", "Wakasek", "admin123", "", ""]
       ];
       const data = headers.concat(sampleData);
       
@@ -10496,14 +10618,10 @@
           else if (action === "deleteTeacher") {
             if (payload.currentUserRole !== "Admin") return reject(new Error("Akses Ditolak: Hanya Admin yang dapat menghapus data guru."));
             const users = JSON.parse(localStorage.getItem('db_users')) || [];
-            const index = users.findIndex(u => u.id === payload.id);
-            if (index !== -1) {
-              users.splice(index, 1);
-              localStorage.setItem('db_users', JSON.stringify(users));
-              resolve({ success: true });
-            } else {
-              reject(new Error("Guru tidak ditemukan di database mockup."));
-            }
+            const ids = payload.ids || [payload.id];
+            const updated = users.filter(u => !ids.includes(u.id));
+            localStorage.setItem('db_users', JSON.stringify(updated));
+            resolve({ success: true });
           }
 
           else if (action === "addStudent") {
