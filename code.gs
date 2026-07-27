@@ -610,14 +610,14 @@ function getDashboard(role, email, nama, waliKelasClass) {
   // Format Settings list
   var sheetSettings = ss.getSheetByName("Settings");
   var settingsRaw = sheetSettings ? sheetSettings.getDataRange().getValues() : [["Key", "Value"]];
-  result.settings = { hariBelajar: 5, daftarKelas: ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"] };
+  result.settings = { hariBelajar: 5, daftarKelas: ["X.1", "X.2", "XI.1", "XI.2", "XII.1", "XII.2"] };
   for (var i = 1; i < settingsRaw.length; i++) {
     var row = settingsRaw[i];
     if (row[0].toString().trim() === "hari_belajar") {
       result.settings.hariBelajar = parseInt(row[1]) || 5;
     } else if (row[0].toString().trim() === "daftar_kelas") {
       var val = row[1].toString().trim();
-      result.settings.daftarKelas = val ? val.split(",") : ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"];
+      result.settings.daftarKelas = val ? val.split(",") : ["X.1", "X.2", "XI.1", "XI.2", "XII.1", "XII.2"];
     }
   }
 

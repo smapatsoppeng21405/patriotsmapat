@@ -5341,7 +5341,7 @@
             kelas: sObj[k].kelas ? sObj[k].kelas.toString().trim() : ""
           }));
           
-          let settings = { hariBelajar: 5, daftarKelas: ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"] };
+          let settings = { hariBelajar: 5, daftarKelas: ["X.1", "X.2", "XI.1", "XI.2", "XII.1", "XII.2"] };
           if (root.settings) {
             if (root.settings.daftar_kelas) {
               settings.daftarKelas = typeof root.settings.daftar_kelas === "string" 
@@ -5392,7 +5392,7 @@
           const sObj = root.students || {};
           const kmpObj = root.kelasmapelpilihan || {};
 
-          let settings = { hariBelajar: 5, daftarKelas: ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"] };
+          let settings = { hariBelajar: 5, daftarKelas: ["X.1", "X.2", "XI.1", "XI.2", "XII.1", "XII.2"] };
           if (root.settings) {
             if (root.settings.hari_belajar) settings.hariBelajar = parseInt(root.settings.hari_belajar) || 5;
             else if (root.settings.hariBelajar) settings.hariBelajar = parseInt(root.settings.hariBelajar) || 5;
@@ -6017,7 +6017,7 @@
             });
           });
           
-          let settings = { hariBelajar: 5, daftarKelas: ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"] };
+          let settings = { hariBelajar: 5, daftarKelas: ["X.1", "X.2", "XI.1", "XI.2", "XII.1", "XII.2"] };
           const settingsDoc = await db.collection("settings").doc("app_settings").get();
           if (settingsDoc.exists) {
             const sData = settingsDoc.data();
@@ -6089,7 +6089,7 @@
           const sRaw = sSnap.docs.map(d => ({ id: d.id, ...d.data() }));
           const kmpRaw = kmpSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-          let settings = { hariBelajar: 5, daftarKelas: ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"] };
+          let settings = { hariBelajar: 5, daftarKelas: ["X.1", "X.2", "XI.1", "XI.2", "XII.1", "XII.2"] };
           if (setSnap.exists) {
             const data = setSnap.data();
             if (data.hari_belajar) settings.hariBelajar = parseInt(data.hari_belajar) || 5;
@@ -6672,7 +6672,6 @@
         appState.studentList = data.studentList || [];
         appState.kelasMapelPilihanList = data.kelasMapelPilihanList || [];
         
-        // Simpan data lokal sebagai cache
         localStorage.setItem(`cache_stats_${appState.user.role}`, JSON.stringify(data.stats));
         localStorage.setItem(`cache_jurnals_${appState.user.role}`, JSON.stringify(data.jurnalList || []));
         localStorage.setItem(`cache_perangkats_${appState.user.role}`, JSON.stringify(data.perangkatList || []));
@@ -6681,11 +6680,11 @@
         localStorage.setItem(`cache_laporans_${appState.user.role}`, JSON.stringify(data.laporanWaliList || []));
         localStorage.setItem(`cache_gurujadwals_${appState.user.role}`, JSON.stringify(data.guruJadwalList || []));
         localStorage.setItem(`cache_gurumaster_${appState.user.role}`, JSON.stringify(data.guruMasterList || []));
-        localStorage.setItem(`cache_settings_${appState.user.role}`, JSON.stringify(data.settings || { hariBelajar: 5 }));
-        localStorage.setItem(`cache_teachers_${appState.user.role}`, JSON.stringify(data.teacherList || []));
+        localStorage.setItem('cache_settings', JSON.stringify(data.settings || { hariBelajar: 5 }));
+        localStorage.setItem('cache_teachers', JSON.stringify(data.teacherList || []));
         localStorage.setItem(`cache_siswagw_${appState.user.role}`, JSON.stringify(data.siswaGuruWaliList || []));
         localStorage.setItem(`cache_jurnal7kaih_${appState.user.role}`, JSON.stringify(data.jurnal7KAIHList || []));
-        localStorage.setItem(`cache_students_${appState.user.role}`, JSON.stringify(data.studentList || []));
+        localStorage.setItem('cache_students', JSON.stringify(data.studentList || []));
         localStorage.setItem(`cache_kelas_mapel_pilihan_${appState.user.role}`, JSON.stringify(data.kelasMapelPilihanList || []));
         
         // Render Views
@@ -6710,11 +6709,11 @@
       appState.laporanWaliList = JSON.parse(localStorage.getItem(`cache_laporans_${appState.user.role}`)) || [];
       appState.guruJadwalList = JSON.parse(localStorage.getItem(`cache_gurujadwals_${appState.user.role}`)) || [];
       appState.guruMasterList = JSON.parse(localStorage.getItem(`cache_gurumaster_${appState.user.role}`)) || [];
-      appState.settings = JSON.parse(localStorage.getItem(`cache_settings_${appState.user.role}`)) || { hariBelajar: 5 };
-      appState.teacherList = JSON.parse(localStorage.getItem(`cache_teachers_${appState.user.role}`)) || [];
+      appState.settings = JSON.parse(localStorage.getItem('cache_settings')) || { hariBelajar: 5 };
+      appState.teacherList = JSON.parse(localStorage.getItem('cache_teachers')) || [];
       appState.siswaGuruWaliList = JSON.parse(localStorage.getItem(`cache_siswagw_${appState.user.role}`)) || [];
       appState.jurnal7KAIHList = JSON.parse(localStorage.getItem(`cache_jurnal7kaih_${appState.user.role}`)) || [];
-      appState.studentList = JSON.parse(localStorage.getItem(`cache_students_${appState.user.role}`)) || [];
+      appState.studentList = JSON.parse(localStorage.getItem('cache_students')) || [];
       appState.kelasMapelPilihanList = JSON.parse(localStorage.getItem(`cache_kelas_mapel_pilihan_${appState.user.role}`)) || [];
       
       renderDashboardData();
@@ -7986,7 +7985,7 @@
       const container = document.getElementById('activeClassesListContainer');
       if (!container) return;
       
-      const classes = appState.settings.daftarKelas || ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"];
+      const classes = appState.settings.daftarKelas || ["X.1", "X.2", "XI.1", "XI.2", "XII.1", "XII.2"];
       container.innerHTML = "";
       
       classes.forEach(c => {
@@ -8010,7 +8009,7 @@
         return;
       }
       
-      const classes = appState.settings.daftarKelas || ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"];
+      const classes = appState.settings.daftarKelas || ["X.1", "X.2", "XI.1", "XI.2", "XII.1", "XII.2"];
       if (classes.includes(newClassName)) {
         showToast("Kelas ini sudah terdaftar!", "warning");
         return;
@@ -8037,7 +8036,7 @@
         return;
       }
       
-      const classes = appState.settings.daftarKelas || ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"];
+      const classes = appState.settings.daftarKelas || ["X.1", "X.2", "XI.1", "XI.2", "XII.1", "XII.2"];
       const index = classes.indexOf(className);
       if (index === -1) return;
       
@@ -8316,7 +8315,7 @@
       } else if (appState.settings && appState.settings.daftarKelas) {
         classes = appState.settings.daftarKelas;
       } else {
-        classes = ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"];
+        classes = ["X.1", "X.2", "XI.1", "XI.2", "XII.1", "XII.2"];
       }
 
       if (!appState.settings) appState.settings = {};
@@ -8352,7 +8351,7 @@
         return;
       }
 
-      let currentClasses = appState.settings.daftarKelas || ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"];
+      let currentClasses = appState.settings.daftarKelas || ["X.1", "X.2", "XI.1", "XI.2", "XII.1", "XII.2"];
       if (currentClasses.includes(newName)) {
         showToast(`Kelas ${newName} sudah ada di dalam daftar!`, "warning");
         return;
@@ -8378,7 +8377,7 @@
       const confirmed = await showCustomConfirm("Hapus Kelas", `Apakah Anda yakin ingin menghapus kelas ${className}?`, "Ya, Hapus", true);
       if (!confirmed) return;
 
-      let currentClasses = appState.settings.daftarKelas || ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"];
+      let currentClasses = appState.settings.daftarKelas || ["X.1", "X.2", "XI.1", "XI.2", "XII.1", "XII.2"];
       const updatedClasses = currentClasses.filter(c => c !== className);
 
       showLoading(true, `Menghapus kelas ${className}...`);
@@ -8396,7 +8395,7 @@
     }
 
     function populateClassDropdowns() {
-      let classList = ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"];
+      let classList = ["X.1", "X.2", "XI.1", "XI.2", "XII.1", "XII.2"];
       if (appState.settings && appState.settings.daftarKelas) {
         let temp = [];
         if (Array.isArray(appState.settings.daftarKelas)) {
@@ -8423,9 +8422,9 @@
         const currentVal = select.value;
         
         let allowedClasses = [...classList];
-        // Jika user adalah Guru, tambahkan kelas mapel pilihan ke list untuk pengisian jurnal
+        // Jika user adalah Guru, tambahkan kelas mapel pilihan ke list untuk pengisian jurnal dan jadwal mengajar
         if (appState.user && appState.user.role === "Guru") {
-          if (id === 'jurnalKelas') {
+          if (id === 'jurnalKelas' || id === 'guruJadwalKelas') {
             allowedClasses.push("Kelas Mapil X", "Kelas Mapil XI", "Kelas Mapil XII");
           }
         }
@@ -10397,7 +10396,7 @@
 
           else if (action === "getSiswaPublic") {
             const students = JSON.parse(localStorage.getItem('db_students')) || [];
-            const settings = JSON.parse(localStorage.getItem('db_settings')) || { hariBelajar: 5, daftarKelas: ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"] };
+            const settings = JSON.parse(localStorage.getItem('db_settings')) || { hariBelajar: 5, daftarKelas: ["X.1", "X.2", "XI.1", "XI.2", "XII.1", "XII.2"] };
             
             const studentList = students.map(s => ({
               nis: s.nis ? s.nis.toString().trim() : "",
@@ -10418,7 +10417,7 @@
 
             resolve({
               studentList: studentList,
-              daftarKelas: settings.daftarKelas || ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"]
+              daftarKelas: settings.daftarKelas || ["X.1", "X.2", "XI.1", "XI.2", "XII.1", "XII.2"]
             });
           }
           
@@ -10434,8 +10433,8 @@
             const lpRaw = JSON.parse(localStorage.getItem('db_laporans')) || [];
             const gmRaw = JSON.parse(localStorage.getItem('db_gurumasters')) || [];
             
-            const dbSettings = JSON.parse(localStorage.getItem('db_settings')) || { hariBelajar: 5, daftarKelas: ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"] };
-            let settings = { hariBelajar: 5, daftarKelas: ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"] };
+            const dbSettings = JSON.parse(localStorage.getItem('db_settings')) || { hariBelajar: 5, daftarKelas: ["X.1", "X.2", "XI.1", "XI.2", "XII.1", "XII.2"] };
+            let settings = { hariBelajar: 5, daftarKelas: ["X.1", "X.2", "XI.1", "XI.2", "XII.1", "XII.2"] };
             if (dbSettings) {
               if (dbSettings.hari_belajar) settings.hariBelajar = parseInt(dbSettings.hari_belajar) || 5;
               else if (dbSettings.hariBelajar) settings.hariBelajar = parseInt(dbSettings.hariBelajar) || 5;
@@ -11177,11 +11176,11 @@
           }
 
           else if (action === "updateSettings") {
-            const settings = JSON.parse(localStorage.getItem('db_settings')) || { hariBelajar: 5, daftarKelas: ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"] };
+            const settings = JSON.parse(localStorage.getItem('db_settings')) || { hariBelajar: 5, daftarKelas: ["X.1", "X.2", "XI.1", "XI.2", "XII.1", "XII.2"] };
             if (payload.key === "hari_belajar") {
               settings.hariBelajar = parseInt(payload.value) || 5;
             } else if (payload.key === "daftar_kelas") {
-              settings.daftarKelas = payload.value ? payload.value.split(",") : ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"];
+              settings.daftarKelas = payload.value ? payload.value.split(",") : ["X.1", "X.2", "XI.1", "XI.2", "XII.1", "XII.2"];
             }
             localStorage.setItem('db_settings', JSON.stringify(settings));
             resolve({ success: true });
@@ -11269,7 +11268,7 @@
         { id: "GM-3", guru: "Bu Siti (Guru Matematika)", mapel: "Matematika Peminatan", kelas: "11-B", jumlahJam: 4 }
       ];
 
-      const mockSettings = { hariBelajar: 5 };
+      const mockSettings = { hariBelajar: 5, daftarKelas: ["X.1", "X.2", "XI.1", "XI.2", "XII.1", "XII.2"] };
 
       const mockRekapAbsen = [
         { id: "RA-1", bulan: "Juni", tahun: "2026", waliKelas: "Pak Joko (Wali Kelas 10A)", kelas: "10-A", namaSiswa: "Ahmad Dani", hadir: 20, sakit: 1, izin: 1, alpa: 0 },
@@ -11658,7 +11657,7 @@
           if (localSettings) {
             appState.settings = {
               hariBelajar: localSettings.hari_belajar || localSettings.hariBelajar || 5,
-              daftarKelas: localSettings.daftar_kelas || localSettings.daftarKelas || ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"]
+              daftarKelas: localSettings.daftar_kelas || localSettings.daftarKelas || ["X.1", "X.2", "XI.1", "XI.2", "XII.1", "XII.2"]
             };
           }
           populateClassDropdowns();
@@ -12307,7 +12306,18 @@
       const selectKelasKondisi = document.getElementById('ks-filter-kondisi-kelas');
       const selectGuru7KAIH = document.getElementById('ks-filter-7kaih-guru');
       
-      const kelasList = ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"];
+      let kelasList = ["X.1", "X.2", "XI.1", "XI.2", "XII.1", "XII.2"];
+      if (appState.settings && appState.settings.daftarKelas) {
+        let temp = [];
+        if (Array.isArray(appState.settings.daftarKelas)) {
+          temp = appState.settings.daftarKelas;
+        } else if (typeof appState.settings.daftarKelas === "string") {
+          temp = appState.settings.daftarKelas.split(",").map(s => s.trim()).filter(Boolean);
+        }
+        if (temp && temp.length > 0) {
+          kelasList = temp;
+        }
+      }
       
       [selectKelasJurnal, selectKelasAbsen, selectKelasKondisi].forEach(sel => {
         if (!sel) return;
@@ -12342,7 +12352,18 @@
     function renderKepalaCharts() {
       if (!appState.user || appState.user.role !== "Kepala Sekolah") return;
       
-      const kelasList = ["10-A", "10-B", "11-A", "11-B", "12-A", "12-B"];
+      let kelasList = ["X.1", "X.2", "XI.1", "XI.2", "XII.1", "XII.2"];
+      if (appState.settings && appState.settings.daftarKelas) {
+        let temp = [];
+        if (Array.isArray(appState.settings.daftarKelas)) {
+          temp = appState.settings.daftarKelas;
+        } else if (typeof appState.settings.daftarKelas === "string") {
+          temp = appState.settings.daftarKelas.split(",").map(s => s.trim()).filter(Boolean);
+        }
+        if (temp && temp.length > 0) {
+          kelasList = temp;
+        }
+      }
       const counts = kelasList.map(kelas => {
         return appState.jurnalList.filter(j => j.kelas === kelas).length;
       });
