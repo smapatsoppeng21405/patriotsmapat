@@ -1164,7 +1164,7 @@
 
         <div class="form-group" style="margin-bottom: 1.5rem;">
           <label for="studentTanggal">Tanggal Pengisian</label>
-          <input type="date" id="studentTanggal" class="form-control" style="padding-left: 1rem;" required>
+          <input type="date" id="studentTanggal" class="form-control" style="padding-left: 1rem; cursor: pointer;" required onclick="if (typeof this.showPicker === 'function') { try { this.showPicker(); } catch(e) {} }">
         </div>
 
         <h4 style="margin: 1.5rem 0 1rem; color: #a5b4fc; font-weight: 600; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; font-size: 0.95rem;">
@@ -2420,7 +2420,7 @@
               <div class="form-grid">
                 <div class="form-group">
                   <label for="jurnalTanggal">Tanggal KBM</label>
-                  <input type="date" id="jurnalTanggal" class="form-control" style="padding-left: 1rem;" required>
+                  <input type="date" id="jurnalTanggal" class="form-control" style="padding-left: 1rem; cursor: pointer;" required onclick="if (typeof this.showPicker === 'function') { try { this.showPicker(); } catch(e) {} }">
                 </div>
                 <div class="form-group">
                   <label for="jurnalKelas">Kelas</label>
@@ -3169,7 +3169,7 @@
               <div class="form-grid">
                 <div class="form-group">
                   <label for="bimbinganTanggal">Tanggal Pembimbingan</label>
-                  <input type="date" id="bimbinganTanggal" class="form-control" style="padding-left: 1rem;" required>
+                  <input type="date" id="bimbinganTanggal" class="form-control" style="padding-left: 1rem; cursor: pointer;" required onclick="if (typeof this.showPicker === 'function') { try { this.showPicker(); } catch(e) {} }">
                 </div>
                 <div class="form-group">
                   <label for="bimbinganSiswa">Pilih Siswa Bimbingan</label>
