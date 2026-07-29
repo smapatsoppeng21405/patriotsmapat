@@ -5357,11 +5357,33 @@
         setTimeout(renderKepalaCharts, 100);
       }
     }
-
+    
     // MOBILE SIDEBAR TOGGLE
     function toggleSidebar() {
       const sidebar = document.getElementById('appSidebar');
       sidebar.classList.toggle('sidebar-open');
+    }
+
+    // SAFE LOCAL STORAGE SETITEM TO PREVENT QUOTA EXCEEDED EXCEPTION
+    function safeLocalStorageSetItem(key, value) {
+      try {
+        localStorage.setItem(key, value);
+      } catch (err) {
+        console.warn("LocalStorage setItem failed. Clearing old cache items to free space...", err);
+        try {
+          // Clear non-critical caches
+          for (let i = localStorage.length - 1; i >= 0; i--) {
+            const k = localStorage.key(i);
+            if (k && (k.startsWith("cache_") || k.startsWith("offline_"))) {
+              localStorage.removeItem(k);
+            }
+          }
+          // Try setting again
+          localStorage.setItem(key, value);
+        } catch (innerErr) {
+          console.error("Critical: LocalStorage full even after clearing caches.", innerErr);
+        }
+      }
     }
 
     // API REQUEST UTILITY (FIREBASE RTDB / FIRESTORE / GAS / MOCKUP)
@@ -6805,21 +6827,21 @@
         appState.kelasMapelPilihanList = data.kelasMapelPilihanList || [];
         appState.sesiList = data.sesiList || [];
         
-        localStorage.setItem(`cache_stats_${appState.user.role}`, JSON.stringify(data.stats));
-        localStorage.setItem(`cache_jurnals_${appState.user.role}`, JSON.stringify(data.jurnalList || []));
-        localStorage.setItem(`cache_perangkats_${appState.user.role}`, JSON.stringify(data.perangkatList || []));
-        localStorage.setItem(`cache_nilais_${appState.user.role}`, JSON.stringify(data.nilaiList || []));
-        localStorage.setItem(`cache_jadwals_${appState.user.role}`, JSON.stringify(data.jadwalList || []));
-        localStorage.setItem(`cache_laporans_${appState.user.role}`, JSON.stringify(data.laporanWaliList || []));
-        localStorage.setItem(`cache_gurujadwals_${appState.user.role}`, JSON.stringify(data.guruJadwalList || []));
-        localStorage.setItem(`cache_gurumaster_${appState.user.role}`, JSON.stringify(data.guruMasterList || []));
-        localStorage.setItem('cache_settings', JSON.stringify(data.settings || { hariBelajar: 5 }));
-        localStorage.setItem('cache_teachers', JSON.stringify(data.teacherList || []));
-        localStorage.setItem(`cache_siswagw_${appState.user.role}`, JSON.stringify(data.siswaGuruWaliList || []));
-        localStorage.setItem(`cache_jurnal7kaih_${appState.user.role}`, JSON.stringify(data.jurnal7KAIHList || []));
-        localStorage.setItem('cache_students', JSON.stringify(data.studentList || []));
-        localStorage.setItem(`cache_kelas_mapel_pilihan_${appState.user.role}`, JSON.stringify(data.kelasMapelPilihanList || []));
-        localStorage.setItem('cache_sesi', JSON.stringify(data.sesiList || []));
+        safeLocalStorageSetItem(`cache_stats_${appState.user.role}`, JSON.stringify(data.stats));
+        safeLocalStorageSetItem(`cache_jurnals_${appState.user.role}`, JSON.stringify(data.jurnalList || []));
+        safeLocalStorageSetItem(`cache_perangkats_${appState.user.role}`, JSON.stringify(data.perangkatList || []));
+        safeLocalStorageSetItem(`cache_nilais_${appState.user.role}`, JSON.stringify(data.nilaiList || []));
+        safeLocalStorageSetItem(`cache_jadwals_${appState.user.role}`, JSON.stringify(data.jadwalList || []));
+        safeLocalStorageSetItem(`cache_laporans_${appState.user.role}`, JSON.stringify(data.laporanWaliList || []));
+        safeLocalStorageSetItem(`cache_gurujadwals_${appState.user.role}`, JSON.stringify(data.guruJadwalList || []));
+        safeLocalStorageSetItem(`cache_gurumaster_${appState.user.role}`, JSON.stringify(data.guruMasterList || []));
+        safeLocalStorageSetItem('cache_settings', JSON.stringify(data.settings || { hariBelajar: 5 }));
+        safeLocalStorageSetItem('cache_teachers', JSON.stringify(data.teacherList || []));
+        safeLocalStorageSetItem(`cache_siswagw_${appState.user.role}`, JSON.stringify(data.siswaGuruWaliList || []));
+        safeLocalStorageSetItem(`cache_jurnal7kaih_${appState.user.role}`, JSON.stringify(data.jurnal7KAIHList || []));
+        safeLocalStorageSetItem('cache_students', JSON.stringify(data.studentList || []));
+        safeLocalStorageSetItem(`cache_kelas_mapel_pilihan_${appState.user.role}`, JSON.stringify(data.kelasMapelPilihanList || []));
+        safeLocalStorageSetItem('cache_sesi', JSON.stringify(data.sesiList || []));
         
         // Render Views
         renderDashboardData();
