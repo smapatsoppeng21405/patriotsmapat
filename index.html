@@ -2490,10 +2490,10 @@
                   </select>
                 </div>
                 <div class="form-group">
-                  <label for="jurnalSesi">Sesi Pelajaran</label>
-                  <select id="jurnalSesi" class="form-control" style="padding-left: 1rem;" required>
-                    <option value="">Pilih Sesi</option>
-                  </select>
+                  <label style="display: block; margin-bottom: 0.5rem;">Sesi Pelajaran (Pilih 1 atau lebih)</label>
+                  <div id="jurnalSesiCheckboxes" style="display: flex; flex-wrap: wrap; gap: 0.5rem; background: rgba(30, 41, 59, 0.5); border: 1px solid var(--border-color); padding: 0.75rem; border-radius: 0.5rem; max-height: 140px; overflow-y: auto; width: 100%;">
+                    <!-- Checkboxes generated dynamically -->
+                  </div>
                 </div>
               </div>
 
@@ -7596,11 +7596,22 @@
         mapel = mapelSelect.value;
       }
       
+      // Dapatkan sesi terpilih
+      const checkedSesi = [];
+      document.querySelectorAll('#jurnalSesiCheckboxes input[type="checkbox"]:checked').forEach(cb => {
+        checkedSesi.push(cb.value);
+      });
+      if (checkedSesi.length === 0) {
+        showToast("Silakan pilih minimal satu sesi pelajaran.", "warning");
+        return;
+      }
+      const sesi = checkedSesi.join(', ');
+
       const data = {
         tanggal: document.getElementById('jurnalTanggal').value,
         kelas: document.getElementById('jurnalKelas').value,
         mapel: mapel,
-        sesi: document.getElementById('jurnalSesi').value,
+        sesi: sesi,
         materi: document.getElementById('jurnalMateri').value,
         kehadiran: document.getElementById('jurnalKehadiran').value,
         catatan: document.getElementById('jurnalCatatan').value,
@@ -7641,7 +7652,22 @@
       document.getElementById('jurnalId').value = item.id;
       document.getElementById('jurnalTanggal').value = item.tanggal;
       document.getElementById('jurnalKelas').value = item.kelas;
-      document.getElementById('jurnalSesi').value = item.sesi || "";
+      
+      // Reset all session checkboxes
+      document.querySelectorAll('#jurnalSesiCheckboxes input[type="checkbox"]').forEach(cb => {
+        cb.checked = false;
+      });
+      // Check matching checkboxes
+      if (item.sesi) {
+        const parts = item.sesi.toString().split(',').map(s => s.trim());
+        parts.forEach(part => {
+          document.querySelectorAll(`#jurnalSesiCheckboxes input[type="checkbox"]`).forEach(cb => {
+            if (cb.value === part) {
+              cb.checked = true;
+            }
+          });
+        });
+      }
       
       // Populate Mapel options
       handleJurnalKelasChange();
@@ -7689,6 +7715,9 @@
     function resetJurnalForm() {
       document.getElementById('formInputJurnal').reset();
       document.getElementById('jurnalId').value = "";
+      document.querySelectorAll('#jurnalSesiCheckboxes input[type="checkbox"]').forEach(cb => {
+        cb.checked = false;
+      });
       document.getElementById('titleFormInputJurnal').innerText = "Form Input Jurnal Mengajar";
       document.getElementById('btnSubmitJurnal').innerHTML = '<i class="fa-solid fa-paper-plane"></i> Simpan Jurnal Mengajar';
       document.getElementById('btnCancelEditJurnal').style.display = "none";
@@ -9048,18 +9077,44 @@
       });
     }
 
-    // Populasikan Dropdown Sesi di Form Jurnal
+    // Populasikan Checkboxes Sesi di Form Jurnal
     function populateJurnalSesiDropdown() {
-      const select = document.getElementById('jurnalSesi');
-      if (!select) return;
-      select.innerHTML = '<option value="">Pilih Sesi</option>';
+      const container = document.getElementById('jurnalSesiCheckboxes');
+      if (!container) return;
+      container.innerHTML = '';
       
       const sessions = appState.sesiList || [];
+      if (sessions.length === 0) {
+        container.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">Tidak ada sesi pelajaran aktif.</span>';
+        return;
+      }
+      
       sessions.forEach(s => {
-        const opt = document.createElement('option');
-        opt.value = s.namaSesi;
-        opt.textContent = `${s.namaSesi} (${s.jamMulai} - ${s.jamSelesai})`;
-        select.appendChild(opt);
+        const div = document.createElement('div');
+        div.style.cssText = "display: flex; align-items: center; gap: 0.35rem; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); padding: 0.35rem 0.65rem; border-radius: 0.35rem; cursor: pointer; user-select: none;";
+        
+        const cb = document.createElement('input');
+        cb.type = "checkbox";
+        cb.value = s.namaSesi;
+        cb.id = `cb_sesi_${s.id}`;
+        cb.style.cssText = "cursor: pointer; accent-color: var(--primary); margin: 0;";
+        
+        const lbl = document.createElement('label');
+        lbl.htmlFor = `cb_sesi_${s.id}`;
+        lbl.style.cssText = "cursor: pointer; font-size: 0.85rem; font-weight: 500; margin: 0; color: #cbd5e1;";
+        lbl.textContent = `${s.namaSesi} (${s.jamMulai} - ${s.jamSelesai})`;
+        
+        div.appendChild(cb);
+        div.appendChild(lbl);
+        
+        // Menjadikan klik pada div otomatis mencentang checkbox
+        div.addEventListener('click', (e) => {
+          if (e.target !== cb && e.target !== lbl) {
+            cb.checked = !cb.checked;
+          }
+        });
+        
+        container.appendChild(div);
       });
     }
 
@@ -12457,7 +12512,7 @@
           const sClean = cleanTeacherNameForMatching(sched.guru);
           const teacherMatches = jClean.includes(sClean) || sClean.includes(jClean);
           const classMatches = j.kelas === sched.kelas;
-          const sesiMatches = (j.sesi === sched.jamKe) || (j.sesi && j.sesi.toString() === sched.jamKe.toString());
+          const sesiMatches = j.sesi && j.sesi.toString().split(',').map(s => s.trim()).includes(sched.jamKe.toString().trim());
           
           return teacherMatches && classMatches && sesiMatches;
         });
@@ -12505,7 +12560,7 @@
           const sClean = cleanTeacherNameForMatching(sched.guru);
           const teacherMatches = jClean.includes(sClean) || sClean.includes(jClean);
           const classMatches = j.kelas === sched.kelas;
-          const sesiMatches = (j.sesi === sched.jamKe) || (j.sesi && j.sesi.toString() === sched.jamKe.toString());
+          const sesiMatches = j.sesi && j.sesi.toString().split(',').map(s => s.trim()).includes(sched.jamKe.toString().trim());
           return teacherMatches && classMatches && sesiMatches;
         });
         return !isScheduled;
@@ -12519,8 +12574,17 @@
         tbody.appendChild(trHeader);
         
         extraJournals.forEach(j => {
-          const sessInfo = sessions.find(s => s.namaSesi === j.sesi);
-          const timeStr = sessInfo ? `${sessInfo.jamMulai} - ${sessInfo.jamSelesai}` : "-";
+          let timeStr = "-";
+          if (j.sesi) {
+            const parts = j.sesi.toString().split(',').map(s => s.trim());
+            const matchedSess = sessions.filter(s => parts.includes(s.namaSesi));
+            if (matchedSess.length > 0) {
+              matchedSess.sort((a, b) => (a.jamMulai || "").localeCompare(b.jamMulai || ""));
+              const earliest = matchedSess[0].jamMulai;
+              const latest = matchedSess[matchedSess.length - 1].jamSelesai;
+              timeStr = `${earliest} - ${latest}`;
+            }
+          }
           
           const tr = document.createElement('tr');
           const statusBadge = `<span class="badge badge-success" style="background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.15); color: var(--primary);"><i class="fa-solid fa-circle-check"></i> Terlaksana (Tambahan)</span>`;
