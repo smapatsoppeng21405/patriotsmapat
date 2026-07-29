@@ -17,7 +17,7 @@ function initSheets() {
   // Define sheets and headers
   var sheetsDef = {
     "Users": ["ID", "Nama", "Email", "Role", "Password", "WaliKelasClass", "Mapel"],
-    "JurnalMengajar": ["ID", "Tanggal", "Guru", "Kelas", "Materi", "Kehadiran", "Catatan", "Mode", "Mapel"],
+    "JurnalMengajar": ["ID", "Tanggal", "Guru", "Kelas", "Materi", "Kehadiran", "Catatan", "Mode", "Mapel", "Sesi"],
     "PerangkatAjar": ["ID", "Nama_Guru", "Jenis_Dokumen", "Link_Drive", "Status", "Catatan"],
     "AnalisisNilai": ["ID", "Kelas", "Mapel", "Rata_Nilai", "Jumlah_Siswa_Remidial"],
     "Jadwal": ["ID", "Hari", "JamKe", "Kelas", "Guru", "Mapel"],
@@ -30,7 +30,8 @@ function initSheets() {
     "Siswa": ["ID", "NIS", "NamaSiswa", "Kelas", "Tingkatan"],
     "Jurnal7KAIH": ["ID", "Tanggal", "NIS", "NamaSiswa", "BangunPagi", "Beribadah", "Berolahraga", "MakanSehat", "GemarBelajar", "Bermasyarakat", "TidurCepat"],
     "CatatanBimbingan": ["ID", "Tanggal", "GuruWali", "NamaSiswa", "CatatanPerkembangan"],
-    "KelasMapelPilihan": ["ID", "GuruEmail", "NamaKelas", "Tingkatan", "NamaSiswa", "NIS"]
+    "KelasMapelPilihan": ["ID", "GuruEmail", "NamaKelas", "Tingkatan", "NamaSiswa", "NIS"],
+    "Sesi": ["ID", "NamaSesi", "JamMulai", "JamSelesai"]
   };
   
   for (var name in sheetsDef) {
@@ -38,8 +39,28 @@ function initSheets() {
     if (!sheet) {
       sheet = ss.insertSheet(name);
       sheet.appendRow(sheetsDef[name]);
-    } else if (sheet.getLastRow() === 0) {
-      sheet.appendRow(sheetsDef[name]);
+    } else {
+      if (sheet.getLastRow() === 0) {
+        sheet.appendRow(sheetsDef[name]);
+      } else {
+        // Verifikasi dan migrasi header kolom jika ada kolom baru
+        var lastCol = sheet.getLastColumn();
+        var currentHeaders = lastCol > 0 ? sheet.getRange(1, 1, 1, lastCol).getValues()[0] : [];
+        var targetHeaders = sheetsDef[name];
+        var needsUpdate = false;
+        
+        for (var idx = 0; idx < targetHeaders.length; idx++) {
+          var h = targetHeaders[idx];
+          if (currentHeaders.indexOf(h) === -1) {
+            needsUpdate = true;
+            break;
+          }
+        }
+        
+        if (needsUpdate) {
+          sheet.getRange(1, 1, 1, targetHeaders.length).setValues([targetHeaders]);
+        }
+      }
     }
   }
   
@@ -51,7 +72,7 @@ function initSheets() {
       ["USR002", "Bu Siti (Guru Matematika)", "guru@sekolah.com", "Guru", "guru123"],
       ["USR003", "Pak Joko (Wali Kelas 10A)", "walikelas@sekolah.com", "Wali Kelas", "walikelas123"],
       ["USR004", "Pak Salim (Guru Wali)", "guruwali@sekolah.com", "Guru Wali", "wali123"],
-      ["USR005", "Bu Retno (Kepala Sekolah)", "kepala@sekolah.com", "Kepala Sekolah", "kepala123"]
+      ["USR005", "Drs. H. Mulyono (Kepala Sekolah)", "kepala@sekolah.com", "Kepala Sekolah", "kepala123"]
     ];
     defaultUsers.forEach(function(row) {
       userSheet.appendRow(row);
@@ -62,12 +83,30 @@ function initSheets() {
   var jadwalSheet = ss.getSheetByName("Jadwal");
   if (jadwalSheet.getLastRow() <= 1) {
     var defaultSchedules = [
-      ["SCH-001", "Senin", "1", "10-A", "Bu Siti (Guru Matematika)", "Matematika Aljabar"],
-      ["SCH-002", "Senin", "2", "10-A", "Bu Siti (Guru Matematika)", "Matematika Aljabar"],
-      ["SCH-003", "Selasa", "3", "10-A", "Pak Joko (Wali Kelas 10A)", "Fisika Dasar"]
+      ["SCH-001", "Senin", "Sesi 1", "10-A", "Bu Siti (Guru Matematika)", "Matematika Aljabar"],
+      ["SCH-002", "Senin", "Sesi 2", "10-A", "Bu Siti (Guru Matematika)", "Matematika Aljabar"],
+      ["SCH-003", "Selasa", "Sesi 3", "10-A", "Pak Joko (Wali Kelas 10A)", "Fisika Dasar"]
     ];
     defaultSchedules.forEach(function(row) {
       jadwalSheet.appendRow(row);
+    });
+  }
+
+  // Insert default sessions if sheet Sesi is empty
+  var sesiSheet = ss.getSheetByName("Sesi");
+  if (sesiSheet.getLastRow() <= 1) {
+    var defaultSesi = [
+      ["SES-001", "Sesi 1", "07:00", "07:45"],
+      ["SES-002", "Sesi 2", "07:45", "08:30"],
+      ["SES-003", "Sesi 3", "08:30", "09:15"],
+      ["SES-004", "Sesi 4", "09:30", "10:15"],
+      ["SES-005", "Sesi 5", "10:15", "11:00"],
+      ["SES-006", "Sesi 6", "11:00", "11:45"],
+      ["SES-007", "Sesi 7", "12:30", "13:15"],
+      ["SES-008", "Sesi 8", "13:15", "14:00"]
+    ];
+    defaultSesi.forEach(function(row) {
+      sesiSheet.appendRow(row);
     });
   }
 
@@ -162,6 +201,16 @@ function doPost(e) {
         
       case "deleteJadwal":
         response = { status: "success", data: deleteJadwal(payload.id) };
+        break;
+
+      case "addSesi":
+        if (payload.currentUserRole !== "Admin") throw new Error("Akses ditolak. Pengaturan sesi hanya dapat dilakukan oleh Admin.");
+        response = { status: "success", data: addSesi(payload) };
+        break;
+
+      case "deleteSesi":
+        if (payload.currentUserRole !== "Admin") throw new Error("Akses ditolak. Pengaturan sesi hanya dapat dilakukan oleh Admin.");
+        response = { status: "success", data: deleteSesi(payload.id) };
         break;
         
       case "addLaporanWali":
@@ -341,6 +390,7 @@ function getDashboard(role, email, nama, waliKelasClass) {
   var sheetJurnal7KAIH = ss.getSheetByName("Jurnal7KAIH");
   var sheetCatatanBimbingan = ss.getSheetByName("CatatanBimbingan");
   var sheetSiswa = ss.getSheetByName("Siswa");
+  var sheetSesi = ss.getSheetByName("Sesi");
   
   var jurnalRaw = sheetJurnal.getDataRange().getValues();
   var perangkatRaw = sheetPerangkat.getDataRange().getValues();
@@ -353,6 +403,7 @@ function getDashboard(role, email, nama, waliKelasClass) {
   var jurnal7KAIHRaw = (sheetJurnal7KAIH && sheetJurnal7KAIH.getLastRow() > 0) ? sheetJurnal7KAIH.getDataRange().getValues() : [["ID", "Tanggal", "NIS", "NamaSiswa", "BangunPagi", "Beribadah", "Berolahraga", "MakanSehat", "GemarBelajar", "Bermasyarakat", "TidurCepat"]];
   var catatanBimbinganRaw = (sheetCatatanBimbingan && sheetCatatanBimbingan.getLastRow() > 0) ? sheetCatatanBimbingan.getDataRange().getValues() : [["ID", "Tanggal", "GuruWali", "NamaSiswa", "CatatanPerkembangan"]];
   var siswaRaw = (sheetSiswa && sheetSiswa.getLastRow() > 0) ? sheetSiswa.getDataRange().getValues() : [["ID", "NIS", "NamaSiswa", "Kelas"]];
+  var sesiRaw = (sheetSesi && sheetSesi.getLastRow() > 0) ? sheetSesi.getDataRange().getValues() : [["ID", "NamaSesi", "JamMulai", "JamSelesai"]];
   
   var result = {
     role: role,
@@ -367,8 +418,20 @@ function getDashboard(role, email, nama, waliKelasClass) {
     siswaGuruWaliList: [],
     jurnal7KAIHList: [],
     catatanBimbinganList: [],
-    studentList: []
+    studentList: [],
+    sesiList: []
   };
+  
+  // Format Sesi list
+  for (var i = 1; i < sesiRaw.length; i++) {
+    var row = sesiRaw[i];
+    result.sesiList.push({
+      id: row[0],
+      namaSesi: row[1],
+      jamMulai: row[2],
+      jamSelesai: row[3]
+    });
+  }
   
   // Format Jurnal list
   for (var i = 1; i < jurnalRaw.length; i++) {
@@ -382,7 +445,8 @@ function getDashboard(role, email, nama, waliKelasClass) {
       kehadiran: row[5],
       catatan: row[6],
       mode: row[7] || "Tatap Muka",
-      mapel: row[8] || ""
+      mapel: row[8] || "",
+      sesi: row[9] || ""
     });
   }
   
@@ -868,12 +932,13 @@ function addJurnal(payload) {
   var catatan = payload.catatan || "";
   var mode = payload.mode || "Tatap Muka";
   var mapel = payload.mapel || "";
+  var sesi = payload.sesi || "";
   
   // Jika ID dikirim, update baris yang sudah ada
   if (id) {
     for (var i = 1; i < data.length; i++) {
       if (data[i][0].toString() === id.toString()) {
-        sheet.getRange(i + 1, 2, 1, 8).setValues([[tanggal, guru, kelas, materi, kehadiran, catatan, mode, mapel]]);
+        sheet.getRange(i + 1, 2, 1, 9).setValues([[tanggal, guru, kelas, materi, kehadiran, catatan, mode, mapel, sesi]]);
         SpreadsheetApp.flush();
         return { id: id, success: true };
       }
@@ -881,7 +946,7 @@ function addJurnal(payload) {
   }
   
   var newId = "JR-" + new Date().getTime() + "-" + Math.floor(Math.random() * 1000);
-  sheet.appendRow([newId, tanggal, guru, kelas, materi, kehadiran, catatan, mode, mapel]);
+  sheet.appendRow([newId, tanggal, guru, kelas, materi, kehadiran, catatan, mode, mapel, sesi]);
   SpreadsheetApp.flush();
   
   return { id: newId, success: true };
@@ -919,13 +984,57 @@ function syncOfflineJurnal(jurnalList) {
     var kehadiran = j.kehadiran;
     var catatan = j.catatan;
     var mode = j.mode || "Tatap Muka";
+    var mapel = j.mapel || "";
+    var sesi = j.sesi || "";
     
-    sheet.appendRow([id, tanggal, guru, kelas, materi, kehadiran, catatan, mode]);
+    sheet.appendRow([id, tanggal, guru, kelas, materi, kehadiran, catatan, mode, mapel, sesi]);
     count++;
   });
   
   SpreadsheetApp.flush();
   return { syncedCount: count, success: true };
+}
+
+// 4b. Manajemen Sesi Pelajaran (Admin Only)
+function addSesi(payload) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Sesi");
+  var data = sheet.getDataRange().getValues();
+  
+  var id = payload.id || "";
+  var namaSesi = payload.namaSesi || "";
+  var jamMulai = payload.jamMulai || "";
+  var jamSelesai = payload.jamSelesai || "";
+  
+  if (id) {
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0].toString() === id.toString()) {
+        sheet.getRange(i + 1, 2, 1, 3).setValues([[namaSesi, jamMulai, jamSelesai]]);
+        SpreadsheetApp.flush();
+        return { id: id, success: true };
+      }
+    }
+  }
+  
+  var newId = "SES-" + new Date().getTime();
+  sheet.appendRow([newId, namaSesi, jamMulai, jamSelesai]);
+  SpreadsheetApp.flush();
+  return { id: newId, success: true };
+}
+
+function deleteSesi(id) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Sesi");
+  var data = sheet.getDataRange().getValues();
+  
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0].toString() === id.toString()) {
+      sheet.deleteRow(i + 1);
+      SpreadsheetApp.flush();
+      return { success: true };
+    }
+  }
+  throw new Error("Sesi tidak ditemukan.");
 }
 
 // 5. Menambah Dokumen Perangkat Ajar
@@ -1811,4 +1920,54 @@ function getSiswaPublic() {
     studentList: studentList,
     daftarKelas: daftarKelas
   };
+}
+
+// 22. Tambah / Edit Sesi Pelajaran (Admin)
+function addSesi(payload) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Sesi");
+  if (!sheet) {
+    sheet = ss.insertSheet("Sesi");
+    sheet.appendRow(["ID", "NamaSesi", "JamMulai", "JamSelesai"]);
+  }
+  
+  var id = payload.id;
+  var namaSesi = payload.namaSesi;
+  var jamMulai = payload.jamMulai;
+  var jamSelesai = payload.jamSelesai;
+  
+  if (id) {
+    var data = sheet.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0].toString() === id.toString()) {
+        sheet.getRange(i + 1, 2).setValue(namaSesi);
+        sheet.getRange(i + 1, 3).setValue(jamMulai);
+        sheet.getRange(i + 1, 4).setValue(jamSelesai);
+        SpreadsheetApp.flush();
+        return { success: true, id: id };
+      }
+    }
+  }
+  
+  var newId = "SES-" + new Date().getTime();
+  sheet.appendRow([newId, namaSesi, jamMulai, jamSelesai]);
+  SpreadsheetApp.flush();
+  return { success: true, id: newId };
+}
+
+// 23. Hapus Sesi Pelajaran (Admin)
+function deleteSesi(id) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Sesi");
+  if (!sheet) throw new Error("Sheet Sesi tidak ditemukan.");
+  
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0].toString() === id.toString()) {
+      sheet.deleteRow(i + 1);
+      SpreadsheetApp.flush();
+      return { success: true };
+    }
+  }
+  throw new Error("Sesi pelajaran tidak ditemukan.");
 }
