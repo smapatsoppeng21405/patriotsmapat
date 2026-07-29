@@ -5545,6 +5545,7 @@
           const cbObj = root.catatanbimbingan || {};
           const sObj = root.students || {};
           const kmpObj = root.kelasmapelpilihan || {};
+          const sessionsObj = root.sessions || root.sesi || {};
 
           let settings = { hariBelajar: 5, daftarKelas: ["X.1", "X.2", "XI.1", "XI.2", "XII.1", "XII.2"] };
           if (root.settings) {
@@ -5572,30 +5573,32 @@
           const sgwRaw = Object.keys(sgwObj).map(k => ({ id: k, ...sgwObj[k] }));
           const j7kaihRaw = Object.keys(j7Obj).map(k => ({ id: k, ...j7Obj[k] }));
           const cbRaw = Object.keys(cbObj).map(k => ({ id: k, ...cbObj[k] }));
-           const sRaw = Object.keys(sObj).map(k => ({ id: k, ...sObj[k] }));
-           const kmpRaw = Object.keys(kmpObj).map(k => ({ id: k, ...kmpObj[k] }));
+          const sRaw = Object.keys(sObj).map(k => ({ id: k, ...sObj[k] }));
+          const kmpRaw = Object.keys(kmpObj).map(k => ({ id: k, ...kmpObj[k] }));
+          const sesiRaw = Object.keys(sessionsObj).map(k => ({ id: k, ...sessionsObj[k] }));
 
-           const teachers = users;
+          const teachers = users;
 
-           let result = {
-             role: role,
-             stats: {},
-             jurnalList: [...jRaw],
-             perangkatList: [...pRaw],
-             nilaiList: [...nRaw],
-             jadwalList: [...jdRaw],
-             laporanWaliList: [...lpRaw],
-             guruMasterList: [...gmRaw],
-             settings: settings,
-             teacherList: teachers,
-             rekapAbsenList: [...raRaw],
-             kondisiSiswaList: [...ksRaw],
-             siswaGuruWaliList: [...sgwRaw],
-             jurnal7KAIHList: [...j7kaihRaw],
-             catatanBimbinganList: [...cbRaw],
-             studentList: [...sRaw],
-             kelasMapelPilihanList: [...kmpRaw]
-           };
+          let result = {
+            role: role,
+            stats: {},
+            jurnalList: [...jRaw],
+            perangkatList: [...pRaw],
+            nilaiList: [...nRaw],
+            jadwalList: [...jdRaw],
+            laporanWaliList: [...lpRaw],
+            guruMasterList: [...gmRaw],
+            settings: settings,
+            teacherList: teachers,
+            rekapAbsenList: [...raRaw],
+            kondisiSiswaList: [...ksRaw],
+            siswaGuruWaliList: [...sgwRaw],
+            jurnal7KAIHList: [...j7kaihRaw],
+            catatanBimbinganList: [...cbRaw],
+            studentList: [...sRaw],
+            kelasMapelPilihanList: [...kmpRaw],
+            sesiList: [...sesiRaw]
+          };
 
           if (role === "Wakasek" || role === "Admin") {
             const pending = pRaw.filter(p => p.status === "Pending").length;
@@ -6110,6 +6113,21 @@
           await ref(`settings/${payload.key}`).set(payload.value);
           return { success: true };
         }
+
+        else if (action === "addSesi") {
+          const key = payload.id || ref("sessions").push().key;
+          await ref(`sessions/${key}`).update({
+            namaSesi: payload.namaSesi,
+            jamMulai: payload.jamMulai,
+            jamSelesai: payload.jamSelesai
+          });
+          return { success: true, id: key };
+        }
+
+        else if (action === "deleteSesi") {
+          await ref(`sessions/${payload.id}`).remove();
+          return { success: true };
+        }
       } catch (err) {
         console.error("Firebase RTDB Error:", err);
         if (err.message && err.message.includes("permission_denied")) {
@@ -6209,7 +6227,7 @@
 
           const [
             jSnap, pSnap, nSnap, jdSnap, lpSnap, gmSnap,
-            uSnap, raSnap, ksSnap, sgwSnap, j7Snap, cbSnap, sSnap, kmpSnap, setSnap
+            uSnap, raSnap, ksSnap, sgwSnap, j7Snap, cbSnap, sSnap, kmpSnap, setSnap, sessSnap
           ] = await Promise.all([
             db.collection("jurnals").get(),
             db.collection("perangkats").get(),
@@ -6225,7 +6243,8 @@
             db.collection("catatanbimbingan").get(),
             db.collection("students").get(),
             db.collection("kelasmapelpilihan").get(),
-            db.collection("settings").doc("main").get()
+            db.collection("settings").doc("main").get(),
+            db.collection("sessions").get()
           ]);
 
           const jRaw = jSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -6242,6 +6261,7 @@
           const cbRaw = cbSnap.docs.map(d => ({ id: d.id, ...d.data() }));
           const sRaw = sSnap.docs.map(d => ({ id: d.id, ...d.data() }));
           const kmpRaw = kmpSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+          const sessions = sessSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
           let settings = { hariBelajar: 5, daftarKelas: ["X.1", "X.2", "XI.1", "XI.2", "XII.1", "XII.2"] };
           if (setSnap.exists) {
@@ -6276,7 +6296,8 @@
             jurnal7KAIHList: [...j7kaihRaw],
             catatanBimbinganList: [...cbRaw],
             studentList: [...sRaw],
-            kelasMapelPilihanList: [...kmpRaw]
+            kelasMapelPilihanList: [...kmpRaw],
+            sesiList: [...sessions]
           };
 
           if (role === "Wakasek" || role === "Admin") {
@@ -6796,6 +6817,21 @@
           await db.collection("settings").doc("main").set({
             [payload.key]: payload.value
           }, { merge: true });
+          return { success: true };
+        }
+
+        else if (action === "addSesi") {
+          const id = payload.id || db.collection("sessions").doc().id;
+          await db.collection("sessions").doc(id).set({
+            namaSesi: payload.namaSesi,
+            jamMulai: payload.jamMulai,
+            jamSelesai: payload.jamSelesai
+          }, { merge: true });
+          return { success: true, id: id };
+        }
+
+        else if (action === "deleteSesi") {
+          await db.collection("sessions").doc(payload.id).delete();
           return { success: true };
         }
       } catch (err) {
@@ -10941,7 +10977,7 @@
                   jamMulai: payload.jamMulai,
                   jamSelesai: payload.jamSelesai
                 };
-                localStorage.setItem('db_sesi', JSON.stringify(sessions));
+                safeLocalStorageSetItem('db_sesi', JSON.stringify(sessions));
               }
               resolve({ success: true, id: id });
             } else {
@@ -10952,14 +10988,14 @@
                 jamSelesai: payload.jamSelesai
               };
               sessions.push(newSesi);
-              localStorage.setItem('db_sesi', JSON.stringify(sessions));
+              safeLocalStorageSetItem('db_sesi', JSON.stringify(sessions));
               resolve({ success: true, id: newSesi.id });
             }
           }
           else if (action === "deleteSesi") {
             const sessions = JSON.parse(localStorage.getItem('db_sesi')) || [];
             const filtered = sessions.filter(s => s.id !== payload.id);
-            localStorage.setItem('db_sesi', JSON.stringify(filtered));
+            safeLocalStorageSetItem('db_sesi', JSON.stringify(filtered));
             resolve({ success: true });
           }
           
