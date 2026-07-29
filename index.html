@@ -10315,18 +10315,34 @@
         let timeDisplay = "";
         let sesiName = item.jamKe || "";
         
-        // Find if this is a configured Sesi
-        const foundSesi = (appState.sesiList || []).find(s => s.namaSesi === item.jamKe);
-        if (foundSesi) {
-          timeDisplay = `${foundSesi.jamMulai} - ${foundSesi.jamSelesai} WITA`;
-          sesiName = foundSesi.namaSesi;
-        } else if (item.jamKe && item.jamKe.includes("-")) {
+        if (item.jamKe && item.jamKe.includes("-")) {
           timeDisplay = item.jamKe + " WITA";
           sesiName = "Kustom";
+        } else if (item.jamKe) {
+          const parts = item.jamKe.toString().split(',').map(p => p.trim());
+          const matchedSess = (appState.sesiList || []).filter(s => parts.includes(s.namaSesi));
+          if (matchedSess.length > 0) {
+            matchedSess.sort((a, b) => (a.jamMulai || "").localeCompare(b.jamMulai || ""));
+            const startTimeStr = matchedSess[0].jamMulai;
+            const endTimeStr = matchedSess[matchedSess.length - 1].jamSelesai;
+            timeDisplay = `${startTimeStr} - ${endTimeStr} WITA`;
+            sesiName = parts.join(", ");
+          } else {
+            const matchedHours = CLASS_HOURS.filter(h => parts.includes(h.jam));
+            if (matchedHours.length > 0) {
+              matchedHours.sort((a, b) => (a.start || "").localeCompare(b.start || ""));
+              const startTimeStr = matchedHours[0].start;
+              const endTimeStr = matchedHours[matchedHours.length - 1].end;
+              timeDisplay = `${startTimeStr} - ${endTimeStr} WITA`;
+              sesiName = parts.map(p => `Jam ${p}`).join(", ");
+            } else {
+              timeDisplay = "-";
+              sesiName = item.jamKe;
+            }
+          }
         } else {
-          const timeSlot = CLASS_HOURS.find(h => h.jam === item.jamKe.toString()) || { start: "", end: "" };
-          timeDisplay = timeSlot.start && timeSlot.end ? `${timeSlot.start} - ${timeSlot.end} WITA` : "-";
-          sesiName = item.jamKe ? `Jam Ke-${item.jamKe}` : "-";
+          timeDisplay = "-";
+          sesiName = "-";
         }
         
         tr.innerHTML = `
@@ -10705,11 +10721,20 @@
           const parts = item.jamKe.split("-").map(p => p.trim());
           startTimeStr = parts[0];
           endTimeStr = parts[1];
-        } else {
-          const timeSlot = CLASS_HOURS.find(h => h.jam === item.jamKe.toString());
-          if (timeSlot) {
-            startTimeStr = timeSlot.start;
-            endTimeStr = timeSlot.end;
+        } else if (item.jamKe) {
+          const parts = item.jamKe.toString().split(',').map(p => p.trim());
+          const matchedSess = (appState.sesiList || []).filter(s => parts.includes(s.namaSesi));
+          if (matchedSess.length > 0) {
+            matchedSess.sort((a, b) => (a.jamMulai || "").localeCompare(b.jamMulai || ""));
+            startTimeStr = matchedSess[0].jamMulai;
+            endTimeStr = matchedSess[matchedSess.length - 1].jamSelesai;
+          } else {
+            const matchedHours = CLASS_HOURS.filter(h => parts.includes(h.jam));
+            if (matchedHours.length > 0) {
+              matchedHours.sort((a, b) => (a.start || "").localeCompare(b.start || ""));
+              startTimeStr = matchedHours[0].start;
+              endTimeStr = matchedHours[matchedHours.length - 1].end;
+            }
           }
         }
         
