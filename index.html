@@ -2827,6 +2827,43 @@
             </form>
           </div>
 
+          <!-- CARD 2: PENGATURAN NADA DERING ALARM -->
+          <div class="card glass-effect" style="margin-bottom: 2rem;">
+            <div class="card-title" style="display: flex; align-items: center; gap: 0.5rem;">
+              <i class="fa-solid fa-music" style="color: var(--primary);"></i>
+              <span>Pengaturan Nada Dering Alarm Mengajar</span>
+            </div>
+            <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1rem; line-height:1.5;">
+              Pilih berkas audio (MP3/WAV/AAC) dari HP Anda untuk nada dering alarm waktu mengajar dimulai/selesai.
+            </p>
+            <div style="display:flex; flex-wrap:wrap; gap:1rem; align-items:center;">
+              <div style="flex:1; min-width:200px;">
+                <input type="file" id="alarmRingtoneFileInput" accept="audio/*" class="form-control" style="padding: 0.35rem 0.75rem; font-size:0.85rem;" onchange="handleAlarmRingtoneUpload(event)">
+              </div>
+              <div style="display:flex; gap:0.5rem;">
+                <button type="button" class="btn btn-success" onclick="playTestAlarmRingtone()" id="btnPlayTestAlarm" style="padding: 0.5rem 1rem; font-size: 0.85rem; display: flex; align-items: center; gap: 0.35rem;">
+                  <i class="fa-solid fa-play"></i> Tes Bunyi
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="resetAlarmRingtone()" style="padding: 0.5rem 1rem; font-size: 0.85rem; color:var(--danger); display: flex; align-items: center; gap: 0.35rem;">
+                  <i class="fa-solid fa-rotate-left"></i> Default
+                </button>
+              </div>
+            </div>
+            <div style="margin-top:0.75rem; font-size:0.8rem; color:var(--text-muted);" id="alarmRingtoneStatus">
+              Nada alarm aktif: <strong>Nada Default Sistem (Bip)</strong>
+            </div>
+            
+            <!-- Tombol Matikan Alarm Aktif -->
+            <div id="stopAlarmContainer" style="display:none; margin-top: 1rem; padding: 0.75rem; background: rgba(239, 68, 68, 0.1); border: 1px dashed var(--danger); border-radius: 0.5rem; justify-content: space-between; align-items: center; width: 100%;">
+              <span style="color: #f87171; font-weight: 600; font-size:0.85rem; display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fa-solid fa-triangle-exclamation fa-beat"></i> Alarm sedang berbunyi...
+              </span>
+              <button type="button" class="btn btn-danger" onclick="stopCurrentAlarmAudio()" style="padding: 0.25rem 0.75rem; font-size: 0.8rem; font-weight:600; display: flex; align-items: center; gap: 0.25rem;">
+                <i class="fa-solid fa-volume-xmark"></i> Matikan Alarm
+              </button>
+            </div>
+          </div>
+
           <div class="card glass-effect" style="margin-bottom: 2rem;">
             <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
               <span>⏰ Jadwal Mengajar Saya</span>
@@ -4131,6 +4168,7 @@
     let modeChartInstance = null;
     let mapelChartInstance = null;
     let guruJurnalChartInstance = null;
+    let currentAlarmAudio = null;
 
     // INITIALIZATION RUN
     window.addEventListener('DOMContentLoaded', () => {
@@ -6971,6 +7009,11 @@
         safeLocalStorageSetItem(`cache_kelas_mapel_pilihan_${appState.user.role}`, JSON.stringify(data.kelasMapelPilihanList || []));
         safeLocalStorageSetItem('cache_sesi', JSON.stringify(data.sesiList || []));
         
+        // Sync alarms to SW if role is Guru
+        if (appState.user && appState.user.role === 'Guru') {
+          syncAlarmsToServiceWorker();
+        }
+        
         // Render Views
         renderDashboardData();
         
@@ -7101,6 +7144,9 @@
         document.getElementById('g-stat-jurnal').textContent = appState.stats.totalJurnalGuru || 0;
         document.getElementById('g-stat-disetujui').textContent = appState.stats.disetujuiPerangkatGuru || 0;
         document.getElementById('g-stat-pending').textContent = appState.stats.pendingPerangkatGuru || 0;
+        
+        // Update Ringtone Label
+        updateAlarmRingtoneStatusLabel();
         
         // Riwayat, Status, Jadwal & Kelas Mapel Pilihan tables
         renderGuruHistoryTables();
@@ -10337,6 +10383,7 @@
         showToast("Jadwal mengajar berhasil disimpan!");
         resetGuruJadwalForm();
         await loadDashboardData();
+        syncAlarmsToServiceWorker();
       } catch (err) {
         showToast("Gagal menyimpan jadwal: " + err.message, "danger");
       } finally {
@@ -10394,6 +10441,7 @@
         await callApi("deleteJadwal", { id });
         showToast("Jadwal mengajar berhasil dihapus.");
         await loadDashboardData();
+        syncAlarmsToServiceWorker();
       } catch (err) {
         showToast("Gagal menghapus jadwal: " + err.message, "danger");
       } finally {
@@ -10697,6 +10745,9 @@
 
     // Trigger Notification standard browser atau custom visual toast fallback
     function triggerSystemNotification(title, body, onClickCallback) {
+      // Mainkan nada dering alarm
+      playAlarmAudio();
+      
       if ("Notification" in window && Notification.permission === "granted") {
         const notification = new Notification(title, {
           body: body,
@@ -10709,12 +10760,206 @@
           window.focus();
           onClickCallback();
           notification.close();
+          stopCurrentAlarmAudio();
         };
       } else {
         // Fallback Toast visual premium jika notifikasi ditolak
         showToast(`${title} - ${body}`, "warning");
-        // Bunyikan nada ting (Opsional dengan audio synth API browser)
-        playNotificationBeep();
+      }
+    }
+
+    // Audio Alarm & Ringtone Handler Functions
+    let continuousBeepInterval = null;
+    let continuousBeepAudioCtx = null;
+
+    function playNotificationBeepContinuous() {
+      if (continuousBeepInterval) return;
+      try {
+        continuousBeepAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function beep() {
+          if (!continuousBeepAudioCtx) return;
+          const oscillator = continuousBeepAudioCtx.createOscillator();
+          const gainNode = continuousBeepAudioCtx.createGain();
+          oscillator.connect(gainNode);
+          gainNode.connect(continuousBeepAudioCtx.destination);
+          
+          oscillator.type = 'sine';
+          oscillator.frequency.value = 523.25; // C5 note
+          gainNode.gain.setValueAtTime(0.1, continuousBeepAudioCtx.currentTime);
+          
+          oscillator.start();
+          oscillator.stop(continuousBeepAudioCtx.currentTime + 0.35);
+        }
+        
+        beep();
+        continuousBeepInterval = setInterval(beep, 1000);
+      } catch (e) {
+        console.warn("AudioContext continuous failed:", e);
+      }
+    }
+
+    function stopContinuousBeep() {
+      if (continuousBeepInterval) {
+        clearInterval(continuousBeepInterval);
+        continuousBeepInterval = null;
+      }
+      if (continuousBeepAudioCtx) {
+        try {
+          continuousBeepAudioCtx.close();
+        } catch(e){}
+        continuousBeepAudioCtx = null;
+      }
+    }
+
+    function playAlarmAudio() {
+      // Hentikan audio yang sedang berbunyi jika ada
+      stopCurrentAlarmAudio();
+      
+      const stopContainer = document.getElementById('stopAlarmContainer');
+      if (stopContainer) {
+        stopContainer.style.display = 'flex';
+      }
+      
+      const customRingtone = localStorage.getItem('guru_alarm_ringtone');
+      if (customRingtone) {
+        try {
+          currentAlarmAudio = new Audio(customRingtone);
+          currentAlarmAudio.loop = true;
+          currentAlarmAudio.play().catch(err => {
+            console.warn("Autoplay kustom diblokir browser, fallback ke beep:", err);
+            playNotificationBeepContinuous();
+          });
+        } catch (e) {
+          console.error("Gagal memutar nada dering kustom:", e);
+          playNotificationBeepContinuous();
+        }
+      } else {
+        playNotificationBeepContinuous();
+      }
+    }
+
+    function stopCurrentAlarmAudio() {
+      if (currentAlarmAudio) {
+        try {
+          currentAlarmAudio.pause();
+          currentAlarmAudio.currentTime = 0;
+        } catch (e) {}
+        currentAlarmAudio = null;
+      }
+      stopContinuousBeep();
+      
+      const stopContainer = document.getElementById('stopAlarmContainer');
+      if (stopContainer) {
+        stopContainer.style.display = 'none';
+      }
+      
+      // Update tombol tes jika sedang aktif
+      const btn = document.getElementById('btnPlayTestAlarm');
+      if (btn && btn.innerText.includes("Hentikan")) {
+        btn.innerHTML = '<i class="fa-solid fa-play"></i> Tes Bunyi';
+        btn.className = "btn btn-success";
+      }
+    }
+
+    function handleAlarmRingtoneUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      if (file.size > 5 * 1024 * 1024) {
+        showToast("Berkas audio terlalu besar! Maksimal ukuran adalah 5MB.", "danger");
+        e.target.value = "";
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          localStorage.setItem('guru_alarm_ringtone', evt.target.result);
+          updateAlarmRingtoneStatusLabel(file.name);
+          showToast("Nada dering alarm kustom berhasil disimpan!");
+        } catch(err) {
+          console.error(err);
+          showToast("Penyimpanan lokal penuh. Gagal menyimpan nada dering.", "danger");
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+    
+    function resetAlarmRingtone() {
+      localStorage.removeItem('guru_alarm_ringtone');
+      const fileInput = document.getElementById('alarmRingtoneFileInput');
+      if (fileInput) fileInput.value = "";
+      updateAlarmRingtoneStatusLabel();
+      showToast("Nada dering alarm dikembalikan ke default.");
+    }
+    
+    function updateAlarmRingtoneStatusLabel(fileName) {
+      const statusEl = document.getElementById('alarmRingtoneStatus');
+      if (!statusEl) return;
+      
+      const customRingtone = localStorage.getItem('guru_alarm_ringtone');
+      if (customRingtone) {
+        statusEl.innerHTML = `Nada alarm aktif: <strong style="color:var(--success);"><i class="fa-solid fa-circle-check"></i> Nada Kustom (${fileName || 'Tersimpan'})</strong>`;
+      } else {
+        statusEl.innerHTML = `Nada alarm aktif: <strong><i class="fa-solid fa-volume-high"></i> Nada Default Sistem (Bip)</strong>`;
+      }
+    }
+    
+    function playTestAlarmRingtone() {
+      const btn = document.getElementById('btnPlayTestAlarm');
+      if (!btn) return;
+      
+      if (currentAlarmAudio || continuousBeepInterval) {
+        stopCurrentAlarmAudio();
+        btn.innerHTML = '<i class="fa-solid fa-play"></i> Tes Bunyi';
+        btn.className = "btn btn-success";
+        return;
+      }
+      
+      playAlarmAudio();
+      btn.innerHTML = '<i class="fa-solid fa-stop"></i> Hentikan';
+      btn.className = "btn btn-danger";
+      
+      setTimeout(() => {
+        if (btn.innerText.includes("Hentikan")) {
+          stopCurrentAlarmAudio();
+          btn.innerHTML = '<i class="fa-solid fa-play"></i> Tes Bunyi';
+          btn.className = "btn btn-success";
+        }
+      }, 10000);
+    }
+
+    function syncAlarmsToServiceWorker() {
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+          action: 'setAlarms',
+          jadwal: appState.guruJadwalList || [],
+          sesiList: appState.sesiList || [],
+          user: appState.user
+        });
+        console.log("Alarms synchronized with Service Worker.");
+      }
+    }
+
+    // Audio Beep Synth Fallback (untuk notifikasi sekali klik)
+    function playNotificationBeep() {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        
+        oscillator.type = 'sine';
+        oscillator.frequency.value = 523.25; // C5 note
+        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + 0.35);
+      } catch (e) {
+        console.log("AudioContext blocked or not supported.");
       }
     }
 
