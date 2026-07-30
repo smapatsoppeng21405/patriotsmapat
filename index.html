@@ -12938,7 +12938,7 @@
           const sClean = cleanTeacherNameForMatching(sched.guru);
           const teacherMatches = jClean.includes(sClean) || sClean.includes(jClean);
           const classMatches = j.kelas === sched.kelas;
-          const sesiMatches = j.sesi && j.sesi.toString().split(',').map(s => s.trim()).includes(sched.jamKe.toString().trim());
+          const sesiMatches = j.sesi && sched.jamKe && j.sesi.toString().split(',').map(s => s.trim()).some(s => sched.jamKe.toString().split(',').map(x => x.trim()).includes(s));
           
           return teacherMatches && classMatches && sesiMatches;
         });
@@ -12986,7 +12986,7 @@
           const sClean = cleanTeacherNameForMatching(sched.guru);
           const teacherMatches = jClean.includes(sClean) || sClean.includes(jClean);
           const classMatches = j.kelas === sched.kelas;
-          const sesiMatches = j.sesi && j.sesi.toString().split(',').map(s => s.trim()).includes(sched.jamKe.toString().trim());
+          const sesiMatches = j.sesi && sched.jamKe && j.sesi.toString().split(',').map(s => s.trim()).some(s => sched.jamKe.toString().split(',').map(x => x.trim()).includes(s));
           return teacherMatches && classMatches && sesiMatches;
         });
         return !isScheduled;
@@ -13079,7 +13079,7 @@
           const sClean = cleanTeacherNameForMatching(sched.guru);
           const teacherMatches = jClean.includes(sClean) || sClean.includes(jClean);
           const classMatches = j.kelas === sched.kelas;
-          const sesiMatches = j.sesi && j.sesi.toString().split(',').map(s => s.trim()).includes(sched.jamKe.toString().trim());
+          const sesiMatches = j.sesi && sched.jamKe && j.sesi.toString().split(',').map(s => s.trim()).some(s => sched.jamKe.toString().split(',').map(x => x.trim()).includes(s));
           return teacherMatches && classMatches && sesiMatches;
         });
         
@@ -13117,7 +13117,7 @@
           const sClean = cleanTeacherNameForMatching(sched.guru);
           const teacherMatches = jClean.includes(sClean) || sClean.includes(jClean);
           const classMatches = j.kelas === sched.kelas;
-          const sesiMatches = j.sesi && j.sesi.toString().split(',').map(s => s.trim()).includes(sched.jamKe.toString().trim());
+          const sesiMatches = j.sesi && sched.jamKe && j.sesi.toString().split(',').map(s => s.trim()).some(s => sched.jamKe.toString().split(',').map(x => x.trim()).includes(s));
           return teacherMatches && classMatches && sesiMatches;
         });
         return !isScheduled;
