@@ -5868,7 +5868,8 @@
               materi: payload.materi,
               kehadiran: payload.kehadiran,
               catatan: payload.catatan || "",
-              mode: payload.mode || "Tatap Muka"
+              mode: payload.mode || "Tatap Muka",
+              sesi: payload.sesi || ""
             });
             return { success: true, id: id };
           } else {
@@ -5881,7 +5882,8 @@
               materi: payload.materi,
               kehadiran: payload.kehadiran,
               catatan: payload.catatan || "",
-              mode: payload.mode || "Tatap Muka"
+              mode: payload.mode || "Tatap Muka",
+              sesi: payload.sesi || ""
             });
             return { success: true, id: newRef.key };
           }
@@ -6568,7 +6570,8 @@
               materi: payload.materi,
               kehadiran: payload.kehadiran,
               catatan: payload.catatan || "",
-              mode: payload.mode || "Tatap Muka"
+              mode: payload.mode || "Tatap Muka",
+              sesi: payload.sesi || ""
             });
             return { success: true, id: id };
           } else {
@@ -6581,7 +6584,8 @@
               materi: payload.materi,
               kehadiran: payload.kehadiran,
               catatan: payload.catatan || "",
-              mode: payload.mode || "Tatap Muka"
+              mode: payload.mode || "Tatap Muka",
+              sesi: payload.sesi || ""
             });
             return { success: true, id: docRef.id };
           }
@@ -11412,7 +11416,8 @@
                   materi: payload.materi,
                   kehadiran: payload.kehadiran,
                   catatan: payload.catatan || "",
-                  mode: payload.mode || "Tatap Muka"
+                  mode: payload.mode || "Tatap Muka",
+                  sesi: payload.sesi || ""
                 };
                 localStorage.setItem('db_jurnals', JSON.stringify(jRaw));
               }
@@ -11427,7 +11432,8 @@
                 materi: payload.materi,
                 kehadiran: payload.kehadiran,
                 catatan: payload.catatan,
-                mode: payload.mode || "Tatap Muka"
+                mode: payload.mode || "Tatap Muka",
+                sesi: payload.sesi || ""
               };
               jRaw.push(newJurnal);
               localStorage.setItem('db_jurnals', JSON.stringify(jRaw));
