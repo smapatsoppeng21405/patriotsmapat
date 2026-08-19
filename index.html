@@ -3093,7 +3093,7 @@
               <div class="form-grid">
                 <div class="form-group">
                   <label for="absenBulan">Bulan</label>
-                  <select id="absenBulan" class="filter-control" style="padding: 0.85rem 1rem;" required>
+                  <select id="absenBulan" class="filter-control" style="padding: 0.85rem 1rem;" required onchange="loadClassStudentsToAbsen()">
                     <option value="">Pilih Bulan</option>
                     <option value="Januari">Januari</option>
                     <option value="Februari">Februari</option>
@@ -3111,7 +3111,7 @@
                 </div>
                 <div class="form-group">
                   <label for="absenTahun">Tahun</label>
-                  <select id="absenTahun" class="filter-control" style="padding: 0.85rem 1rem;" required>
+                  <select id="absenTahun" class="filter-control" style="padding: 0.85rem 1rem;" required onchange="loadClassStudentsToAbsen()">
                     <option value="2026">2026</option>
                     <option value="2027">2027</option>
                   </select>
@@ -3134,7 +3134,10 @@
                 <h4 style="font-weight: 500; font-size: 1rem; color: var(--text-main);">Data Absensi Siswa</h4>
                 <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
                   <button type="button" class="btn btn-primary" onclick="loadClassStudentsToAbsen()" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; background-color: var(--primary); border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 0.35rem;">
-                    <i class="fa-solid fa-users"></i> Muat Siswa Kelas
+                    <i class="fa-solid fa-sync"></i> Rekap Jurnal Otomatis
+                  </button>
+                  <button type="button" class="btn btn-secondary" onclick="downloadCurrentInputGrid()" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; display: flex; align-items: center; gap: 0.35rem; background-color: var(--border-color); border: 1px solid rgba(255,255,255,0.05);">
+                    <i class="fa-solid fa-download"></i> Unduh Tabel Ini
                   </button>
                   <input type="file" id="excelImportFileInput" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleExcelImport(event)">
                   <button type="button" class="btn btn-secondary" onclick="document.getElementById('excelImportFileInput').click()" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; background-color: var(--border-color); border: 1px solid rgba(255,255,255,0.05);">
@@ -8058,6 +8061,8 @@
 
     function loadClassStudentsToAbsen(silent = false) {
       const kelasVal = document.getElementById('absenKelas').value;
+      const bulanVal = document.getElementById('absenBulan').value;
+      const tahunVal = document.getElementById('absenTahun').value;
       const tbody = document.getElementById('absen-input-tbody');
       if (!tbody) return;
       
@@ -8080,11 +8085,161 @@
         return;
       }
       
-      classStudents.forEach(student => {
-        addAbsenRow(student.namaSiswa, 20, 0, 0, 0);
+      // Jika Bulan atau Tahun belum dipilih, muat daftar siswa saja dengan default
+      if (!bulanVal || !tahunVal) {
+        classStudents.forEach(student => {
+          addAbsenRow(student.namaSiswa, 20, 0, 0, 0);
+        });
+        return;
+      }
+      
+      const monthMap = {
+        "Januari": 0, "Februari": 1, "Maret": 2, "April": 3, "Mei": 4, "Juni": 5,
+        "Juli": 6, "Agustus": 7, "September": 8, "Oktober": 9, "November": 10, "Desember": 11
+      };
+      
+      const targetMonth = monthMap[bulanVal];
+      const targetYear = parseInt(tahunVal);
+      
+      const allJournals = appState.jurnalList || [];
+      
+      // Filter jurnal berdasarkan kelas, bulan, dan tahun
+      const filteredJournals = allJournals.filter(j => {
+        if (!j.kelas || j.kelas.toLowerCase() !== kelasVal.toLowerCase()) return false;
+        if (!j.tanggal) return false;
+        
+        const d = new Date(j.tanggal);
+        if (isNaN(d.getTime())) return false;
+        
+        return d.getMonth() === targetMonth && d.getFullYear() === targetYear;
       });
       
-      if (!silent) showToast(`Berhasil memuat ${classStudents.length} siswa kelas ${kelasVal}!`, "success");
+      // Ambil tanggal unik dari jurnal
+      const uniqueDates = [...new Set(filteredJournals.map(j => {
+        const d = new Date(j.tanggal);
+        return d.toISOString().split('T')[0];
+      }))];
+      
+      // Lacak ketidakhadiran per siswa per tanggal unik
+      const studentDateStatus = {}; // { namaSiswaLCase: { dateStr: "Sakit"|"Izin"|"Alpa" } }
+      classStudents.forEach(student => {
+        studentDateStatus[student.namaSiswa.toLowerCase().trim()] = {};
+      });
+      
+      filteredJournals.forEach(j => {
+        const d = new Date(j.tanggal);
+        const dateStr = d.toISOString().split('T')[0];
+        const kehadiranStr = j.kehadiran || "";
+        
+        const parseStatusNames = (str, statusKey) => {
+          const regex = new RegExp(statusKey + "\\s*:\\s*\\d+\\s*\\(([^)]+)\\)", "i");
+          const match = str.match(regex);
+          if (match && match[1]) {
+            return match[1].split(",").map(name => name.trim().toLowerCase());
+          }
+          return [];
+        };
+        
+        const sakitStudents = parseStatusNames(kehadiranStr, "Sakit");
+        const izinStudents = parseStatusNames(kehadiranStr, "Izin");
+        const alpaStudents = [...parseStatusNames(kehadiranStr, "Alfa"), ...parseStatusNames(kehadiranStr, "Alpa")];
+        
+        sakitStudents.forEach(name => {
+          const key = name.trim().toLowerCase();
+          if (studentDateStatus[key]) {
+            studentDateStatus[key][dateStr] = "Sakit";
+          }
+        });
+        
+        izinStudents.forEach(name => {
+          const key = name.trim().toLowerCase();
+          if (studentDateStatus[key]) {
+            studentDateStatus[key][dateStr] = "Izin";
+          }
+        });
+        
+        alpaStudents.forEach(name => {
+          const key = name.trim().toLowerCase();
+          if (studentDateStatus[key]) {
+            studentDateStatus[key][dateStr] = "Alpa";
+          }
+        });
+      });
+      
+      classStudents.forEach(student => {
+        const nameKey = student.namaSiswa.toLowerCase().trim();
+        let sakit = 0;
+        let izin = 0;
+        let alpa = 0;
+        let hadir = 0;
+        
+        if (uniqueDates.length > 0) {
+          uniqueDates.forEach(dateStr => {
+            const status = studentDateStatus[nameKey][dateStr];
+            if (status === "Sakit") sakit++;
+            else if (status === "Izin") izin++;
+            else if (status === "Alpa") alpa++;
+            else hadir++;
+          });
+        } else {
+          hadir = 20; // Default jika tidak ada jurnal
+        }
+        
+        addAbsenRow(student.namaSiswa, hadir, sakit, izin, alpa);
+      });
+      
+      if (!silent) {
+        if (filteredJournals.length > 0) {
+          showToast(`Berhasil merekap otomatis dari ${filteredJournals.length} jurnal mengajar (${uniqueDates.length} hari KBM) untuk kelas ${kelasVal}!`, "success");
+        } else {
+          showToast(`Memuat ${classStudents.length} siswa kelas ${kelasVal}. Jurnal mengajar periode ${bulanVal} ${tahunVal} belum tersedia (default Hadir: 20).`, "info");
+        }
+      }
+    }
+
+    function downloadCurrentInputGrid() {
+      const bulan = document.getElementById('absenBulan').value;
+      const tahun = document.getElementById('absenTahun').value;
+      const kelas = document.getElementById('absenKelas').value;
+      
+      if (!bulan || !tahun || !kelas) {
+        showToast("Pilih Bulan, Tahun, dan Kelas terlebih dahulu!", "warning");
+        return;
+      }
+      
+      const rows = [];
+      const trElements = document.querySelectorAll('#tableRekapAbsenInput tbody tr');
+      
+      trElements.forEach(row => {
+        const namaInput = row.querySelector('.rekap-nama') || row.querySelector('.s-nama');
+        const hadirInput = row.querySelector('.rekap-hadir') || row.querySelector('.s-hadir');
+        const sakitInput = row.querySelector('.rekap-sakit') || row.querySelector('.s-sakit');
+        const izinInput = row.querySelector('.rekap-izin') || row.querySelector('.s-izin');
+        const alpaInput = row.querySelector('.rekap-alpa') || row.querySelector('.s-alpa');
+        
+        const namaSiswa = namaInput ? namaInput.value.trim() : "";
+        const hadir = hadirInput ? parseInt(hadirInput.value) || 0 : 0;
+        const sakit = sakitInput ? parseInt(sakitInput.value) || 0 : 0;
+        const izin = izinInput ? parseInt(izinInput.value) || 0 : 0;
+        const alpa = alpaInput ? parseInt(alpaInput.value) || 0 : 0;
+        
+        if (namaSiswa) {
+          rows.push([namaSiswa, hadir, sakit, izin, alpa]);
+        }
+      });
+      
+      if (rows.length === 0) {
+        showToast("Tidak ada data siswa untuk diunduh!", "warning");
+        return;
+      }
+      
+      const headers = ["Nama Siswa", "Hadir", "Sakit", "Izin", "Alpa"];
+      exportData(
+        `Rekap Absensi Bulanan Kelas ${kelas} - ${bulan} ${tahun}`,
+        headers,
+        rows,
+        `Rekap_Absensi_Kelas_${kelas}_${bulan}_${tahun}`
+      );
     }
 
     // Dynamic row helpers for Rekap Absen
@@ -8147,11 +8302,17 @@
       const students = [];
       
       rows.forEach(row => {
-        const namaSiswa = row.querySelector('.rekap-nama').value.trim();
-        const hadir = parseInt(row.querySelector('.rekap-hadir').value) || 0;
-        const sakit = parseInt(row.querySelector('.rekap-sakit').value) || 0;
-        const izin = parseInt(row.querySelector('.rekap-izin').value) || 0;
-        const alpa = parseInt(row.querySelector('.rekap-alpa').value) || 0;
+        const namaInput = row.querySelector('.rekap-nama') || row.querySelector('.s-nama');
+        const hadirInput = row.querySelector('.rekap-hadir') || row.querySelector('.s-hadir');
+        const sakitInput = row.querySelector('.rekap-sakit') || row.querySelector('.s-sakit');
+        const izinInput = row.querySelector('.rekap-izin') || row.querySelector('.s-izin');
+        const alpaInput = row.querySelector('.rekap-alpa') || row.querySelector('.s-alpa');
+        
+        const namaSiswa = namaInput ? namaInput.value.trim() : "";
+        const hadir = hadirInput ? parseInt(hadirInput.value) || 0 : 0;
+        const sakit = sakitInput ? parseInt(sakitInput.value) || 0 : 0;
+        const izin = izinInput ? parseInt(izinInput.value) || 0 : 0;
+        const alpa = alpaInput ? parseInt(alpaInput.value) || 0 : 0;
         
         if (namaSiswa) {
           students.push({
@@ -12203,12 +12364,12 @@
       list.forEach(item => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td><input type="text" class="form-control s-nama" style="padding-left:0.5rem;" value="${item.namaSiswa}" required></td>
-          <td><input type="number" class="form-control s-hadir" style="padding-left:0.5rem;" min="0" value="${item.hadir}" required></td>
-          <td><input type="number" class="form-control s-sakit" style="padding-left:0.5rem;" min="0" value="${item.sakit}" required></td>
-          <td><input type="number" class="form-control s-izin" style="padding-left:0.5rem;" min="0" value="${item.izin}" required></td>
-          <td><input type="number" class="form-control s-alpa" style="padding-left:0.5rem;" min="0" value="${item.alpa}" required></td>
-          <td style="text-align: center;"><button type="button" class="btn btn-danger" onclick="this.closest('tr').remove()" style="padding:0.25rem 0.5rem; font-size:0.75rem;"><i class="fa-solid fa-trash"></i></button></td>
+          <td><input type="text" class="form-control rekap-nama" style="padding-left:0.5rem;" value="${item.namaSiswa}" required style="padding: 0.5rem; background: var(--bg-input); border-color: var(--border-color); color: var(--text-main);"></td>
+          <td><input type="number" class="form-control rekap-hadir" style="padding-left:0.5rem;" min="0" value="${item.hadir}" required style="padding: 0.5rem; background: var(--bg-input); border-color: var(--border-color); color: var(--text-main);"></td>
+          <td><input type="number" class="form-control rekap-sakit" style="padding-left:0.5rem;" min="0" value="${item.sakit}" required style="padding: 0.5rem; background: var(--bg-input); border-color: var(--border-color); color: var(--text-main);"></td>
+          <td><input type="number" class="form-control rekap-izin" style="padding-left:0.5rem;" min="0" value="${item.izin}" required style="padding: 0.5rem; background: var(--bg-input); border-color: var(--border-color); color: var(--text-main);"></td>
+          <td><input type="number" class="form-control rekap-alpa" style="padding-left:0.5rem;" min="0" value="${item.alpa}" required style="padding: 0.5rem; background: var(--bg-input); border-color: var(--border-color); color: var(--text-main);"></td>
+          <td style="text-align: center;"><button type="button" class="btn" onclick="this.closest('tr').remove()" style="padding: 0.4rem 0.6rem; background: var(--danger-glow); color: var(--danger); border: 1px solid var(--danger); border-radius: 0.35rem;"><i class="fa-solid fa-trash-can"></i></button></td>
         `;
         tbody.appendChild(tr);
       });
@@ -12340,40 +12501,7 @@
       }
     }
 
-    function loadClassStudentsToAbsen() {
-      const selectedClass = document.getElementById('absenKelas').value;
-      if (!selectedClass) {
-        showToast("Pilih kelas bimbingan terlebih dahulu!", "warning");
-        return;
-      }
-      
-      const studentNames = getStudentsForClass(selectedClass);
-      
-      if (studentNames.length === 0) {
-        showToast("Tidak ada data siswa untuk kelas " + selectedClass + " di database utama.", "warning");
-        return;
-      }
-      
-      const tbody = document.getElementById('absen-input-tbody');
-      tbody.innerHTML = "";
-      
-      const sortedNames = [...studentNames].sort((a, b) => a.localeCompare(b));
-      
-      sortedNames.forEach(name => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td><input type="text" class="form-control s-nama" style="padding-left:0.5rem;" value="${name}" required></td>
-          <td><input type="number" class="form-control s-hadir" style="padding-left:0.5rem;" min="0" value="20" required></td>
-          <td><input type="number" class="form-control s-sakit" style="padding-left:0.5rem;" min="0" value="0" required></td>
-          <td><input type="number" class="form-control s-izin" style="padding-left:0.5rem;" min="0" value="0" required></td>
-          <td><input type="number" class="form-control s-alpa" style="padding-left:0.5rem;" min="0" value="0" required></td>
-          <td style="text-align: center;"><button type="button" class="btn btn-danger" onclick="this.closest('tr').remove()" style="padding:0.25rem 0.5rem; font-size:0.75rem;"><i class="fa-solid fa-trash"></i></button></td>
-        `;
-        tbody.appendChild(tr);
-      });
-      
-      showToast("Berhasil memuat " + studentNames.length + " siswa kelas " + selectedClass + "!");
-    }
+    // loadClassStudentsToAbsen is defined earlier in the file to avoid duplicates
 
     function populateKondisiSiswaNames() {
       const kelas = document.getElementById('kondisiKelas').value;
