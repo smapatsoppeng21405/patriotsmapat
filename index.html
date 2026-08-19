@@ -1463,6 +1463,33 @@
               </div>
             </div>
           </div>
+
+          <!-- DATA PELAKSANAAN PEMBELAJARAN YANG TIDAK BERJALAN (WAKASEK) -->
+          <div class="card glass-effect" style="margin-top: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
+              <div class="card-title" style="margin-bottom: 0;">Pelaksanaan Pembelajaran Hari Ini Yang Belum Berjalan (Jurnal Kosong)</div>
+              <span class="badge badge-danger" id="w-dashboard-tidak-berjalan-count" style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.15); color: var(--danger); font-size: 0.85rem; padding: 0.35rem 0.65rem;">0 Jadwal</span>
+            </div>
+            <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1.5rem; line-height:1.5;">
+              Menampilkan daftar sesi mengajar hari ini yang terjadwal namun belum diisi jurnal mengajarnya oleh guru mata pelajaran bersangkutan.
+            </p>
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Sesi</th>
+                    <th>Kelas</th>
+                    <th>Mata Pelajaran</th>
+                    <th>Guru Terjadwal</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="w-dashboard-tidak-berjalan-table-body">
+                  <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Memuat data...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
 
         <!-- WAKASEK: MONITORING JURNAL -->
@@ -3338,6 +3365,34 @@
               </button>
             </div>
           </div>
+
+          <!-- DAFTAR SISWA PERWALIAN GURU WALI -->
+          <div class="card glass-effect" style="margin-top: 2rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
+              <div class="card-title" style="margin-bottom: 0;">Siswa Perwalian Saya</div>
+              <button type="button" class="btn btn-primary" onclick="openGuruWaliStudentModal()">
+                <i class="fa-solid fa-user-plus"></i> Input Siswa Perwalian
+              </button>
+            </div>
+            <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1.5rem; line-height:1.5;">
+              Daftar siswa perwalian yang berada di bawah bimbingan Anda. Anda dapat menambahkan siswa baru dari basis data admin.
+            </p>
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>NIS</th>
+                    <th>Nama Siswa</th>
+                    <th>Kelas</th>
+                    <th>Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="gw-perwalian-table-body">
+                  <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Belum ada data siswa perwalian.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
 
         <!-- GURU WALI: JURNAL 7KAIH & CATATAN BIMBINGAN -->
@@ -3518,6 +3573,33 @@
               <div style="position: relative; height:250px;">
                 <canvas id="chartKepalaGuruJurnal"></canvas>
               </div>
+            </div>
+          </div>
+
+          <!-- DATA PELAKSANAAN PEMBELAJARAN YANG TIDAK BERJALAN (KEPALA SEKOLAH) -->
+          <div class="card glass-effect" style="margin-top: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
+              <div class="card-title" style="margin-bottom: 0;">Pelaksanaan Pembelajaran Hari Ini Yang Belum Berjalan (Jurnal Kosong)</div>
+              <span class="badge badge-danger" id="ks-dashboard-tidak-berjalan-count" style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.15); color: var(--danger); font-size: 0.85rem; padding: 0.35rem 0.65rem;">0 Jadwal</span>
+            </div>
+            <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1.5rem; line-height:1.5;">
+              Menampilkan daftar sesi mengajar hari ini yang terjadwal namun belum diisi jurnal mengajarnya oleh guru mata pelajaran bersangkutan.
+            </p>
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Sesi</th>
+                    <th>Kelas</th>
+                    <th>Mata Pelajaran</th>
+                    <th>Guru Terjadwal</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="ks-dashboard-tidak-berjalan-table-body">
+                  <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Memuat data...</td></tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -3957,6 +4039,48 @@
         <button class="btn btn-secondary" onclick="closeRosterModal()" style="flex:1;">Batal</button>
         <button class="btn btn-primary" onclick="applyManualRosterChange()" style="flex:1;">Terapkan</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL INPUT SISWA PERWALIAN (GURU WALI) ==================== -->
+  <div class="modal-overlay" id="guruWaliStudentModal" style="display:none;">
+    <div class="modal-box glass-effect" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3>Input Siswa Perwalian Baru</h3>
+        <button class="modal-close" onclick="closeGuruWaliStudentModal()">&times;</button>
+      </div>
+      <form id="formGuruWaliStudent" onsubmit="submitGuruWaliStudentForm(event)">
+        <div class="modal-body">
+          <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1.5rem;">
+            Silakan pilih siswa dari basis data admin untuk dijadikan siswa perwalian Anda.
+          </p>
+          
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label for="gwModalKelas">Pilih Kelas</label>
+            <select id="gwModalKelas" class="filter-control" style="padding: 0.85rem 1rem; width: 100%;" required onchange="populateGuruWaliModalStudentNames()">
+              <option value="">Pilih Kelas</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label for="gwModalNama">Nama Lengkap Siswa</label>
+            <select id="gwModalNama" class="filter-control" style="padding: 0.85rem 1rem; width: 100%;" required onchange="handleGuruWaliModalNameChange()">
+              <option value="">Pilih Siswa (Pilih Kelas Dulu)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="gwModalNis">NIS Siswa</label>
+            <input type="text" id="gwModalNis" class="form-control" style="padding-left: 1rem;" readonly placeholder="Terisi otomatis">
+          </div>
+        </div>
+        <div class="modal-footer" style="display:flex; gap:1rem;">
+          <button type="button" class="btn btn-secondary" onclick="closeGuruWaliStudentModal()" style="flex:1;">Batal</button>
+          <button type="submit" class="btn btn-primary" style="flex:1;">
+            <i class="fa-solid fa-user-plus"></i> Simpan
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -7122,6 +7246,7 @@
           dateInputW.value = new Date().toISOString().substring(0, 10);
         }
         renderWakasekKbmExecution();
+        renderDashboardTidakBerjalan('w');
         
         renderSiswaGWTable();
         populateSiswaGWFormDropdowns();
@@ -7205,6 +7330,9 @@
         populateGuruWaliSiswaDropdown();
         renderGuruWaliJurnal7KAIHTable();
         renderGuruWaliCatatanBimbinganTable();
+        if (role === "Guru Wali") {
+          renderGuruWaliMyStudentsTable();
+        }
         
         // Reset form input
         document.getElementById('formCatatanBimbingan').reset();
@@ -7223,6 +7351,7 @@
           dateInput.value = new Date().toISOString().substring(0, 10);
         }
         renderKepalaKbmExecution();
+        renderDashboardTidakBerjalan('ks');
 
         // Render all monitoring tables
         renderKepalaJurnalTable(appState.jurnalList);
@@ -12728,6 +12857,142 @@
       }
     }
 
+    // ==================== GURU WALI: CUSTOM STUDENT MANAGEMENT ====================
+    function renderGuruWaliMyStudentsTable() {
+      const tbody = document.getElementById('gw-perwalian-table-body');
+      if (!tbody) return;
+      tbody.innerHTML = "";
+      
+      const list = appState.siswaGuruWaliList || [];
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Belum ada data siswa perwalian.</td></tr>`;
+        return;
+      }
+      
+      list.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="font-family: monospace;">${item.nis || '-'}</td>
+          <td style="font-weight:600;">${item.namaSiswa}</td>
+          <td><span class="badge badge-primary">${item.kelas}</span></td>
+          <td>
+            <button class="btn btn-danger" onclick="deleteGuruWaliStudent('${item.id}')" style="padding:0.25rem 0.5rem; font-size:0.75rem;"><i class="fa-solid fa-trash"></i></button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function openGuruWaliStudentModal() {
+      const modal = document.getElementById('guruWaliStudentModal');
+      if (modal) {
+        modal.style.display = "flex";
+        populateGuruWaliModalClassDropdown();
+      }
+    }
+
+    function closeGuruWaliStudentModal() {
+      const modal = document.getElementById('guruWaliStudentModal');
+      if (modal) {
+        modal.style.display = "none";
+        document.getElementById('formGuruWaliStudent').reset();
+      }
+    }
+
+    function populateGuruWaliModalClassDropdown() {
+      const selectKelas = document.getElementById('gwModalKelas');
+      if (!selectKelas) return;
+      selectKelas.innerHTML = '<option value="">Pilih Kelas</option>';
+      
+      const students = appState.studentList || [];
+      const classes = [...new Set(students.map(s => s.kelas).filter(Boolean))];
+      classes.sort().forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = c;
+        selectKelas.appendChild(opt);
+      });
+      
+      const selectNama = document.getElementById('gwModalNama');
+      if (selectNama) selectNama.innerHTML = '<option value="">Pilih Siswa (Pilih Kelas Dulu)</option>';
+      document.getElementById('gwModalNis').value = "";
+    }
+
+    function populateGuruWaliModalStudentNames() {
+      const kelas = document.getElementById('gwModalKelas').value;
+      const selectNama = document.getElementById('gwModalNama');
+      if (!selectNama) return;
+      
+      selectNama.innerHTML = '<option value="">Pilih Siswa</option>';
+      document.getElementById('gwModalNis').value = "";
+      
+      if (!kelas) return;
+      
+      const students = appState.studentList || [];
+      const classStudents = students.filter(s => s.kelas && s.kelas.toUpperCase() === kelas.toUpperCase());
+      
+      classStudents.sort((a, b) => a.namaSiswa.localeCompare(b.namaSiswa)).forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.namaSiswa;
+        opt.textContent = s.namaSiswa;
+        opt.setAttribute('data-nis', s.nis || "");
+        selectNama.appendChild(opt);
+      });
+    }
+
+    function handleGuruWaliModalNameChange() {
+      const selectNama = document.getElementById('gwModalNama');
+      const selectedOpt = selectNama.options[selectNama.selectedIndex];
+      const nisInput = document.getElementById('gwModalNis');
+      
+      if (selectedOpt && selectedOpt.value) {
+        nisInput.value = selectedOpt.getAttribute('data-nis') || "";
+      } else {
+        nisInput.value = "";
+      }
+    }
+
+    async function submitGuruWaliStudentForm(e) {
+      e.preventDefault();
+      const nis = document.getElementById('gwModalNis').value;
+      const namaSiswa = document.getElementById('gwModalNama').value;
+      const kelas = document.getElementById('gwModalKelas').value;
+      const guruWali = appState.user.nama;
+      
+      if (!namaSiswa || !kelas || !guruWali) {
+        showToast("Mohon lengkapi semua data!", "danger");
+        return;
+      }
+      
+      showLoading(true, "Menyimpan data siswa perwalian...");
+      try {
+        await callApi("addSiswaGuruWali", { id: "", nis, namaSiswa, kelas, guruWali });
+        showToast("Siswa perwalian berhasil ditambahkan!");
+        closeGuruWaliStudentModal();
+        loadDashboardData();
+      } catch (err) {
+        showToast("Gagal menyimpan: " + err.message, "danger");
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    async function deleteGuruWaliStudent(id) {
+      const confirmed = await showCustomConfirm("Hapus Siswa Perwalian", "Apakah Anda yakin ingin menghapus siswa perwalian ini?", "Ya, Hapus", true);
+      if (!confirmed) return;
+      
+      showLoading(true, "Menghapus siswa perwalian...");
+      try {
+        await callApi("deleteSiswaGuruWali", { id });
+        showToast("Siswa perwalian berhasil dihapus.");
+        loadDashboardData();
+      } catch (err) {
+        showToast("Gagal menghapus: " + err.message, "danger");
+      } finally {
+        showLoading(false);
+      }
+    }
+
     function populateGuruWaliSiswaDropdown() {
       const selectSiswa = document.getElementById('bimbinganSiswa');
       if (!selectSiswa) return;
@@ -13011,6 +13276,71 @@
       const date = new Date(dateString);
       const days = ["Ahad", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
       return days[date.getDay()];
+    }
+
+    function renderDashboardTidakBerjalan(prefix) {
+      const tbody = document.getElementById(`${prefix}-dashboard-tidak-berjalan-table-body`);
+      const countEl = document.getElementById(`${prefix}-dashboard-tidak-berjalan-count`);
+      if (!tbody) return;
+      tbody.innerHTML = "";
+      
+      const today = new Date();
+      const selectedDate = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+      const dayName = getIndonesianDayName(selectedDate);
+      
+      const schedules = appState.jadwalList || [];
+      const daySchedules = schedules.filter(s => s.hari === dayName);
+      
+      const journals = appState.jurnalList || [];
+      const dateJournals = journals.filter(j => j.tanggal === selectedDate);
+      
+      const sessions = appState.sesiList || [];
+      
+      const tidakBerjalanSchedules = daySchedules.filter(sched => {
+        const matchingJournal = dateJournals.find(j => {
+          const jClean = cleanTeacherNameForMatching(j.guru);
+          const sClean = cleanTeacherNameForMatching(sched.guru);
+          const teacherMatches = jClean.includes(sClean) || sClean.includes(jClean);
+          const classMatches = j.kelas === sched.kelas;
+          const sesiMatches = j.sesi && sched.jamKe && j.sesi.toString().split(',').map(s => s.trim()).some(s => sched.jamKe.toString().split(',').map(x => x.trim()).includes(s));
+          
+          return teacherMatches && classMatches && sesiMatches;
+        });
+        
+        return !matchingJournal;
+      });
+      
+      tidakBerjalanSchedules.sort((a, b) => {
+        const sA = sessions.find(s => s.namaSesi === a.jamKe);
+        const sB = sessions.find(s => s.namaSesi === b.jamKe);
+        if (sA && sB) {
+          return (sA.jamMulai || "").localeCompare(sB.jamMulai || "");
+        }
+        return (a.jamKe || "").localeCompare(b.jamKe || "");
+      });
+      
+      if (countEl) {
+        countEl.textContent = `${tidakBerjalanSchedules.length} Jadwal`;
+      }
+      
+      if (tidakBerjalanSchedules.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 1rem;">Hebat! Semua pembelajaran hari ini sudah berjalan / terisi jurnalnya.</td></tr>`;
+        return;
+      }
+      
+      tidakBerjalanSchedules.forEach(sched => {
+        const tr = document.createElement('tr');
+        const statusBadge = `<span class="badge badge-danger" style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.15); color: var(--danger);"><i class="fa-solid fa-circle-xmark"></i> Belum Mengisi Jurnal</span>`;
+        
+        tr.innerHTML = `
+          <td style="font-weight: 600; color: #cbd5e1;">${sched.jamKe}</td>
+          <td><span class="badge badge-primary">${sched.kelas}</span></td>
+          <td style="font-weight: 600; color: #cbd5e1;">${sched.mapel || '-'}</td>
+          <td><i class="fa-regular fa-user" style="color:var(--primary); margin-right:0.25rem;"></i> ${sched.guru}</td>
+          <td>${statusBadge}</td>
+        `;
+        tbody.appendChild(tr);
+      });
     }
 
     function renderKbmExecutionGeneric(prefix) {
