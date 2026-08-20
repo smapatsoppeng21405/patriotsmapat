@@ -5090,6 +5090,71 @@
           }
         });
       }
+
+      // Pastikan beralih status untuk Guru, Wali Kelas, dan Guru Wali bisa dilakukan tanpa log out
+      const teacherRoles = ["Guru", "Wali Kelas", "Guru Wali"];
+      let profileList = allProfiles || [profile];
+      const hasTeacherRole = profileList.some(p => teacherRoles.includes(p.role));
+      
+      if (hasTeacherRole) {
+        let updatedList = [...profileList];
+        let foundWClass = "";
+        updatedList.forEach(p => {
+          if (p.role === "Wali Kelas" && p.waliKelasClass) {
+            foundWClass = p.waliKelasClass;
+          }
+        });
+        if (!foundWClass && profile.role === "Wali Kelas" && profile.waliKelasClass) {
+          foundWClass = profile.waliKelasClass;
+        }
+        if (!foundWClass && profile.nama) {
+          const matchClass = profile.nama.match(/Wali\s+Kelas\s+([A-Za-zA-Z0-9\-]+)/i);
+          if (matchClass && matchClass[1]) {
+            foundWClass = matchClass[1].trim().replace(/^(\d+)([a-zA-Z])$/i, "$1-$2");
+          }
+        }
+        // Fallback ke list guru jika ada data guru yang tercatat kelasnya
+        if (!foundWClass) {
+          let tList = [];
+          if (typeof appState !== 'undefined' && appState.teacherList && appState.teacherList.length > 0) {
+            tList = appState.teacherList;
+          } else {
+            try {
+              tList = JSON.parse(localStorage.getItem('cache_teachers')) || [];
+            } catch(e) {}
+          }
+          const matchTeacher = tList.find(t => t.email && t.email.toLowerCase() === profile.email.toLowerCase() && t.waliKelasClass);
+          if (matchTeacher) {
+            foundWClass = matchTeacher.waliKelasClass;
+          }
+        }
+        
+        const baseP = updatedList.find(p => teacherRoles.includes(p.role)) || profile;
+        teacherRoles.forEach(r => {
+          const exists = updatedList.some(p => p.role === r);
+          if (!exists) {
+            updatedList.push({
+              id: baseP.id,
+              nama: baseP.nama,
+              email: baseP.email,
+              role: r,
+              waliKelasClass: r === "Wali Kelas" ? foundWClass : ""
+            });
+          } else if (r === "Wali Kelas" && foundWClass) {
+            const wkp = updatedList.find(p => p.role === "Wali Kelas");
+            if (wkp && !wkp.waliKelasClass) {
+              wkp.waliKelasClass = foundWClass;
+            }
+          }
+        });
+        
+        if (profile.role === "Wali Kelas" && !profile.waliKelasClass && foundWClass) {
+          profile.waliKelasClass = foundWClass;
+        }
+        
+        allProfiles = updatedList;
+      }
+      
       const finalUser = { ...profile, allProfiles: allProfiles || [profile] };
       appState.user = finalUser;
       localStorage.setItem('si_kurikulum_user', JSON.stringify(finalUser));
@@ -5431,10 +5496,36 @@
         }
       }
       
+      // Fallback waliKelasClass dari appState.teacherList atau cache jika terpilih sebagai Wali Kelas dan masih kosong
+      if (appState.user && appState.user.role === "Wali Kelas" && !appState.user.waliKelasClass) {
+        let tList = [];
+        if (typeof appState !== 'undefined' && appState.teacherList && appState.teacherList.length > 0) {
+          tList = appState.teacherList;
+        } else {
+          try {
+            tList = JSON.parse(localStorage.getItem('cache_teachers')) || [];
+          } catch(e) {}
+        }
+        const matchTeacher = tList.find(t => t.email && t.email.toLowerCase() === appState.user.email.toLowerCase() && t.waliKelasClass);
+        if (matchTeacher) {
+          appState.user.waliKelasClass = matchTeacher.waliKelasClass;
+        }
+      }
+      
       // Update Profile UI sidebar
       document.getElementById('userName').textContent = appState.user.nama;
       document.getElementById('userRoleBadge').textContent = formatRoleDisplay(appState.user.role);
       document.getElementById('userAvatar').textContent = appState.user.nama.charAt(0).toUpperCase();
+      
+      // Tampilkan tombol beralih peran jika profil lebih dari satu
+      const switcherContainer = document.getElementById('roleSwitcherContainer');
+      if (switcherContainer) {
+        if (appState.user && appState.user.allProfiles && appState.user.allProfiles.length > 1) {
+          switcherContainer.style.display = 'inline-block';
+        } else {
+          switcherContainer.style.display = 'none';
+        }
+      }
       
       // Buat Menu Navigasi Sesuai Role
       buildNavigationMenu();
