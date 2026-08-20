@@ -9350,7 +9350,7 @@
         'nilaiKelas', 'kondisiKelas', 'studentMasterKelas', 'siswaGWKelas', 'w-filter-kelas',
         'w-filter-absen-kelas', 'w-filter-kondisi-kelas', 'rosterKelasSelect',
         'ks-filter-kelas', 'ks-filter-absen-kelas', 'ks-filter-kondisi-kelas', 'filterStudentKelas',
-        'teacherWaliKelasClass', 'guruJadwalKelas', 'studentKelas'
+        'teacherWaliKelasClass', 'guruJadwalKelas', 'studentKelas', 'catatanWaliKelasSelect'
       ];
 
       dropdownIds.forEach(id => {
@@ -9367,7 +9367,7 @@
         }
         // Jika user adalah Wali Kelas, batasi kelas input bimbingan (absen, kondisi, laporan, nilai) ke kelasnya sendiri
         if (appState.user && appState.user.role === "Wali Kelas" && appState.user.waliKelasClass) {
-          if (['absenKelas', 'kondisiKelas', 'laporanKelas', 'nilaiKelas'].includes(id)) {
+          if (['absenKelas', 'kondisiKelas', 'laporanKelas', 'nilaiKelas', 'catatanWaliKelasSelect'].includes(id)) {
             allowedClasses = [appState.user.waliKelasClass];
             if (id === 'absenKelas') {
               // Tambahkan kelas mapel pilihan wali kelas dari data wakasek
@@ -13320,7 +13320,6 @@
       }
     }
 
-    // ==================== WALI KELAS: CATATAN UNTUK GURU WALI ====================
     function populateCatatanWaliSiswaDropdown() {
       const kelas = document.getElementById('catatanWaliKelasSelect').value;
       const selectNama = document.getElementById('catatanWaliSiswaSelect');
@@ -13330,10 +13329,8 @@
       
       if (!kelas) return;
       
-      const students = appState.studentList || [];
-      const classStudents = students.filter(s => s.kelas && s.kelas.toUpperCase() === kelas.toUpperCase());
-      
-      const sortedNames = [...new Set(classStudents.map(s => s.namaSiswa))].sort((a, b) => a.localeCompare(b));
+      const studentNames = getStudentsForClass(kelas);
+      const sortedNames = [...studentNames].sort((a, b) => a.localeCompare(b));
       
       sortedNames.forEach(name => {
         const opt = document.createElement('option');
@@ -13444,75 +13441,99 @@
 
     // ==================== KEPALA SEKOLAH: KEPATUHAN PENGISIAN JURNAL GURU ====================
     function getTeacherJurnalCompliance() {
-      const schedules = appState.jadwalList || [];
-      const journals = appState.jurnalList || [];
-      const teachers = appState.teacherList || [];
+      var schedules = appState.jadwalList || [];
+      var journals = appState.jurnalList || [];
+      var teachers = appState.teacherList || [];
       
-      const weeklySchedCount = {};
-      schedules.forEach(s => {
-        if (s.guru) {
-          const cleanName = cleanTeacherNameForMatching(s.guru);
+      var weeklySchedCount = {};
+      for (var i = 0; i < schedules.length; i++) {
+        var s = schedules[i];
+        if (s && s.guru) {
+          var cleanName = cleanTeacherNameForMatching(s.guru);
           weeklySchedCount[cleanName] = (weeklySchedCount[cleanName] || 0) + 1;
         }
-      });
+      }
       
-      const journalCount = {};
-      const thirtyDaysAgo = new Date();
+      var journalCount = {};
+      var thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       
-      journals.forEach(j => {
-        if (j.guru) {
-          const cleanName = cleanTeacherNameForMatching(j.guru);
-          let dateOk = true;
+      for (var i = 0; i < journals.length; i++) {
+        var j = journals[i];
+        if (j && j.guru) {
+          var cleanName = cleanTeacherNameForMatching(j.guru);
+          var dateOk = true;
           if (j.tanggal) {
-            const jDate = new Date(j.tanggal);
-            if (jDate < thirtyDaysAgo) dateOk = false;
+            var jDate = new Date(j.tanggal);
+            if (!isNaN(jDate.getTime())) {
+              if (jDate < thirtyDaysAgo) dateOk = false;
+            }
           }
           if (dateOk) {
             journalCount[cleanName] = (journalCount[cleanName] || 0) + 1;
           }
         }
-      });
-      
-      const totalRecentJournals = Object.values(journalCount).reduce((a, b) => a + b, 0);
-      const useAllTime = totalRecentJournals < 10;
-      
-      if (useAllTime) {
-        Object.keys(journalCount).forEach(k => delete journalCount[k]);
-        journals.forEach(j => {
-          if (j.guru) {
-            const cleanName = cleanTeacherNameForMatching(j.guru);
-            journalCount[cleanName] = (journalCount[cleanName] || 0) + 1;
-          }
-        });
       }
       
-      let elapsedWeeks = 4;
+      var totalRecentJournals = 0;
+      for (var k in journalCount) {
+        if (journalCount.hasOwnProperty(k)) {
+          totalRecentJournals += journalCount[k];
+        }
+      }
+      
+      var useAllTime = totalRecentJournals < 10;
+      
+      if (useAllTime) {
+        journalCount = {};
+        for (var i = 0; i < journals.length; i++) {
+          var j = journals[i];
+          if (j && j.guru) {
+            var cleanName = cleanTeacherNameForMatching(j.guru);
+            journalCount[cleanName] = (journalCount[cleanName] || 0) + 1;
+          }
+        }
+      }
+      
+      var elapsedWeeks = 4;
       if (useAllTime && journals.length > 0) {
-        const dates = journals.map(j => new Date(j.tanggal)).filter(d => !isNaN(d));
-        if (dates.length > 0) {
-          const minDate = new Date(Math.min.apply(null, dates));
-          const maxDate = new Date(Math.max.apply(null, dates));
-          const diffTime = Math.abs(maxDate - minDate);
-          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        var minTime = Infinity;
+        var maxTime = -Infinity;
+        for (var i = 0; i < journals.length; i++) {
+          var j = journals[i];
+          if (j && j.tanggal) {
+            var jDate = new Date(j.tanggal);
+            var t = jDate.getTime();
+            if (!isNaN(t)) {
+              if (t < minTime) minTime = t;
+              if (t > maxTime) maxTime = t;
+            }
+          }
+        }
+        
+        if (minTime !== Infinity && maxTime !== -Infinity) {
+          var diffTime = Math.abs(maxTime - minTime);
+          var diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
           elapsedWeeks = Math.max(1, Math.ceil(diffDays / 7));
         }
       }
       
-      let totalTeachingTeachers = 0;
-      let lowComplianceTeachers = 0;
-      const teacherDetails = [];
+      var totalTeachingTeachers = 0;
+      var lowComplianceTeachers = 0;
+      var teacherDetails = [];
       
-      teachers.forEach(t => {
-        const cleanName = cleanTeacherNameForMatching(t.nama);
-        const scheds = weeklySchedCount[cleanName] || 0;
+      for (var i = 0; i < teachers.length; i++) {
+        var t = teachers[i];
+        if (!t) continue;
+        var cleanName = cleanTeacherNameForMatching(t.nama);
+        var scheds = weeklySchedCount[cleanName] || 0;
         if (scheds > 0) {
           totalTeachingTeachers++;
-          const filled = journalCount[cleanName] || 0;
-          const expected = scheds * elapsedWeeks;
-          const compliance = expected > 0 ? Math.min(100, Math.round((filled / expected) * 100)) : 0;
+          var filled = journalCount[cleanName] || 0;
+          var expected = scheds * elapsedWeeks;
+          var compliance = expected > 0 ? Math.min(100, Math.round((filled / expected) * 100)) : 0;
           
-          const isLow = compliance < 60;
+          var isLow = compliance < 60;
           if (isLow) {
             lowComplianceTeachers++;
           }
@@ -13527,9 +13548,9 @@
             isLow: isLow
           });
         }
-      });
+      }
       
-      const percentageLow = totalTeachingTeachers > 0 ? Math.round((lowComplianceTeachers / totalTeachingTeachers) * 100) : 0;
+      var percentageLow = totalTeachingTeachers > 0 ? Math.round((lowComplianceTeachers / totalTeachingTeachers) * 100) : 0;
       return {
         percentageLow: percentageLow,
         totalTeachingTeachers: totalTeachingTeachers,
@@ -13867,7 +13888,7 @@
 
     function cleanTeacherNameForMatching(name) {
       if (!name) return "";
-      return name.toLowerCase()
+      return String(name).toLowerCase()
         .replace(/^(bu|pak|drs|dra|h\.|hj\.)\s+/gi, '')
         .replace(/,\s*(s\.pd\.|m\.pd\.|m\.m\.|s\.kom\.|s\.t\.|s\.si\.|m\.si\.|ph\.d\.|dr\.|s\.pd|m\.pd|m\.m|s\.kom|s\.t|s\.si|m\.si|ph\.d|dr)/gi, '')
         .replace(/\(.*\)/g, '')
