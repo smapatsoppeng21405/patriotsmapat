@@ -3325,6 +3325,7 @@
                   <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Belum ada catatan kondisi siswa.</td></tr>
                 </tbody>
               </table>
+            </div>
           </div>
         </div>
 
@@ -4292,6 +4293,17 @@
   <script>
     window.onerror = function(message, source, lineno, colno, error) {
       alert("GLOBAL ERROR:\n" + message + "\nSource: " + source + "\nLine: " + lineno + "\nCol: " + colno + "\nStack: " + (error ? error.stack : ""));
+      try {
+        const errDiv = document.createElement('div');
+        errDiv.style.cssText = 'position:fixed; top:0; left:0; width:100%; background:#f43f5e; color:#fff; padding:1.5rem; z-index:999999; font-family:monospace; font-size:14px; border-bottom:4px solid #be123c; box-shadow:0 10px 15px -3px rgba(0,0,0,0.5); overflow-y:auto; max-height:50vh;';
+        errDiv.innerHTML = '<strong>Aplikasi Mengalami Kendala (Crash)</strong><br><br>' +
+          '<strong>Pesan:</strong> ' + message + '<br>' +
+          '<strong>Berkas:</strong> ' + source + '<br>' +
+          '<strong>Baris/Kolom:</strong> ' + lineno + ':' + colno + '<br><br>' +
+          '<strong>Stack Trace:</strong><pre style="white-space:pre-wrap; margin-top:0.5rem; background:rgba(0,0,0,0.2); padding:1rem; border-radius:4px;">' + (error ? error.stack : "") + '</pre>' +
+          '<button onclick="this.parentElement.remove()" style="margin-top:1rem; padding:0.5rem 1rem; background:#fff; color:#f43f5e; border:none; font-weight:bold; cursor:pointer; border-radius:4px;">Tutup</button>';
+        document.body.appendChild(errDiv);
+      } catch(e) {}
       return false;
     };
     // ==================== CONFIGURATIONS STORAGE ====================
@@ -7373,6 +7385,7 @@
         appState.siswaGuruWaliList = data.siswaGuruWaliList || [];
         appState.jurnal7KAIHList = data.jurnal7KAIHList || [];
         appState.studentList = data.studentList || [];
+        appState.catatanWaliKelasList = data.catatanWaliKelasList || [];
         appState.kelasMapelPilihanList = data.kelasMapelPilihanList || [];
         appState.sesiList = data.sesiList || [];
         
@@ -7389,6 +7402,7 @@
         safeLocalStorageSetItem(`cache_siswagw_${appState.user.role}`, JSON.stringify(data.siswaGuruWaliList || []));
         safeLocalStorageSetItem(`cache_jurnal7kaih_${appState.user.role}`, JSON.stringify(data.jurnal7KAIHList || []));
         safeLocalStorageSetItem('cache_students', JSON.stringify(data.studentList || []));
+        safeLocalStorageSetItem(`cache_catatanwali_${appState.user.role}`, JSON.stringify(data.catatanWaliKelasList || []));
         safeLocalStorageSetItem(`cache_kelas_mapel_pilihan_${appState.user.role}`, JSON.stringify(data.kelasMapelPilihanList || []));
         safeLocalStorageSetItem('cache_sesi', JSON.stringify(data.sesiList || []));
         
@@ -7424,6 +7438,7 @@
       appState.siswaGuruWaliList = JSON.parse(localStorage.getItem(`cache_siswagw_${appState.user.role}`)) || [];
       appState.jurnal7KAIHList = JSON.parse(localStorage.getItem(`cache_jurnal7kaih_${appState.user.role}`)) || [];
       appState.studentList = JSON.parse(localStorage.getItem('cache_students')) || [];
+      appState.catatanWaliKelasList = JSON.parse(localStorage.getItem(`cache_catatanwali_${appState.user.role}`)) || [];
       appState.kelasMapelPilihanList = JSON.parse(localStorage.getItem(`cache_kelas_mapel_pilihan_${appState.user.role}`)) || [];
       appState.sesiList = JSON.parse(localStorage.getItem('cache_sesi')) || [];
       
