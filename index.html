@@ -8060,7 +8060,9 @@
         const parts = item.sesi.toString().split(',').map(s => s.trim());
         parts.forEach(part => {
           document.querySelectorAll(`#jurnalSesiCheckboxes input[type="checkbox"]`).forEach(cb => {
-            if (cb.value === part) {
+            const cleanCbVal = cb.value.toString().replace(/\D/g, '').trim();
+            const cleanPart = part.toString().replace(/\D/g, '').trim();
+            if (cb.value === part || (cleanCbVal && cleanCbVal === cleanPart)) {
               cb.checked = true;
             }
           });
@@ -10848,7 +10850,9 @@
         const parts = item.jamKe.toString().split(',').map(s => s.trim());
         parts.forEach(part => {
           document.querySelectorAll(`#guruJadwalSesiCheckboxes input[type="checkbox"]`).forEach(cb => {
-            if (cb.value === part) {
+            const cleanCbVal = cb.value.toString().replace(/\D/g, '').trim();
+            const cleanPart = part.toString().replace(/\D/g, '').trim();
+            if (cb.value === part || (cleanCbVal && cleanCbVal === cleanPart)) {
               cb.checked = true;
             }
           });
