@@ -31,7 +31,8 @@ function initSheets() {
     "Jurnal7KAIH": ["ID", "Tanggal", "NIS", "NamaSiswa", "BangunPagi", "Beribadah", "Berolahraga", "MakanSehat", "GemarBelajar", "Bermasyarakat", "TidurCepat"],
     "CatatanBimbingan": ["ID", "Tanggal", "GuruWali", "NamaSiswa", "CatatanPerkembangan"],
     "KelasMapelPilihan": ["ID", "GuruEmail", "NamaKelas", "Tingkatan", "NamaSiswa", "NIS"],
-    "Sesi": ["ID", "NamaSesi", "JamMulai", "JamSelesai"]
+    "Sesi": ["ID", "NamaSesi", "JamMulai", "JamSelesai"],
+    "CatatanWaliKelas": ["ID", "Tanggal", "WaliKelas", "Kelas", "NamaSiswa", "Catatan"]
   };
   
   for (var name in sheetsDef) {
@@ -299,6 +300,14 @@ function doPost(e) {
         response = { status: "success", data: deleteCatatanBimbingan(payload.id) };
         break;
         
+      case "addCatatanWaliKelas":
+        response = { status: "success", data: addCatatanWaliKelas(payload) };
+        break;
+        
+      case "deleteCatatanWaliKelas":
+        response = { status: "success", data: deleteCatatanWaliKelas(payload.id) };
+        break;
+        
       case "addSiswaMapelPilihan":
         response = { status: "success", data: addSiswaMapelPilihan(payload) };
         break;
@@ -391,6 +400,7 @@ function getDashboard(role, email, nama, waliKelasClass) {
   var sheetCatatanBimbingan = ss.getSheetByName("CatatanBimbingan");
   var sheetSiswa = ss.getSheetByName("Siswa");
   var sheetSesi = ss.getSheetByName("Sesi");
+  var sheetCatatanWali = ss.getSheetByName("CatatanWaliKelas");
   
   var jurnalRaw = sheetJurnal.getDataRange().getValues();
   var perangkatRaw = sheetPerangkat.getDataRange().getValues();
@@ -404,6 +414,7 @@ function getDashboard(role, email, nama, waliKelasClass) {
   var catatanBimbinganRaw = (sheetCatatanBimbingan && sheetCatatanBimbingan.getLastRow() > 0) ? sheetCatatanBimbingan.getDataRange().getValues() : [["ID", "Tanggal", "GuruWali", "NamaSiswa", "CatatanPerkembangan"]];
   var siswaRaw = (sheetSiswa && sheetSiswa.getLastRow() > 0) ? sheetSiswa.getDataRange().getValues() : [["ID", "NIS", "NamaSiswa", "Kelas"]];
   var sesiRaw = (sheetSesi && sheetSesi.getLastRow() > 0) ? sheetSesi.getDataRange().getValues() : [["ID", "NamaSesi", "JamMulai", "JamSelesai"]];
+  var catatanWaliRaw = (sheetCatatanWali && sheetCatatanWali.getLastRow() > 0) ? sheetCatatanWali.getDataRange().getValues() : [["ID", "Tanggal", "WaliKelas", "Kelas", "NamaSiswa", "Catatan"]];
   
   var result = {
     role: role,
@@ -418,6 +429,7 @@ function getDashboard(role, email, nama, waliKelasClass) {
     siswaGuruWaliList: [],
     jurnal7KAIHList: [],
     catatanBimbinganList: [],
+    catatanWaliKelasList: [],
     studentList: [],
     sesiList: []
   };
@@ -581,6 +593,19 @@ function getDashboard(role, email, nama, waliKelasClass) {
     });
   }
 
+  // Format Catatan Wali Kelas list
+  for (var i = 1; i < catatanWaliRaw.length; i++) {
+    var row = catatanWaliRaw[i];
+    result.catatanWaliKelasList.push({
+      id: row[0],
+      tanggal: row[1],
+      waliKelas: row[2],
+      kelas: row[3],
+      namaSiswa: row[4],
+      catatan: row[5]
+    });
+  }
+
   // Format Student master list
   for (var i = 1; i < siswaRaw.length; i++) {
     var row = siswaRaw[i];
@@ -603,6 +628,7 @@ function getDashboard(role, email, nama, waliKelasClass) {
   result.siswaGuruWaliList.reverse();
   result.jurnal7KAIHList.reverse();
   result.catatanBimbinganList.reverse();
+  result.catatanWaliKelasList.reverse();
   result.studentList.reverse();
 
   // Auto-merge missing students into studentList from other lists to prevent missing student names in Guru account
@@ -768,6 +794,7 @@ function getDashboard(role, email, nama, waliKelasClass) {
     result.kondisiSiswaList = [];
     result.siswaGuruWaliList = result.siswaGuruWaliList; // Do not clear, so Guru can use as fallback for student names
     result.jurnal7KAIHList = [];
+    result.catatanWaliKelasList = [];
   }
   else if (role === "Wali Kelas") {
     var myRekap = result.rekapAbsenList.filter(function(ra) {
@@ -799,6 +826,9 @@ function getDashboard(role, email, nama, waliKelasClass) {
     result.kondisiSiswaList = [];
     result.siswaGuruWaliList = [];
     result.jurnal7KAIHList = [];
+    result.catatanWaliKelasList = result.catatanWaliKelasList.filter(function(cw) {
+      return cw.waliKelas.toLowerCase() === nama.toLowerCase();
+    });
   }
   else if (role === "Guru Wali") {
     var myStudents = result.siswaGuruWaliList.filter(function(s) {
@@ -833,8 +863,17 @@ function getDashboard(role, email, nama, waliKelasClass) {
     result.perangkatList = [];
     result.nilaiList = [];
     result.laporanWaliList = [];
-    result.rekapAbsenList = [];
     result.kondisiSiswaList = [];
+    
+    var myRekap = result.rekapAbsenList.filter(function(ra) {
+      return ra.namaSiswa && myStudentNamesList.indexOf(ra.namaSiswa.toLowerCase().trim()) !== -1;
+    });
+    result.rekapAbsenList = myRekap;
+    
+    var myCatatanWali = result.catatanWaliKelasList.filter(function(cw) {
+      return cw.namaSiswa && myStudentNamesList.indexOf(cw.namaSiswa.toLowerCase().trim()) !== -1;
+    });
+    result.catatanWaliKelasList = myCatatanWali;
   }
   else if (role === "Kepala Sekolah") {
     var totalGuru = sheetUsers.getDataRange().getValues().length - 1;
@@ -887,6 +926,7 @@ function getDashboard(role, email, nama, waliKelasClass) {
     result.laporanWaliList = [];
     result.rekapAbsenList = [];
     result.kondisiSiswaList = [];
+    result.catatanWaliKelasList = [];
   }
   else if (role === "Tenaga Kependidikan") {
     var totalGuru = sheetUsers.getDataRange().getValues().length - 1;
@@ -912,6 +952,7 @@ function getDashboard(role, email, nama, waliKelasClass) {
       avgNilaiSekolah: avgNilai,
       totalLaporanWali: result.laporanWaliList.length
     };
+    result.catatanWaliKelasList = [];
   }
   
   return result;
@@ -1970,4 +2011,42 @@ function deleteSesi(id) {
     }
   }
   throw new Error("Sesi pelajaran tidak ditemukan.");
+}
+
+// 24. Tambah Catatan Wali Kelas untuk Guru Wali
+function addCatatanWaliKelas(payload) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("CatatanWaliKelas");
+  if (!sheet) {
+    sheet = ss.insertSheet("CatatanWaliKelas");
+    sheet.appendRow(["ID", "Tanggal", "WaliKelas", "Kelas", "NamaSiswa", "Catatan"]);
+  }
+  
+  var id = payload.id || "CWK-" + new Date().getTime() + "-" + Math.floor(Math.random() * 1000);
+  var tanggal = new Date().toISOString().substring(0, 10);
+  var waliKelas = payload.waliKelas || payload.currentUserName || "";
+  var kelas = payload.kelas || "";
+  var namaSiswa = payload.namaSiswa || "";
+  var catatan = payload.catatan || "";
+  
+  sheet.appendRow([id, tanggal, waliKelas, kelas, namaSiswa, catatan]);
+  SpreadsheetApp.flush();
+  return { id: id, success: true };
+}
+
+// 25. Hapus Catatan Wali Kelas
+function deleteCatatanWaliKelas(id) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("CatatanWaliKelas");
+  if (!sheet) throw new Error("Sheet CatatanWaliKelas tidak ditemukan.");
+  
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0].toString() === id.toString()) {
+      sheet.deleteRow(i + 1);
+      SpreadsheetApp.flush();
+      return { success: true };
+    }
+  }
+  throw new Error("Catatan Wali Kelas tidak ditemukan.");
 }

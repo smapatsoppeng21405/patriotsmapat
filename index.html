@@ -3325,6 +3325,65 @@
                   <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Belum ada catatan kondisi siswa.</td></tr>
                 </tbody>
               </table>
+          </div>
+        </div>
+
+        <!-- WALI KELAS: CATATAN UNTUK GURU WALI -->
+        <div id="pane-walikelas-catatanguruwali" class="view-pane">
+          <div class="card glass-effect" style="max-width: 650px; margin: 0 auto 2rem;">
+            <div class="card-title">Kirim Catatan untuk Guru Wali</div>
+            <form id="formCatatanWaliKelas" onsubmit="submitCatatanWaliForm(event)">
+              <div class="form-grid">
+                <div class="form-group" id="catatanWaliKelasGroup">
+                  <label for="catatanWaliKelasSelect">Kelas Bimbingan</label>
+                  <select id="catatanWaliKelasSelect" class="filter-control" style="padding: 0.85rem 1rem;" required onchange="populateCatatanWaliSiswaDropdown()">
+                    <option value="">Pilih Kelas</option>
+                    <option value="10-A">10-A</option>
+                    <option value="10-B">10-B</option>
+                    <option value="11-A">11-A</option>
+                    <option value="11-B">11-B</option>
+                    <option value="12-A">12-A</option>
+                    <option value="12-B">12-B</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="catatanWaliSiswaSelect">Nama Siswa</label>
+                  <select id="catatanWaliSiswaSelect" class="filter-control" style="padding: 0.85rem 1rem;" required>
+                    <option value="">Pilih Siswa (Pilih Kelas Dulu)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-top: 1rem;">
+                <label for="catatanWaliIsi">Catatan untuk Guru Wali</label>
+                <textarea id="catatanWaliIsi" class="form-control" style="padding-left: 1rem; min-height: 120px;" placeholder="Tuliskan catatan khusus atau perkembangan siswa yang perlu diketahui oleh Guru Wali..." required></textarea>
+              </div>
+
+              <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+                <i class="fa-solid fa-paper-plane"></i> Kirim Catatan ke Guru Wali
+              </button>
+            </form>
+          </div>
+
+          <div class="card glass-effect">
+            <div class="card-title">
+              <span>Riwayat Catatan untuk Guru Wali</span>
+            </div>
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Tanggal</th>
+                    <th>Nama Siswa</th>
+                    <th>Kelas</th>
+                    <th>Catatan Anda</th>
+                    <th>Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="wk-catatan-wali-table-body">
+                  <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Belum ada catatan dikirim.</td></tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -3384,11 +3443,12 @@
                     <th>NIS</th>
                     <th>Nama Siswa</th>
                     <th>Kelas</th>
+                    <th>Kehadiran</th>
                     <th>Aksi</th>
                   </tr>
                 </thead>
                 <tbody id="gw-perwalian-table-body">
-                  <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Belum ada data siswa perwalian.</td></tr>
+                  <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Belum ada data siswa perwalian.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -3422,6 +3482,27 @@
                 <i class="fa-solid fa-paper-plane"></i> Kirim Laporan Bimbingan
               </button>
             </form>
+          </div>
+
+          <div class="card glass-effect" style="margin-bottom: 2rem;">
+            <div class="card-title">
+              <span>Catatan dari Wali Kelas untuk Siswa Bimbingan</span>
+            </div>
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Tanggal</th>
+                    <th>Nama Siswa</th>
+                    <th>Wali Kelas</th>
+                    <th>Catatan dari Wali Kelas</th>
+                  </tr>
+                </thead>
+                <tbody id="gw-catatan-walikelas-table-body">
+                  <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Belum ada catatan dari Wali Kelas.</td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <div class="card glass-effect" style="margin-bottom: 2rem;">
@@ -3539,6 +3620,16 @@
                 <i class="fa-solid fa-heart-pulse"></i>
               </div>
             </div>
+
+            <div class="stat-card glass-effect">
+              <div class="stat-info">
+                <h3>Guru Jarang Isi Jurnal</h3>
+                <div class="stat-number" id="ks-stat-guru-jarang">0%</div>
+              </div>
+              <div class="stat-icon" style="background: rgba(239, 68, 68, 0.1); color: var(--danger);">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+              </div>
+            </div>
           </div>
 
           <div class="charts-row">
@@ -3598,6 +3689,33 @@
                 </thead>
                 <tbody id="ks-dashboard-tidak-berjalan-table-body">
                   <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Memuat data...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- GURU JARANG MENGISI JURNAL -->
+          <div class="card glass-effect" style="margin-top: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
+              <div class="card-title" style="margin-bottom: 0;">Laporan Kepatuhan Pengisian Jurnal Mengajar Guru</div>
+              <span class="badge badge-warning" id="ks-compliance-alert-count" style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.15); color: var(--warning); font-size: 0.85rem; padding: 0.35rem 0.65rem;">0 Guru Kurang Aktif</span>
+            </div>
+            <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1.5rem; line-height:1.5;">
+              Menampilkan tingkat kepatuhan pengisian jurnal mengajar guru berdasarkan jumlah jadwal tatap muka mingguan dan jurnal yang telah diisi. Guru dengan kepatuhan &lt; 60% ditandai sebagai kurang aktif.
+            </p>
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Nama Guru</th>
+                    <th>Jadwal Mingguan</th>
+                    <th>Jurnal Terisi (Estimasi)</th>
+                    <th>Kepatuhan</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="ks-compliance-table-body">
+                  <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Memuat data kepatuhan...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -5578,7 +5696,8 @@
           { text: "Ringkasan", pane: "pane-walikelas-ringkasan", icon: "fa-house-chimney" },
           { text: "Analisis Nilai", pane: "pane-walikelas-inputnilai", icon: "fa-chart-simple" },
           { text: "Jurnal Bimbingan", pane: "pane-walikelas-jurnal", icon: "fa-book" },
-          { text: "Rekap Absen Siswa", pane: "pane-walikelas-rekapabsen", icon: "fa-calendar-days" }
+          { text: "Rekap Absen Siswa", pane: "pane-walikelas-rekapabsen", icon: "fa-calendar-days" },
+          { text: "Catatan Guru Wali", pane: "pane-walikelas-catatanguruwali", icon: "fa-comment-medical" }
         ];
       } else if (role === "Guru Wali") {
         menuItems = [
@@ -5657,6 +5776,21 @@
         // Auto load students for Wali Kelas Rekap Absen when switching to this pane
         if (paneId === "pane-walikelas-rekapabsen") {
           resetRekapAbsenForm();
+        } else if (paneId === "pane-walikelas-catatanguruwali") {
+          const form = document.getElementById('formCatatanWaliKelas');
+          if (form) form.reset();
+          const selectSiswa = document.getElementById('catatanWaliSiswaSelect');
+          if (selectSiswa) selectSiswa.innerHTML = '<option value="">Pilih Siswa (Pilih Kelas Dulu)</option>';
+          const classSelect = document.getElementById('catatanWaliKelasSelect');
+          if (classSelect) {
+            if (appState.user && appState.user.waliKelasClass) {
+              classSelect.value = appState.user.waliKelasClass;
+              populateCatatanWaliSiswaDropdown();
+            } else {
+              classSelect.value = "";
+            }
+          }
+          renderWaliKelasCatatanHistory();
         }
         
         // Update Judul Halaman di Topbar Header
@@ -5678,6 +5812,7 @@
         else if (paneId.includes("jadwal") && paneId.includes("guru")) pageTitle = "Jadwal Mengajar Saya";
         else if (paneId === "pane-walikelas-rekapabsen") pageTitle = "Rekap Absen Siswa Bulanan";
         else if (paneId === "pane-walikelas-kondisisiswa") pageTitle = "Kondisi Peserta Didik Bulanan";
+        else if (paneId === "pane-walikelas-catatanguruwali") pageTitle = "Catatan Wali Kelas untuk Guru Wali";
         else if (paneId === "pane-wakasek-rekapabsen") pageTitle = "Monitoring Rekap Absensi Siswa";
         else if (paneId === "pane-wakasek-kondisisiswa") pageTitle = "Monitoring Kondisi Peserta Didik";
         else if (paneId === "pane-guruwali-ringkasan") pageTitle = "Ringkasan Dasbor Guru Wali";
@@ -7422,6 +7557,7 @@
         renderWaliKelasJurnalTable();
         renderWaliKelasRekapAbsenTable();
         renderWaliKelasKondisiSiswaTable();
+        renderWaliKelasCatatanHistory();
         resetRekapAbsenForm();
         
         // Populate names of students in that class for conditions dropdown
@@ -7443,6 +7579,7 @@
         populateGuruWaliSiswaDropdown();
         renderGuruWaliJurnal7KAIHTable();
         renderGuruWaliCatatanBimbinganTable();
+        renderGuruWaliCatatanWaliTable();
         if (role === "Guru Wali") {
           renderGuruWaliMyStudentsTable();
         }
@@ -7465,6 +7602,7 @@
         }
         renderKepalaKbmExecution();
         renderDashboardTidakBerjalan('ks');
+        renderKepalaTeacherCompliance();
 
         // Render all monitoring tables
         renderKepalaJurnalTable(appState.jurnalList);
@@ -13020,6 +13158,31 @@
     }
 
     // ==================== GURU WALI: CUSTOM STUDENT MANAGEMENT ====================
+    function calculateAttendancePercentage(studentName, studentClass) {
+      const rekap = appState.rekapAbsenList || [];
+      let totalHadir = 0;
+      let totalSakit = 0;
+      let totalIzin = 0;
+      let totalAlpa = 0;
+      let found = false;
+
+      rekap.forEach(ra => {
+        if (ra.namaSiswa && ra.namaSiswa.toLowerCase().trim() === studentName.toLowerCase().trim()) {
+          totalHadir += parseInt(ra.hadir) || 0;
+          totalSakit += parseInt(ra.sakit) || 0;
+          totalIzin += parseInt(ra.izin) || 0;
+          totalAlpa += parseInt(ra.alpa) || 0;
+          found = true;
+        }
+      });
+
+      if (!found) return "-";
+      const totalDays = totalHadir + totalSakit + totalIzin + totalAlpa;
+      if (totalDays === 0) return "0%";
+      const pct = (totalHadir / totalDays) * 100;
+      return pct.toFixed(1) + "%";
+    }
+
     function renderGuruWaliMyStudentsTable() {
       const tbody = document.getElementById('gw-perwalian-table-body');
       if (!tbody) return;
@@ -13027,16 +13190,18 @@
       
       const list = appState.siswaGuruWaliList || [];
       if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Belum ada data siswa perwalian.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Belum ada data siswa perwalian.</td></tr>`;
         return;
       }
       
       list.forEach(item => {
         const tr = document.createElement('tr');
+        const pct = calculateAttendancePercentage(item.namaSiswa, item.kelas);
         tr.innerHTML = `
           <td style="font-family: monospace;">${item.nis || '-'}</td>
           <td style="font-weight:600;">${item.namaSiswa}</td>
           <td><span class="badge badge-primary">${item.kelas}</span></td>
+          <td><span class="badge badge-success" style="font-weight: 700;">${pct}</span></td>
           <td>
             <button class="btn btn-danger" onclick="deleteGuruWaliStudent('${item.id}')" style="padding:0.25rem 0.5rem; font-size:0.75rem;"><i class="fa-solid fa-trash"></i></button>
           </td>
@@ -13153,6 +13318,279 @@
       } finally {
         showLoading(false);
       }
+    }
+
+    // ==================== WALI KELAS: CATATAN UNTUK GURU WALI ====================
+    function populateCatatanWaliSiswaDropdown() {
+      const kelas = document.getElementById('catatanWaliKelasSelect').value;
+      const selectNama = document.getElementById('catatanWaliSiswaSelect');
+      if (!selectNama) return;
+      
+      selectNama.innerHTML = '<option value="">Pilih Siswa</option>';
+      
+      if (!kelas) return;
+      
+      const students = appState.studentList || [];
+      const classStudents = students.filter(s => s.kelas && s.kelas.toUpperCase() === kelas.toUpperCase());
+      
+      const sortedNames = [...new Set(classStudents.map(s => s.namaSiswa))].sort((a, b) => a.localeCompare(b));
+      
+      sortedNames.forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        selectNama.appendChild(opt);
+      });
+    }
+
+    async function submitCatatanWaliForm(e) {
+      e.preventDefault();
+      const kelas = document.getElementById('catatanWaliKelasSelect').value;
+      const namaSiswa = document.getElementById('catatanWaliSiswaSelect').value;
+      const catatan = document.getElementById('catatanWaliIsi').value;
+      const waliKelas = appState.user.nama;
+      
+      if (!kelas || !namaSiswa || !catatan) {
+        showToast("Mohon lengkapi semua field!", "danger");
+        return;
+      }
+      
+      showLoading(true, "Mengirim catatan untuk Guru Wali...");
+      try {
+        await callApi("addCatatanWaliKelas", {
+          id: "",
+          kelas: kelas,
+          namaSiswa: namaSiswa,
+          catatan: catatan,
+          waliKelas: waliKelas
+        });
+        showToast("Catatan berhasil dikirim ke Guru Wali.");
+        document.getElementById('catatanWaliIsi').value = "";
+        loadDashboardData();
+      } catch (err) {
+        showToast("Gagal menyimpan catatan: " + err.message, "danger");
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    function renderWaliKelasCatatanHistory() {
+      const tbody = document.getElementById('wk-catatan-wali-table-body');
+      if (!tbody) return;
+      tbody.innerHTML = "";
+      
+      const list = appState.catatanWaliKelasList || [];
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Belum ada catatan dikirim.</td></tr>`;
+        return;
+      }
+      
+      list.forEach(item => {
+        const tr = document.createElement('tr');
+        const formattedDate = new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+        tr.innerHTML = `
+          <td style="white-space: nowrap;">${formattedDate}</td>
+          <td style="font-weight: 600;">${item.namaSiswa}</td>
+          <td><span class="badge badge-primary">${item.kelas}</span></td>
+          <td>${item.catatan}</td>
+          <td>
+            <button class="btn btn-danger" onclick="deleteCatatanWali('${item.id}')" style="padding:0.25rem 0.5rem; font-size:0.75rem;"><i class="fa-solid fa-trash"></i></button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function deleteCatatanWali(id) {
+      const confirmed = await showCustomConfirm("Hapus Catatan Wali Kelas", "Apakah Anda yakin ingin menghapus catatan ini?", "Ya, Hapus", true);
+      if (!confirmed) return;
+      
+      showLoading(true, "Menghapus catatan...");
+      try {
+        await callApi("deleteCatatanWaliKelas", { id: id });
+        showToast("Catatan berhasil dihapus.");
+        loadDashboardData();
+      } catch (err) {
+        showToast("Gagal menghapus catatan: " + err.message, "danger");
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    // ==================== GURU WALI: CATATAN DARI WALI KELAS ====================
+    function renderGuruWaliCatatanWaliTable() {
+      const tbody = document.getElementById('gw-catatan-walikelas-table-body');
+      if (!tbody) return;
+      tbody.innerHTML = "";
+      
+      const list = appState.catatanWaliKelasList || [];
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Belum ada catatan dari Wali Kelas.</td></tr>`;
+        return;
+      }
+      
+      list.forEach(item => {
+        const tr = document.createElement('tr');
+        const formattedDate = new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+        tr.innerHTML = `
+          <td style="white-space: nowrap;">${formattedDate}</td>
+          <td style="font-weight: 600;">${item.namaSiswa}</td>
+          <td>${item.waliKelas} (${item.kelas})</td>
+          <td>${item.catatan}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // ==================== KEPALA SEKOLAH: KEPATUHAN PENGISIAN JURNAL GURU ====================
+    function getTeacherJurnalCompliance() {
+      const schedules = appState.jadwalList || [];
+      const journals = appState.jurnalList || [];
+      const teachers = appState.teacherList || [];
+      
+      const weeklySchedCount = {};
+      schedules.forEach(s => {
+        if (s.guru) {
+          const cleanName = cleanTeacherNameForMatching(s.guru);
+          weeklySchedCount[cleanName] = (weeklySchedCount[cleanName] || 0) + 1;
+        }
+      });
+      
+      const journalCount = {};
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      journals.forEach(j => {
+        if (j.guru) {
+          const cleanName = cleanTeacherNameForMatching(j.guru);
+          let dateOk = true;
+          if (j.tanggal) {
+            const jDate = new Date(j.tanggal);
+            if (jDate < thirtyDaysAgo) dateOk = false;
+          }
+          if (dateOk) {
+            journalCount[cleanName] = (journalCount[cleanName] || 0) + 1;
+          }
+        }
+      });
+      
+      const totalRecentJournals = Object.values(journalCount).reduce((a, b) => a + b, 0);
+      const useAllTime = totalRecentJournals < 10;
+      
+      if (useAllTime) {
+        Object.keys(journalCount).forEach(k => delete journalCount[k]);
+        journals.forEach(j => {
+          if (j.guru) {
+            const cleanName = cleanTeacherNameForMatching(j.guru);
+            journalCount[cleanName] = (journalCount[cleanName] || 0) + 1;
+          }
+        });
+      }
+      
+      let elapsedWeeks = 4;
+      if (useAllTime && journals.length > 0) {
+        const dates = journals.map(j => new Date(j.tanggal)).filter(d => !isNaN(d));
+        if (dates.length > 0) {
+          const minDate = new Date(Math.min.apply(null, dates));
+          const maxDate = new Date(Math.max.apply(null, dates));
+          const diffTime = Math.abs(maxDate - minDate);
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          elapsedWeeks = Math.max(1, Math.ceil(diffDays / 7));
+        }
+      }
+      
+      let totalTeachingTeachers = 0;
+      let lowComplianceTeachers = 0;
+      const teacherDetails = [];
+      
+      teachers.forEach(t => {
+        const cleanName = cleanTeacherNameForMatching(t.nama);
+        const scheds = weeklySchedCount[cleanName] || 0;
+        if (scheds > 0) {
+          totalTeachingTeachers++;
+          const filled = journalCount[cleanName] || 0;
+          const expected = scheds * elapsedWeeks;
+          const compliance = expected > 0 ? Math.min(100, Math.round((filled / expected) * 100)) : 0;
+          
+          const isLow = compliance < 60;
+          if (isLow) {
+            lowComplianceTeachers++;
+          }
+          
+          teacherDetails.push({
+            nama: t.nama,
+            email: t.email,
+            schedules: scheds,
+            journalsFilled: filled,
+            expectedJournals: expected,
+            compliance: compliance,
+            isLow: isLow
+          });
+        }
+      });
+      
+      const percentageLow = totalTeachingTeachers > 0 ? Math.round((lowComplianceTeachers / totalTeachingTeachers) * 100) : 0;
+      return {
+        percentageLow: percentageLow,
+        totalTeachingTeachers: totalTeachingTeachers,
+        lowComplianceTeachers: lowComplianceTeachers,
+        teacherDetails: teacherDetails
+      };
+    }
+
+    function renderKepalaTeacherCompliance() {
+      const tbody = document.getElementById('ks-compliance-table-body');
+      const countEl = document.getElementById('ks-compliance-alert-count');
+      const statJarangEl = document.getElementById('ks-stat-guru-jarang');
+      if (!tbody) return;
+      tbody.innerHTML = "";
+      
+      const res = getTeacherJurnalCompliance();
+      
+      if (countEl) {
+        countEl.textContent = `${res.lowComplianceTeachers} Guru Kurang Aktif`;
+      }
+      if (statJarangEl) {
+        statJarangEl.textContent = `${res.percentageLow}%`;
+      }
+      
+      const list = res.teacherDetails || [];
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 1rem;">Tidak ada data kepatuhan mengajar guru.</td></tr>`;
+        return;
+      }
+      
+      list.sort((a, b) => {
+        if (a.isLow !== b.isLow) {
+          return b.isLow ? -1 : 1;
+        }
+        return a.compliance - b.compliance;
+      });
+      
+      list.forEach(item => {
+        const tr = document.createElement('tr');
+        
+        let statusBadge = "";
+        let pctColor = "var(--success)";
+        if (item.compliance < 50) {
+          pctColor = "var(--danger)";
+          statusBadge = `<span class="badge badge-danger" style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.15); color: var(--danger);"><i class="fa-solid fa-circle-xmark"></i> Kurang Aktif</span>`;
+        } else if (item.compliance < 75) {
+          pctColor = "var(--warning)";
+          statusBadge = `<span class="badge badge-warning" style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.15); color: var(--warning);"><i class="fa-solid fa-triangle-exclamation"></i> Cukup Aktif</span>`;
+        } else {
+          statusBadge = `<span class="badge badge-success" style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.15); color: var(--success);"><i class="fa-solid fa-circle-check"></i> Sangat Aktif</span>`;
+        }
+        
+        tr.innerHTML = `
+          <td style="font-weight: 600; color: #cbd5e1;"><i class="fa-regular fa-user" style="color:var(--primary); margin-right:0.25rem;"></i> ${item.nama}</td>
+          <td><span class="badge badge-primary">${item.schedules} Jam/Sesi</span></td>
+          <td>${item.journalsFilled} / ${item.expectedJournals}</td>
+          <td style="font-weight: 700; color: ${pctColor};">${item.compliance}%</td>
+          <td>${statusBadge}</td>
+        `;
+        tbody.appendChild(tr);
+      });
     }
 
     function populateGuruWaliSiswaDropdown() {
