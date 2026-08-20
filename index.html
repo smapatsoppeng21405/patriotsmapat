@@ -8041,8 +8041,11 @@
     }
 
     function editJurnal(id) {
-      const item = appState.jurnalList.find(x => x.id === id);
-      if (!item) return;
+      const item = appState.jurnalList.find(x => x.id && id && x.id.toString() === id.toString());
+      if (!item) {
+        showToast("Jurnal tidak ditemukan!", "warning");
+        return;
+      }
       
       document.getElementById('jurnalId').value = item.id;
       document.getElementById('jurnalTanggal').value = item.tanggal;
@@ -8208,8 +8211,11 @@
     }
 
     function editPerangkat(id) {
-      const item = appState.perangkatList.find(x => x.id === id);
-      if (!item) return;
+      const item = appState.perangkatList.find(x => x.id && id && x.id.toString() === id.toString());
+      if (!item) {
+        showToast("Perangkat ajar tidak ditemukan!", "warning");
+        return;
+      }
       
       document.getElementById('perangkatId').value = item.id;
       document.getElementById('perangkatCatatan').value = item.catatan || "";
@@ -9284,8 +9290,11 @@
 
     // Edit Master Guru
     function editGuruMaster(id) {
-      const item = appState.guruMasterList.find(g => g.id === id);
-      if (!item) return;
+      const item = appState.guruMasterList.find(g => g.id && id && g.id.toString() === id.toString());
+      if (!item) {
+        showToast("Master tugas guru tidak ditemukan!", "warning");
+        return;
+      }
 
       document.getElementById('guruMasterId').value = item.id;
       document.getElementById('guruMasterNama').value = item.guru;
@@ -9810,8 +9819,11 @@
   
       // Edit Akun Guru
       function editTeacher(id) {
-        const item = appState.teacherList.find(t => t.id === id);
-        if (!item) return;
+        const item = appState.teacherList.find(t => t.id && id && t.id.toString() === id.toString());
+        if (!item) {
+          showToast("Akun guru tidak ditemukan!", "warning");
+          return;
+        }
         
         document.getElementById('teacherId').value = item.id;
         document.getElementById('teacherNama').value = item.nama;
@@ -10052,8 +10064,11 @@
     }
 
     function editStudent(id) {
-      const item = appState.studentList.find(s => s.id === id);
-      if (!item) return;
+      const item = appState.studentList.find(s => s.id && id && s.id.toString() === id.toString());
+      if (!item) {
+        showToast("Data siswa tidak ditemukan!", "warning");
+        return;
+      }
       
       document.getElementById('studentId').value = item.id;
       document.getElementById('studentNis').value = item.nis || "";
@@ -10815,8 +10830,11 @@
     }
 
     function editGuruJadwal(id) {
-      const item = appState.guruJadwalList.find(j => j.id === id);
-      if (!item) return;
+      const item = appState.guruJadwalList.find(j => j.id && id && j.id.toString() === id.toString());
+      if (!item) {
+        showToast("Jadwal tidak ditemukan!", "warning");
+        return;
+      }
       
       document.getElementById('guruJadwalId').value = item.id;
       document.getElementById('guruJadwalHari').value = item.hari;
@@ -10844,6 +10862,12 @@
       document.getElementById('guruJadwalMapel').value = item.mapel || "";
       
       document.getElementById('btnCancelEditGuruJadwal').style.display = "inline-block";
+
+      // Scroll the form into view smoothly
+      const formCard = document.getElementById('formGuruJadwal');
+      if (formCard) {
+        formCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
     }
 
     function resetGuruJadwalForm() {
@@ -12702,8 +12726,11 @@
     }
 
     function editSiswaGW(id) {
-      const item = appState.siswaGuruWaliList.find(s => s.id === id);
-      if (!item) return;
+      const item = appState.siswaGuruWaliList.find(s => s.id && id && s.id.toString() === id.toString());
+      if (!item) {
+        showToast("Data siswa guru wali tidak ditemukan!", "warning");
+        return;
+      }
       
       document.getElementById('siswaGWId').value = item.id;
       document.getElementById('siswaGWKelas').value = item.kelas;
@@ -13309,8 +13336,11 @@
     }
 
     function editSesi(id) {
-      const item = appState.sesiList.find(s => s.id === id);
-      if (!item) return;
+      const item = appState.sesiList.find(s => s.id && id && s.id.toString() === id.toString());
+      if (!item) {
+        showToast("Sesi pelajaran tidak ditemukan!", "warning");
+        return;
+      }
       
       document.getElementById('sesiId').value = item.id;
       document.getElementById('sesiNama').value = item.namaSesi;
