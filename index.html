@@ -4290,6 +4290,10 @@
 
   <!-- ==================== JAVA SCRIPT PROGRAM ==================== -->
   <script>
+    window.onerror = function(message, source, lineno, colno, error) {
+      alert("GLOBAL ERROR:\n" + message + "\nSource: " + source + "\nLine: " + lineno + "\nCol: " + colno + "\nStack: " + (error ? error.stack : ""));
+      return false;
+    };
     // ==================== CONFIGURATIONS STORAGE ====================
     
     // 1. GOOGLE FIREBASE REALTIME DATABASE CONFIG (SUPER FAST REAL-TIME STORAGE < 100ms)
@@ -7428,7 +7432,8 @@
 
     // RENDER DATA TO ELEMENT VIEWS
     function renderDashboardData() {
-      const role = appState.user.role;
+      try {
+        const role = appState.user.role;
       
       // Populate all class select dropdowns dynamically
       populateClassDropdowns();
@@ -7616,6 +7621,10 @@
         
         // Render charts
         setTimeout(renderKepalaCharts, 100);
+      }
+      } catch (err) {
+        console.error("Error in renderDashboardData: ", err);
+        alert("Error in renderDashboardData: " + err.message + "\nStack: " + err.stack);
       }
     }
 
@@ -14660,7 +14669,8 @@
     }
 
     function renderKepalaCharts() {
-      if (!appState.user || appState.user.role !== "Kepala Sekolah") return;
+      try {
+        if (!appState.user || appState.user.role !== "Kepala Sekolah") return;
       
       const filterDate = document.getElementById('ks-chart-filter-tanggal')?.value || "";
       const filteredJurnalList = filterDate 
@@ -14884,6 +14894,9 @@
           }
         }
       });
+      } catch (err) {
+        console.error("Error in renderKepalaCharts: ", err);
+      }
     }
 
     // REGISTRASI SERVICE WORKER PWA
