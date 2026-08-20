@@ -6358,15 +6358,26 @@
         }
 
         else if (action === "addJadwal") {
-          const newRef = ref("jadwals").push();
-          await newRef.set({
-            hari: payload.hari,
-            jamKe: payload.jamKe,
-            kelas: payload.kelas,
-            guru: payload.guru,
-            mapel: payload.mapel
-          });
-          return { success: true, id: newRef.key };
+          if (payload.id) {
+            await ref(`jadwals/${payload.id}`).update({
+              hari: payload.hari,
+              jamKe: payload.jamKe,
+              kelas: payload.kelas,
+              guru: payload.guru,
+              mapel: payload.mapel
+            });
+            return { success: true, id: payload.id };
+          } else {
+            const newRef = ref("jadwals").push();
+            await newRef.set({
+              hari: payload.hari,
+              jamKe: payload.jamKe,
+              kelas: payload.kelas,
+              guru: payload.guru,
+              mapel: payload.mapel
+            });
+            return { success: true, id: newRef.key };
+          }
         }
 
         else if (action === "deleteJadwal") {
@@ -7062,15 +7073,26 @@
         }
 
         else if (action === "addJadwal") {
-          const docRef = db.collection("jadwals").doc();
-          await docRef.set({
-            hari: payload.hari,
-            jamKe: payload.jamKe,
-            kelas: payload.kelas,
-            guru: payload.guru,
-            mapel: payload.mapel
-          });
-          return { success: true, id: docRef.id };
+          if (payload.id) {
+            await db.collection("jadwals").doc(payload.id).update({
+              hari: payload.hari,
+              jamKe: payload.jamKe,
+              kelas: payload.kelas,
+              guru: payload.guru,
+              mapel: payload.mapel
+            });
+            return { success: true, id: payload.id };
+          } else {
+            const docRef = db.collection("jadwals").doc();
+            await docRef.set({
+              hari: payload.hari,
+              jamKe: payload.jamKe,
+              kelas: payload.kelas,
+              guru: payload.guru,
+              mapel: payload.mapel
+            });
+            return { success: true, id: docRef.id };
+          }
         }
 
         else if (action === "deleteJadwal") {
@@ -11989,17 +12011,35 @@
 
           else if (action === "addJadwal") {
             const jdRaw = JSON.parse(localStorage.getItem('db_jadwals')) || [];
-            const newJd = {
-              id: "SCH-" + new Date().getTime(),
-              hari: payload.hari,
-              jamKe: payload.jamKe,
-              kelas: payload.kelas,
-              guru: payload.guru,
-              mapel: payload.mapel
-            };
-            jdRaw.unshift(newJd);
-            localStorage.setItem('db_jadwals', JSON.stringify(jdRaw));
-            resolve({ success: true, id: newJd.id });
+            if (payload.id) {
+              const index = jdRaw.findIndex(j => j.id === payload.id);
+              if (index !== -1) {
+                jdRaw[index] = {
+                  id: payload.id,
+                  hari: payload.hari,
+                  jamKe: payload.jamKe,
+                  kelas: payload.kelas,
+                  guru: payload.guru,
+                  mapel: payload.mapel
+                };
+                localStorage.setItem('db_jadwals', JSON.stringify(jdRaw));
+                resolve({ success: true, id: payload.id });
+              } else {
+                reject(new Error("Jadwal tidak ditemukan."));
+              }
+            } else {
+              const newJd = {
+                id: "SCH-" + new Date().getTime(),
+                hari: payload.hari,
+                jamKe: payload.jamKe,
+                kelas: payload.kelas,
+                guru: payload.guru,
+                mapel: payload.mapel
+              };
+              jdRaw.unshift(newJd);
+              localStorage.setItem('db_jadwals', JSON.stringify(jdRaw));
+              resolve({ success: true, id: newJd.id });
+            }
           }
 
           else if (action === "deleteJadwal") {
