@@ -5757,12 +5757,23 @@
       
       // Load default pane pertama
       if (menuItems.length > 0) {
-        switchPane(menuItems[0].pane);
+        let firstPane = menuItems[0].pane;
+        if (appState.user && appState.user.role === "Guru" && (!appState.guruJadwalList || appState.guruJadwalList.length === 0)) {
+          firstPane = "pane-guru-jadwal";
+        }
+        switchPane(firstPane);
       }
     }
 
     // SIDEBAR NAVIGATION SWITCH PANE
     function switchPane(paneId, element = null) {
+      // Wajibkan semua guru untuk memasukkan jadwal pelajarannya
+      if (appState.user && appState.user.role === "Guru" && (!appState.guruJadwalList || appState.guruJadwalList.length === 0) && paneId !== "pane-guru-jadwal") {
+        showToast("⚠️ Anda wajib memasukkan jadwal pelajaran Anda terlebih dahulu sebelum menggunakan fitur lain!", "warning");
+        paneId = "pane-guru-jadwal";
+        element = null;
+      }
+      
       // Hapus kelas aktif di nav link
       if (element) {
         document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
@@ -7921,11 +7932,31 @@
         }
       });
       
-      // Bar Chart - Frekuensi Pengisian Jurnal oleh Guru
+      // Bar Chart - Frekuensi Pengisian Jurnal oleh Guru (Hitung semua guru yang terdata)
+      const targetRoles = ["Guru", "Wali Kelas", "Guru Wali", "Wakasek", "Guru BK"];
+      const dbTeachers = (appState.teacherList || []).filter(t => {
+        const roles = (t.role || "").split(",").map(r => r.trim());
+        return roles.some(r => targetRoles.includes(r));
+      });
+
       const guruCounts = {};
+      // Inisialisasi semua guru dari database dengan nilai 0
+      dbTeachers.forEach(t => {
+        guruCounts[t.nama] = 0;
+      });
+
       appState.jurnalList.forEach(j => {
-        const g = j.guru || "Tidak Diketahui";
-        guruCounts[g] = (guruCounts[g] || 0) + 1;
+        const gName = j.guru || "Tidak Diketahui";
+        const tMatch = dbTeachers.find(t => {
+          const gClean = cleanTeacherNameForMatching(gName);
+          const tClean = cleanTeacherNameForMatching(t.nama);
+          return gClean === tClean;
+        });
+        if (tMatch) {
+          guruCounts[tMatch.nama] = (guruCounts[tMatch.nama] || 0) + 1;
+        } else {
+          guruCounts[gName] = (guruCounts[gName] || 0) + 1;
+        }
       });
       const guruLabels = Object.keys(guruCounts);
       const guruData = Object.values(guruCounts);
@@ -13546,32 +13577,36 @@
       var lowComplianceTeachers = 0;
       var teacherDetails = [];
       
+      var targetRoles = ["Guru", "Wali Kelas", "Guru Wali", "Wakasek", "Guru BK"];
       for (var i = 0; i < teachers.length; i++) {
         var t = teachers[i];
         if (!t) continue;
+        var roles = (t.role || "").split(",").map(r => r.trim());
+        var isRealTeacher = roles.some(r => targetRoles.includes(r));
+        if (!isRealTeacher) continue;
+        
         var cleanName = cleanTeacherNameForMatching(t.nama);
         var scheds = weeklySchedCount[cleanName] || 0;
-        if (scheds > 0) {
-          totalTeachingTeachers++;
-          var filled = journalCount[cleanName] || 0;
-          var expected = scheds * elapsedWeeks;
-          var compliance = expected > 0 ? Math.min(100, Math.round((filled / expected) * 100)) : 0;
-          
-          var isLow = compliance < 60;
-          if (isLow) {
-            lowComplianceTeachers++;
-          }
-          
-          teacherDetails.push({
-            nama: t.nama,
-            email: t.email,
-            schedules: scheds,
-            journalsFilled: filled,
-            expectedJournals: expected,
-            compliance: compliance,
-            isLow: isLow
-          });
+        
+        totalTeachingTeachers++;
+        var filled = journalCount[cleanName] || 0;
+        var expected = scheds * elapsedWeeks;
+        var compliance = expected > 0 ? Math.min(100, Math.round((filled / expected) * 100)) : 0;
+        
+        var isLow = compliance < 60 || scheds === 0;
+        if (isLow) {
+          lowComplianceTeachers++;
         }
+        
+        teacherDetails.push({
+          nama: t.nama,
+          email: t.email,
+          schedules: scheds,
+          journalsFilled: filled,
+          expectedJournals: expected,
+          compliance: compliance,
+          isLow: isLow
+        });
       }
       
       var percentageLow = totalTeachingTeachers > 0 ? Math.round((lowComplianceTeachers / totalTeachingTeachers) * 100) : 0;
@@ -13966,12 +14001,29 @@
         }
         return (a.jamKe || "").localeCompare(b.jamKe || "");
       });
-      
+
+      // Hitung semua guru yang terdaftar
+      const targetRoles = ["Guru", "Wali Kelas", "Guru Wali", "Wakasek", "Guru BK"];
+      const dbTeachers = (appState.teacherList || []).filter(t => {
+        const roles = (t.role || "").split(",").map(r => r.trim());
+        return roles.some(r => targetRoles.includes(r));
+      });
+
+      const teachersWithNoSchedule = dbTeachers.filter(t => {
+        const hasAnySchedule = (appState.jadwalList || []).some(sched => {
+          const sClean = cleanTeacherNameForMatching(sched.guru);
+          const tClean = cleanTeacherNameForMatching(t.nama);
+          return sClean === tClean;
+        });
+        return !hasAnySchedule;
+      });
+
+      const totalItemsCount = tidakBerjalanSchedules.length + teachersWithNoSchedule.length;
       if (countEl) {
-        countEl.textContent = `${tidakBerjalanSchedules.length} Jadwal`;
+        countEl.textContent = `${totalItemsCount} Sesi / Guru`;
       }
       
-      if (tidakBerjalanSchedules.length === 0) {
+      if (totalItemsCount === 0) {
         tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 1rem;">Hebat! Semua pembelajaran hari ini sudah berjalan / terisi jurnalnya.</td></tr>`;
         return;
       }
@@ -13985,6 +14037,20 @@
           <td><span class="badge badge-primary">${sched.kelas}</span></td>
           <td style="font-weight: 600; color: #cbd5e1;">${sched.mapel || '-'}</td>
           <td><i class="fa-regular fa-user" style="color:var(--primary); margin-right:0.25rem;"></i> ${sched.guru}</td>
+          <td>${statusBadge}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      teachersWithNoSchedule.forEach(t => {
+        const tr = document.createElement('tr');
+        const statusBadge = `<span class="badge badge-danger" style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.15); color: var(--danger);"><i class="fa-solid fa-circle-xmark"></i> Belum Input Jadwal</span>`;
+        
+        tr.innerHTML = `
+          <td style="font-weight: 600; color: #cbd5e1;">-</td>
+          <td><span class="badge badge-primary">-</span></td>
+          <td style="font-weight: 600; color: #cbd5e1;">-</td>
+          <td><i class="fa-regular fa-user" style="color:var(--primary); margin-right:0.25rem;"></i> ${t.nama}</td>
           <td>${statusBadge}</td>
         `;
         tbody.appendChild(tr);
@@ -14025,20 +14091,28 @@
         return (a.jamKe || "").localeCompare(b.jamKe || "");
       });
       
-      let totalSesi = daySchedules.length;
+      let totalSesi = 0;
       let terlaksanaCount = 0;
       let absenCount = 0;
       
-      if (totalSesi === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Tidak ada jadwal pelajaran terdaftar pada hari ${dayName}.</td></tr>`;
-        document.getElementById(`${prefix}-kbm-stat-total`).textContent = "0";
-        document.getElementById(`${prefix}-kbm-stat-terlaksana`).textContent = "0";
-        document.getElementById(`${prefix}-kbm-stat-absen`).textContent = "0";
-        document.getElementById(`${prefix}-kbm-stat-persen`).textContent = "0%";
-        return;
-      }
+      const targetRoles = ["Guru", "Wali Kelas", "Guru Wali", "Wakasek", "Guru BK"];
+      const dbTeachers = (appState.teacherList || []).filter(t => {
+        const roles = (t.role || "").split(",").map(r => r.trim());
+        return roles.some(r => targetRoles.includes(r));
+      });
+      
+      const processedTeacherNames = new Set();
       
       daySchedules.forEach(sched => {
+        const tMatch = dbTeachers.find(t => {
+          const sClean = cleanTeacherNameForMatching(sched.guru);
+          const tClean = cleanTeacherNameForMatching(t.nama);
+          return sClean === tClean;
+        });
+        if (tMatch) {
+          processedTeacherNames.add(tMatch.nama);
+        }
+
         const matchingJournal = dateJournals.find(j => {
           const jClean = cleanTeacherNameForMatching(j.guru);
           const sClean = cleanTeacherNameForMatching(sched.guru);
@@ -14083,6 +14157,7 @@
           <td style="font-size: 0.85rem; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: normal;">${detailCell}</td>
         `;
         tbody.appendChild(tr);
+        totalSesi++;
       });
       
       // Find extra/out-of-schedule journals filled on this date
@@ -14106,6 +14181,15 @@
         tbody.appendChild(trHeader);
         
         extraJournals.forEach(j => {
+          const tMatch = dbTeachers.find(t => {
+            const jClean = cleanTeacherNameForMatching(j.guru);
+            const tClean = cleanTeacherNameForMatching(t.nama);
+            return jClean === tClean;
+          });
+          if (tMatch) {
+            processedTeacherNames.add(tMatch.nama);
+          }
+
           let timeStr = "-";
           if (j.sesi) {
             const parts = j.sesi.toString().split(',').map(s => s.trim());
@@ -14137,6 +14221,54 @@
           totalSesi++;
           terlaksanaCount++;
         });
+      }
+
+      // Process remaining teachers who don't have schedules today or at all
+      const remainingTeachers = dbTeachers.filter(t => !processedTeacherNames.has(t.nama));
+      
+      if (remainingTeachers.length > 0) {
+        const trHeader = document.createElement('tr');
+        trHeader.innerHTML = `<td colspan="7" style="background: rgba(255,255,255,0.01); text-align: left; font-weight: bold; color: var(--accent); font-size: 0.85rem; border-top: 1px dashed var(--border-color); padding: 0.5rem 1rem;">
+          <i class="fa-solid fa-circle-info"></i> Status Guru Tanpa Aktivitas Pembelajaran Hari Ini
+        </td>`;
+        tbody.appendChild(trHeader);
+        
+        remainingTeachers.forEach(t => {
+          const hasAnySchedule = (appState.jadwalList || []).some(sched => {
+            const sClean = cleanTeacherNameForMatching(sched.guru);
+            const tClean = cleanTeacherNameForMatching(t.nama);
+            return sClean === tClean;
+          });
+          
+          const tr = document.createElement('tr');
+          let statusBadge = "";
+          let detailCell = "";
+          
+          if (!hasAnySchedule) {
+            statusBadge = `<span class="badge badge-danger" style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.15); color: var(--danger);"><i class="fa-solid fa-circle-xmark"></i> Belum Input Jadwal</span>`;
+            detailCell = `<span style="color: var(--danger); font-weight: 600;">Wajib! Guru belum memasukkan jadwal pelajaran ke sistem.</span>`;
+            totalSesi++;
+            absenCount++;
+          } else {
+            statusBadge = `<span class="badge badge-secondary" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-muted);"><i class="fa-solid fa-calendar-minus"></i> Tidak Ada Jadwal Hari Ini</span>`;
+            detailCell = `<span style="color: var(--text-muted); font-size: 0.85rem;">Tidak ada jadwal mengajar pada hari ${dayName}.</span>`;
+          }
+          
+          tr.innerHTML = `
+            <td style="font-weight: 600; color: #cbd5e1;">-</td>
+            <td>-</td>
+            <td><span class="badge badge-primary">-</span></td>
+            <td style="font-weight: 600; color: #cbd5e1;">-</td>
+            <td><i class="fa-regular fa-user" style="color:var(--primary); margin-right:0.25rem;"></i> ${t.nama}</td>
+            <td>${statusBadge}</td>
+            <td style="font-size: 0.85rem; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: normal;">${detailCell}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+
+      if (tbody.children.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Tidak ada aktivitas pembelajaran pada hari ${dayName}.</td></tr>`;
       }
       
       const percent = totalSesi > 0 ? Math.round((terlaksanaCount / totalSesi) * 100) : 0;
@@ -14178,8 +14310,25 @@
       
       const reportRows = [];
       
+      const targetRoles = ["Guru", "Wali Kelas", "Guru Wali", "Wakasek", "Guru BK"];
+      const dbTeachers = (appState.teacherList || []).filter(t => {
+        const roles = (t.role || "").split(",").map(r => r.trim());
+        return roles.some(r => targetRoles.includes(r));
+      });
+      
+      const processedTeacherNames = new Set();
+
       // 1. Process Scheduled KBM
       daySchedules.forEach(sched => {
+        const tMatch = dbTeachers.find(t => {
+          const sClean = cleanTeacherNameForMatching(sched.guru);
+          const tClean = cleanTeacherNameForMatching(t.nama);
+          return sClean === tClean;
+        });
+        if (tMatch) {
+          processedTeacherNames.add(tMatch.nama);
+        }
+
         const matchingJournal = dateJournals.find(j => {
           const jClean = cleanTeacherNameForMatching(j.guru);
           const sClean = cleanTeacherNameForMatching(sched.guru);
@@ -14230,6 +14379,15 @@
       });
       
       extraJournals.forEach(j => {
+        const tMatch = dbTeachers.find(t => {
+          const jClean = cleanTeacherNameForMatching(j.guru);
+          const tClean = cleanTeacherNameForMatching(t.nama);
+          return jClean === tClean;
+        });
+        if (tMatch) {
+          processedTeacherNames.add(tMatch.nama);
+        }
+
         let timeStr = "-";
         if (j.sesi) {
           const parts = j.sesi.toString().split(',').map(s => s.trim());
@@ -14250,6 +14408,37 @@
           j.guru,
           "Terlaksana (Tambahan)",
           `Materi: ${j.materi || '-'}. Kehadiran: ${j.kehadiran || '-'}`
+        ]);
+      });
+
+      // 3. Process Remaining Teachers (Unscheduled or Off)
+      const remainingTeachers = dbTeachers.filter(t => !processedTeacherNames.has(t.nama));
+      remainingTeachers.forEach(t => {
+        const hasAnySchedule = (appState.jadwalList || []).some(sched => {
+          const sClean = cleanTeacherNameForMatching(sched.guru);
+          const tClean = cleanTeacherNameForMatching(t.nama);
+          return sClean === tClean;
+        });
+
+        let statusStr = "";
+        let detailStr = "";
+
+        if (!hasAnySchedule) {
+          statusStr = "Belum Input Jadwal";
+          detailStr = "Wajib! Guru belum memasukkan jadwal pelajaran ke sistem.";
+        } else {
+          statusStr = "Tidak Ada Jadwal Hari Ini";
+          detailStr = `Tidak ada jadwal mengajar pada hari ${dayName}.`;
+        }
+
+        reportRows.push([
+          "-",
+          "-",
+          "-",
+          "-",
+          t.nama,
+          statusStr,
+          detailStr
         ]);
       });
       
