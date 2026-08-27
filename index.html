@@ -3698,25 +3698,29 @@
           <!-- GURU JARANG MENGISI JURNAL -->
           <div class="card glass-effect" style="margin-top: 1.5rem;">
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
-              <div class="card-title" style="margin-bottom: 0;">Laporan Kepatuhan Pengisian Jurnal Mengajar Guru</div>
+              <div class="card-title" style="margin-bottom: 0; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                <span>Laporan Keaktifan Pengisian Jurnal Mengajar Guru</span>
+                <div style="display: flex; gap: 0.5rem; align-items: center; margin-left: 1rem;">
+                  <label style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin: 0;">Filter Bulan:</label>
+                  <select id="ks-compliance-month" class="filter-control" style="width: 160px; padding: 0.35rem 0.5rem;" onchange="renderKepalaTeacherCompliance()"></select>
+                </div>
+              </div>
               <span class="badge badge-warning" id="ks-compliance-alert-count" style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.15); color: var(--warning); font-size: 0.85rem; padding: 0.35rem 0.65rem;">0 Guru Kurang Aktif</span>
             </div>
             <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1.5rem; line-height:1.5;">
-              Menampilkan tingkat kepatuhan pengisian jurnal mengajar guru berdasarkan jumlah jadwal tatap muka mingguan dan jurnal yang telah diisi. Guru dengan kepatuhan &lt; 60% ditandai sebagai kurang aktif.
+              Menampilkan tingkat keaktifan pengisian jurnal mengajar guru per bulan. Status keaktifan dinilai dari jumlah jurnal yang diisi: Sangat Aktif (≥ 12 jurnal), Cukup Aktif (6-11 jurnal), dan Kurang Aktif (&lt; 6 jurnal).
             </p>
             <div class="table-container">
               <table class="data-table">
                 <thead>
                   <tr>
                     <th>Nama Guru</th>
-                    <th>Jadwal Mingguan</th>
-                    <th>Jurnal Terisi (Estimasi)</th>
-                    <th>Kepatuhan</th>
-                    <th>Status</th>
+                    <th>Jumlah Jurnal Diisi</th>
+                    <th>Status Keaktifan</th>
                   </tr>
                 </thead>
                 <tbody id="ks-compliance-table-body">
-                  <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Memuat data kepatuhan...</td></tr>
+                  <tr><td colspan="3" style="text-align: center; color: var(--text-muted);">Memuat data keaktifan...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -7378,7 +7382,13 @@
 
     // LOAD DATA DASHBOARD
     async function loadDashboardData() {
-      showLoading(true, "Sinkronisasi dashboard dengan server...");
+      // Coba load dari cache lokal dulu agar loading terasa instan bagi pengguna
+      const hasCache = !!localStorage.getItem(`cache_stats_${appState.user.role}`);
+      if (hasCache) {
+        loadOfflineCachedData();
+      } else {
+        showLoading(true, "Sinkronisasi pertama kali dengan server...");
+      }
       
       try {
         const data = await callApi("getDashboard");
@@ -7426,9 +7436,11 @@
         renderDashboardData();
         
       } catch (err) {
-        showToast("Gagal memperbarui data dari server: " + err.message, "danger");
-        // Gunakan offline cache
-        loadOfflineCachedData();
+        console.error("Gagal sinkronisasi data server:", err);
+        if (!hasCache) {
+          showToast("Gagal sinkronisasi data dari server: " + err.message, "danger");
+          loadOfflineCachedData();
+        }
       } finally {
         showLoading(false);
       }
@@ -13494,179 +13506,154 @@
       });
     }
 
-    // ==================== KEPALA SEKOLAH: KEPATUHAN PENGISIAN JURNAL GURU ====================
-    function getTeacherJurnalCompliance() {
-      var schedules = appState.jadwalList || [];
-      var journals = appState.jurnalList || [];
-      var teachers = appState.teacherList || [];
-      
-      var weeklySchedCount = {};
-      for (var i = 0; i < schedules.length; i++) {
-        var s = schedules[i];
-        if (s && s.guru) {
-          var cleanName = cleanTeacherNameForMatching(s.guru);
-          weeklySchedCount[cleanName] = (weeklySchedCount[cleanName] || 0) + 1;
-        }
-      }
-      
-      var journalCount = {};
-      var thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      
-      for (var i = 0; i < journals.length; i++) {
-        var j = journals[i];
-        if (j && j.guru) {
-          var cleanName = cleanTeacherNameForMatching(j.guru);
-          var dateOk = true;
-          if (j.tanggal) {
-            var jDate = new Date(j.tanggal);
-            if (!isNaN(jDate.getTime())) {
-              if (jDate < thirtyDaysAgo) dateOk = false;
-            }
-          }
-          if (dateOk) {
-            journalCount[cleanName] = (journalCount[cleanName] || 0) + 1;
-          }
-        }
-      }
-      
-      var totalRecentJournals = 0;
-      for (var k in journalCount) {
-        if (journalCount.hasOwnProperty(k)) {
-          totalRecentJournals += journalCount[k];
-        }
-      }
-      
-      var useAllTime = totalRecentJournals < 10;
-      
-      if (useAllTime) {
-        journalCount = {};
-        for (var i = 0; i < journals.length; i++) {
-          var j = journals[i];
-          if (j && j.guru) {
-            var cleanName = cleanTeacherNameForMatching(j.guru);
-            journalCount[cleanName] = (journalCount[cleanName] || 0) + 1;
-          }
-        }
-      }
-      
-      var elapsedWeeks = 4;
-      if (useAllTime && journals.length > 0) {
-        var minTime = Infinity;
-        var maxTime = -Infinity;
-        for (var i = 0; i < journals.length; i++) {
-          var j = journals[i];
-          if (j && j.tanggal) {
-            var jDate = new Date(j.tanggal);
-            var t = jDate.getTime();
-            if (!isNaN(t)) {
-              if (t < minTime) minTime = t;
-              if (t > maxTime) maxTime = t;
-            }
-          }
-        }
-        
-        if (minTime !== Infinity && maxTime !== -Infinity) {
-          var diffTime = Math.abs(maxTime - minTime);
-          var diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-          elapsedWeeks = Math.max(1, Math.ceil(diffDays / 7));
-        }
-      }
-      
-      var totalTeachingTeachers = 0;
-      var lowComplianceTeachers = 0;
-      var teacherDetails = [];
-      
-      var targetRoles = ["Guru", "Wali Kelas", "Guru Wali", "Wakasek", "Guru BK"];
-      for (var i = 0; i < teachers.length; i++) {
-        var t = teachers[i];
-        if (!t) continue;
-        var roles = (t.role || "").split(",").map(r => r.trim());
-        var isRealTeacher = roles.some(r => targetRoles.includes(r));
-        if (!isRealTeacher) continue;
-        
-        var cleanName = cleanTeacherNameForMatching(t.nama);
-        var scheds = weeklySchedCount[cleanName] || 0;
-        
-        totalTeachingTeachers++;
-        var filled = journalCount[cleanName] || 0;
-        var expected = scheds * elapsedWeeks;
-        var compliance = expected > 0 ? Math.min(100, Math.round((filled / expected) * 100)) : 0;
-        
-        var isLow = compliance < 60 || scheds === 0;
-        if (isLow) {
-          lowComplianceTeachers++;
-        }
-        
-        teacherDetails.push({
-          nama: t.nama,
-          email: t.email,
-          schedules: scheds,
-          journalsFilled: filled,
-          expectedJournals: expected,
-          compliance: compliance,
-          isLow: isLow
-        });
-      }
-      
-      var percentageLow = totalTeachingTeachers > 0 ? Math.round((lowComplianceTeachers / totalTeachingTeachers) * 100) : 0;
-      return {
-        percentageLow: percentageLow,
-        totalTeachingTeachers: totalTeachingTeachers,
-        lowComplianceTeachers: lowComplianceTeachers,
-        teacherDetails: teacherDetails
-      };
-    }
-
+    // ==================== KEPALA SEKOLAH: KEAKTIFAN PENGISIAN JURNAL GURU ====================
     function renderKepalaTeacherCompliance() {
       const tbody = document.getElementById('ks-compliance-table-body');
       const countEl = document.getElementById('ks-compliance-alert-count');
       const statJarangEl = document.getElementById('ks-stat-guru-jarang');
+      const selectMonth = document.getElementById('ks-compliance-month');
       if (!tbody) return;
+
+      const journals = appState.jurnalList || [];
+      const teachers = appState.teacherList || [];
+
+      // Populate month filter dropdown dynamically if it has no options
+      const monthsSet = new Set();
+      journals.forEach(j => {
+        if (j && j.tanggal) {
+          const date = new Date(j.tanggal);
+          if (!isNaN(date.getTime())) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            monthsSet.add(`${year}-${month}`);
+          }
+        }
+      });
+
+      // Ensure current month is included
+      const now = new Date();
+      const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      monthsSet.add(currentYearMonth);
+
+      const sortedMonths = Array.from(monthsSet).sort().reverse();
+      const currentSelectedVal = selectMonth ? selectMonth.value : "";
+
+      if (selectMonth && selectMonth.options.length !== sortedMonths.length) {
+        selectMonth.innerHTML = "";
+        const monthNamesIndo = {
+          "01": "Januari", "02": "Februari", "03": "Maret", "04": "April",
+          "05": "Mei", "06": "Juni", "07": "Juli", "08": "Agustus",
+          "09": "September", "10": "Oktober", "11": "November", "12": "Desember"
+        };
+        sortedMonths.forEach(ym => {
+          const [year, month] = ym.split("-");
+          const opt = document.createElement('option');
+          opt.value = ym;
+          opt.textContent = `${monthNamesIndo[month]} ${year}`;
+          selectMonth.appendChild(opt);
+        });
+
+        if (currentSelectedVal && sortedMonths.includes(currentSelectedVal)) {
+          selectMonth.value = currentSelectedVal;
+        } else if (sortedMonths.includes(currentYearMonth)) {
+          selectMonth.value = currentYearMonth;
+        } else {
+          selectMonth.value = sortedMonths[0] || "";
+        }
+      }
+
+      const selectedYearMonth = selectMonth ? selectMonth.value : currentYearMonth;
       tbody.innerHTML = "";
-      
-      const res = getTeacherJurnalCompliance();
-      
+
+      // Count journals filled in the selected month for each teacher
+      const journalCount = {};
+      const targetRoles = ["Guru", "Wali Kelas", "Guru Wali", "Wakasek", "Guru BK"];
+      const realTeachers = teachers.filter(t => {
+        if (!t) return false;
+        const roles = (t.role || "").split(",").map(r => r.trim());
+        return roles.some(r => targetRoles.includes(r));
+      });
+
+      realTeachers.forEach(t => {
+        const cleanName = cleanTeacherNameForMatching(t.nama);
+        journalCount[cleanName] = 0;
+      });
+
+      journals.forEach(j => {
+        if (j && j.guru && j.tanggal) {
+          const date = new Date(j.tanggal);
+          if (!isNaN(date.getTime())) {
+            const ym = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+            if (ym === selectedYearMonth) {
+              const cleanName = cleanTeacherNameForMatching(j.guru);
+              journalCount[cleanName] = (journalCount[cleanName] || 0) + 1;
+            }
+          }
+        }
+      });
+
+      let totalTeachingTeachers = realTeachers.length;
+      let lowActiveTeachers = 0;
+      const teacherDetails = [];
+
+      realTeachers.forEach(t => {
+        const cleanName = cleanTeacherNameForMatching(t.nama);
+        const filled = journalCount[cleanName] || 0;
+
+        let status = "Kurang Aktif";
+        let isLow = false;
+        if (filled >= 12) {
+          status = "Sangat Aktif";
+        } else if (filled >= 6) {
+          status = "Cukup Aktif";
+        } else {
+          status = "Kurang Aktif";
+          isLow = true;
+          lowActiveTeachers++;
+        }
+
+        teacherDetails.push({
+          nama: t.nama,
+          journalsFilled: filled,
+          status: status,
+          isLow: isLow
+        });
+      });
+
       if (countEl) {
-        countEl.textContent = `${res.lowComplianceTeachers} Guru Kurang Aktif`;
+        countEl.textContent = `${lowActiveTeachers} Guru Kurang Aktif`;
       }
       if (statJarangEl) {
-        statJarangEl.textContent = `${res.percentageLow}%`;
+        const percentageLow = totalTeachingTeachers > 0 ? Math.round((lowActiveTeachers / totalTeachingTeachers) * 100) : 0;
+        statJarangEl.textContent = `${percentageLow}%`;
       }
-      
-      const list = res.teacherDetails || [];
-      if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 1rem;">Tidak ada data kepatuhan mengajar guru.</td></tr>`;
+
+      if (teacherDetails.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 1rem;">Tidak ada data guru.</td></tr>`;
         return;
       }
-      
-      list.sort((a, b) => {
+
+      teacherDetails.sort((a, b) => {
         if (a.isLow !== b.isLow) {
           return b.isLow ? -1 : 1;
         }
-        return a.compliance - b.compliance;
+        return b.journalsFilled - a.journalsFilled;
       });
-      
-      list.forEach(item => {
+
+      teacherDetails.forEach(item => {
         const tr = document.createElement('tr');
-        
         let statusBadge = "";
-        let pctColor = "var(--success)";
-        if (item.compliance < 50) {
-          pctColor = "var(--danger)";
+        if (item.status === "Kurang Aktif") {
           statusBadge = `<span class="badge badge-danger" style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.15); color: var(--danger);"><i class="fa-solid fa-circle-xmark"></i> Kurang Aktif</span>`;
-        } else if (item.compliance < 75) {
-          pctColor = "var(--warning)";
+        } else if (item.status === "Cukup Aktif") {
           statusBadge = `<span class="badge badge-warning" style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.15); color: var(--warning);"><i class="fa-solid fa-triangle-exclamation"></i> Cukup Aktif</span>`;
         } else {
           statusBadge = `<span class="badge badge-success" style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.15); color: var(--success);"><i class="fa-solid fa-circle-check"></i> Sangat Aktif</span>`;
         }
-        
+
         tr.innerHTML = `
           <td style="font-weight: 600; color: #cbd5e1;"><i class="fa-regular fa-user" style="color:var(--primary); margin-right:0.25rem;"></i> ${item.nama}</td>
-          <td><span class="badge badge-primary">${item.schedules} Jam/Sesi</span></td>
-          <td>${item.journalsFilled} / ${item.expectedJournals}</td>
-          <td style="font-weight: 700; color: ${pctColor};">${item.compliance}%</td>
+          <td><span class="badge badge-primary">${item.journalsFilled} Jurnal</span></td>
           <td>${statusBadge}</td>
         `;
         tbody.appendChild(tr);
