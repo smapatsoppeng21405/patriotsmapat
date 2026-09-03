@@ -9835,7 +9835,7 @@
         let finalFileName = (res && res.fileName) || fileNameToUse || (item && `${item.jenisDokumen || 'Perangkat'}_${(item.namaGuru || "Guru").replace(/\s+/g, '_')}.pdf`) || "perangkat_ajar.pdf";
         let mimeType = (res && res.mimeType) || (item && item.fileMimeType) || "application/octet-stream";
 
-        // A. JIKA TERSEDIA FILE BASE64 LENGKAP
+        // A. JIKA TERSEDIA FILE BASE64 LENGKAP (DIRECT DOWNLOAD SAMA DENGAN NAMA BERKAS ASLI GURU)
         if (fileBase64 && fileBase64.length > 50) {
           const cleanBase64 = fileBase64.includes("base64,") ? fileBase64.split("base64,")[1] : fileBase64;
           const byteCharacters = atob(cleanBase64);
@@ -9870,25 +9870,30 @@
           return;
         }
 
-        // C. JIKA LINK DRIVE BERUPA URL INTERNET / GOOGLE DRIVE
+        // C. JIKA LINK DRIVE BERUPA URL INTERNET / GOOGLE DRIVE VALID
         if (linkDrive.startsWith("http://") || linkDrive.startsWith("https://")) {
-          // Perbaiki link format lama uc?export=download ke link valid Google Drive
-          if (linkDrive.includes("drive.google.com") && linkDrive.includes("id=")) {
-            const fId = linkDrive.split("id=")[1].split("&")[0];
-            linkDrive = `https://drive.google.com/file/d/${fId}/view?usp=sharing`;
+          // Abaikan link dummy sampel lama yang tidak valid
+          if (!linkDrive.includes("Gagal") && !linkDrive.includes("dummy") && linkDrive.length > 20) {
+            if (linkDrive.includes("drive.google.com") && linkDrive.includes("id=")) {
+              const fId = linkDrive.split("id=")[1].split("&")[0];
+              linkDrive = `https://drive.google.com/file/d/${fId}/view?usp=sharing`;
+            }
+            const a = document.createElement('a');
+            a.href = linkDrive;
+            a.target = "_blank";
+            a.download = finalFileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            showToast(`Membuka berkas "${finalFileName}" di Google Drive...`, "success");
+            return;
           }
-          const a = document.createElement('a');
-          a.href = linkDrive;
-          a.target = "_blank";
-          a.download = finalFileName;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          showToast(`Membuka link berkas "${finalFileName}"`, "success");
-          return;
         }
 
-        throw new Error("Tautan berkas atau isi file tidak ditemukan. Harap minta Guru mengunggah ulang berkas ini.");
+        // D. JIKA FILE FISIK BELUM DIUNGGAH (DUMMY SAMPLE DATA)
+        const teacherName = (item && item.namaGuru) || "Guru";
+        const docType = (item && item.jenisDokumen) || "Perangkat Ajar";
+        showToast(`ℹ️ Berkas "${docType}" oleh ${teacherName} ini adalah data contoh/lama. Silakan minta Guru mengunggah ulang berkas fisik terbaru.`, "warning");
       } catch (err) {
         showToast("Gagal mengunduh berkas: " + err.message, "danger");
       } finally {
