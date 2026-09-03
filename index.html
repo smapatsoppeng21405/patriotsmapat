@@ -9812,6 +9812,12 @@
     }
 
     async function downloadFileDirectly(id, defaultFileName) {
+      // Buka window baru secara sinkron SESEGERA MUNGKIN saat tombol di-klik agar tidak diblokir Popup Blocker browser
+      const popupWindow = window.open("", "_blank");
+      if (popupWindow) {
+        popupWindow.document.write("<div style='font-family:sans-serif; padding:3rem; text-align:center; background:#0b0f19; color:#f8fafc; height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center;'><h2>⏳ Membuka Berkas Perangkat Ajar...</h2><p style='color:#94a3b8;'>Mohon tunggu sebentar, mengunduh data dari server...</p></div>");
+      }
+
       showLoading(true, "Mengunduh berkas perangkat ajar...");
       try {
         const item = (appState.perangkatList || []).find(p => String(p.id) === String(id));
@@ -9835,8 +9841,10 @@
         let finalFileName = (res && res.fileName) || fileNameToUse || (item && `${item.jenisDokumen || 'Perangkat'}_${(item.namaGuru || "Guru").replace(/\s+/g, '_')}.pdf`) || "perangkat_ajar.pdf";
         let mimeType = (res && res.mimeType) || (item && item.fileMimeType) || "application/octet-stream";
 
-        // A. JIKA TERSEDIA FILE BASE64 LENGKAP (DIRECT DOWNLOAD SAMA DENGAN NAMA BERKAS ASLI GURU)
+        // A. JIKA TERSEDIA FILE BASE64 LENGKAP -> UNDUH LANGSUNG FILE FISIK DI BROWSER
         if (fileBase64 && fileBase64.length > 50) {
+          if (popupWindow) popupWindow.close(); // Tutup popup karena kita akan unduh langsung
+          
           const cleanBase64 = fileBase64.includes("base64,") ? fileBase64.split("base64,")[1] : fileBase64;
           const byteCharacters = atob(cleanBase64);
           const byteNumbers = new Array(byteCharacters.length);
@@ -9860,6 +9868,7 @@
 
         // B. JIKA LINK DRIVE BERUPA DATA URL
         if (linkDrive.startsWith("data:")) {
+          if (popupWindow) popupWindow.close();
           const a = document.createElement('a');
           a.href = linkDrive;
           a.download = finalFileName;
@@ -9878,23 +9887,23 @@
               const fId = linkDrive.split("id=")[1].split("&")[0];
               linkDrive = `https://drive.google.com/file/d/${fId}/view?usp=sharing`;
             }
-            const a = document.createElement('a');
-            a.href = linkDrive;
-            a.target = "_blank";
-            a.download = finalFileName;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+            
+            if (popupWindow) {
+              popupWindow.location.href = linkDrive; // ALIHKAN POPUP YANG TERBUKA SINKRON
+            } else {
+              window.open(linkDrive, '_blank');
+            }
             showToast(`Membuka berkas "${finalFileName}" di Google Drive...`, "success");
             return;
           }
         }
 
-        // D. JIKA FILE FISIK BELUM DIUNGGAH (DUMMY SAMPLE DATA)
+        if (popupWindow) popupWindow.close();
         const teacherName = (item && item.namaGuru) || "Guru";
         const docType = (item && item.jenisDokumen) || "Perangkat Ajar";
-        showToast(`ℹ️ Berkas "${docType}" oleh ${teacherName} ini adalah data contoh/lama. Silakan minta Guru mengunggah ulang berkas fisik terbaru.`, "warning");
+        showToast(`ℹ️ Berkas "${docType}" oleh ${teacherName} ini belum memiliki file fisik. Silakan minta Guru mengunggah ulang berkas fisik terbaru.`, "warning");
       } catch (err) {
+        if (popupWindow) popupWindow.close();
         showToast("Gagal mengunduh berkas: " + err.message, "danger");
       } finally {
         showLoading(false);
