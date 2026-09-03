@@ -4537,6 +4537,14 @@
           const keys = await caches.keys();
           await Promise.all(keys.map(key => caches.delete(key)));
         }
+
+        // Hapus cache lokal data agar ditarik ulang secara bersih dari Firebase
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const k = localStorage.key(i);
+          if (k && (k.startsWith("cache_") || k.startsWith("db_"))) {
+            localStorage.removeItem(k);
+          }
+        }
         
         // Unregister service worker agar memuat ulang versi terbaru
         if ('serviceWorker' in navigator) {
@@ -4544,7 +4552,7 @@
           await Promise.all(registrations.map(reg => reg.unregister()));
         }
         
-        showToast("Pembaruan berhasil! Aplikasi akan dimuat ulang dalam 1.5 detik.", "success");
+        showToast("Pembaruan berhasil! Memuat ulang seluruh data dari Firebase...", "success");
         
         setTimeout(() => {
           window.location.reload(true);
@@ -7089,33 +7097,229 @@
             db.collection("sessions").get()
           ]);
 
-          const jRaw = jSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+          const jRaw = jSnap.docs.map(d => {
+            const item = d.data() || {};
+            return {
+              id: d.id,
+              tanggal: item.tanggal || item.Tanggal || item.tgl || "",
+              guru: item.guru || item.Guru || item.Nama_Guru || item.namaGuru || item.Nama || "",
+              kelas: item.kelas || item.Kelas || "",
+              materi: item.materi || item.Materi || "",
+              kehadiran: item.kehadiran || item.Kehadiran || "",
+              catatan: item.catatan || item.Catatan || "",
+              mode: item.mode || item.Mode || "Tatap Muka",
+              mapel: item.mapel || item.Mapel || "",
+              sesi: item.sesi || item.Sesi || item.jamKe || item.JamKe || ""
+            };
+          });
+
           const pRaw = pSnap.docs.map(d => {
             const p = d.data() || {};
             return {
               id: d.id,
-              namaGuru: p.namaGuru || "",
-              jenisDokumen: p.jenisDokumen || "",
-              linkDrive: p.linkDrive || "",
-              status: p.status || "Pending",
-              catatan: p.catatan || "-",
-              fileName: p.fileName || "perangkat_ajar.zip",
-              fileMimeType: p.fileMimeType || "application/zip"
+              namaGuru: p.namaGuru || p.Nama_Guru || p.NamaGuru || p.guru || p.Guru || p.nama || p.Nama || "",
+              jenisDokumen: p.jenisDokumen || p.Jenis_Dokumen || p.JenisDokumen || p.jenis || "",
+              linkDrive: p.linkDrive || p.Link_Drive || p.LinkDrive || p.link || "",
+              status: p.status || p.Status || "Pending",
+              catatan: p.catatan || p.Catatan || "-",
+              fileName: p.fileName || p.FileName || "perangkat_ajar.zip",
+              fileMimeType: p.fileMimeType || p.FileMimeType || "application/zip"
             };
           });
-          const nRaw = nSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-          const jdRaw = jdSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-          const lpRaw = lpSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-          const gmRaw = gmSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-          const users = uSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-          const raRaw = raSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-          const ksRaw = ksSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-          const sgwRaw = sgwSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-          const j7kaihRaw = j7Snap.docs.map(d => ({ id: d.id, ...d.data() }));
-          const cbRaw = cbSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-          const sRaw = sSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+          const nRaw = nSnap.docs.map(d => {
+            const n = d.data() || {};
+            return {
+              id: d.id,
+              kelas: n.kelas || n.Kelas || "",
+              mapel: n.mapel || n.Mapel || "",
+              rataNilai: parseFloat(n.rataNilai || n.Rata_Nilai || n.rata_nilai || n.rata || 0),
+              jumlahSiswaRemidial: parseInt(n.jumlahSiswaRemidial || n.Jumlah_Siswa_Remidial || n.remidial || 0)
+            };
+          });
+
+          const jdRaw = jdSnap.docs.map(d => {
+            const s = d.data() || {};
+            return {
+              id: d.id,
+              hari: s.hari || s.Hari || "",
+              jamKe: s.jamKe || s.JamKe || s.sesi || s.Sesi || "",
+              kelas: s.kelas || s.Kelas || "",
+              guru: s.guru || s.Guru || s.namaGuru || s.NamaGuru || "",
+              mapel: s.mapel || s.Mapel || ""
+            };
+          });
+
+          const lpRaw = lpSnap.docs.map(d => {
+            const lp = d.data() || {};
+            return {
+              id: d.id,
+              tanggal: lp.tanggal || lp.Tanggal || "",
+              waliKelas: lp.waliKelas || lp.WaliKelas || "",
+              kelas: lp.kelas || lp.Kelas || "",
+              kategori: lp.kategori || lp.Kategori || "",
+              judul: lp.judul || lp.Judul || "",
+              isi: lp.isi || lp.Isi || "",
+              tindakLanjut: lp.tindakLanjut || lp.TindakLanjut || lp.tindak_lanjut || ""
+            };
+          });
+
+          const gmRaw = gmSnap.docs.map(d => {
+            const gm = d.data() || {};
+            return {
+              id: d.id,
+              guru: gm.guru || gm.Guru || gm.NamaGuru || gm.namaGuru || gm.nama || gm.Nama || "",
+              nama: gm.nama || gm.Nama || gm.Guru || gm.guru || gm.NamaGuru || gm.namaGuru || "",
+              mapel: gm.mapel || gm.Mapel || "",
+              kelas: gm.kelas || gm.Kelas || "",
+              jumlahJam: parseInt(gm.jumlahJam || gm.JumlahJam || gm.jam || gm.Jam || 0),
+              email: gm.email || gm.Email || "",
+              nip: gm.nip || gm.NIP || ""
+            };
+          });
+
+          const users = uSnap.docs.map(d => {
+            const u = d.data() || {};
+            return {
+              id: d.id,
+              nama: u.nama || u.Nama || u.Nama_Guru || u.namaGuru || "",
+              email: u.email || u.Email || "",
+              role: u.role || u.Role || "Guru",
+              password: u.password || u.Password || "",
+              nip: u.nip || u.NIP || "",
+              waliKelasClass: u.waliKelasClass || u.WaliKelasClass || u.kelas || u.Kelas || "",
+              mapel: u.mapel || u.Mapel || ""
+            };
+          });
+
+          const raRaw = raSnap.docs.map(d => {
+            const ra = d.data() || {};
+            return {
+              id: d.id,
+              bulan: ra.bulan || ra.Bulan || "",
+              tahun: ra.tahun || ra.Tahun || "",
+              waliKelas: ra.waliKelas || ra.WaliKelas || "",
+              kelas: ra.kelas || ra.Kelas || "",
+              namaSiswa: ra.namaSiswa || ra.NamaSiswa || ra.nama || ra.Nama || "",
+              hadir: parseInt(ra.hadir || ra.Hadir) || 0,
+              sakit: parseInt(ra.sakit || ra.Sakit) || 0,
+              izin: parseInt(ra.izin || ra.Izin) || 0,
+              alpa: parseInt(ra.alpa || ra.Alpa) || 0
+            };
+          });
+
+          const ksRaw = ksSnap.docs.map(d => {
+            const ks = d.data() || {};
+            return {
+              id: d.id,
+              bulan: ks.bulan || ks.Bulan || "",
+              tahun: ks.tahun || ks.Tahun || "",
+              waliKelas: ks.waliKelas || ks.WaliKelas || "",
+              kelas: ks.kelas || ks.Kelas || "",
+              namaSiswa: ks.namaSiswa || ks.NamaSiswa || "",
+              kehadiran: ks.kehadiran || ks.Kehadiran || "",
+              prestasiAkademik: ks.prestasiAkademik || ks.PrestasiAkademik || "-",
+              prestasiNonAkademik: ks.prestasiNonAkademik || ks.PrestasiNonAkademik || "-",
+              tujuanSetelahLulus: ks.tujuanSetelahLulus || ks.TujuanSetelahLulus || "-"
+            };
+          });
+
+          const sgwRaw = sgwSnap.docs.map(d => {
+            const sgw = d.data() || {};
+            return {
+              id: d.id,
+              nis: sgw.nis || sgw.NIS || "",
+              namaSiswa: sgw.namaSiswa || sgw.NamaSiswa || sgw.nama || sgw.Nama || "",
+              kelas: sgw.kelas || sgw.Kelas || "",
+              guruWali: sgw.guruWali || sgw.GuruWali || ""
+            };
+          });
+
+          const j7kaihRaw = j7Snap.docs.map(d => {
+            const j7 = d.data() || {};
+            return {
+              id: d.id,
+              tanggal: j7.tanggal || j7.Tanggal || "",
+              nis: j7.nis || j7.NIS || "",
+              namaSiswa: j7.namaSiswa || j7.NamaSiswa || "",
+              guruWali: j7.guruWali || j7.GuruWali || "",
+              bangunPagi: j7.bangunPagi || j7.BangunPagi || "",
+              beribadah: j7.beribadah || j7.Beribadah || "",
+              berolahraga: j7.berolahraga || j7.Berolahraga || "",
+              makanSehat: j7.makanSehat || j7.MakanSehat || "",
+              gemarBelajar: j7.gemarBelajar || j7.GemarBelajar || "",
+              bermasyarakat: j7.bermasyarakat || j7.Bermasyarakat || "",
+              tidurCepat: j7.tidurCepat || j7.TidurCepat || ""
+            };
+          });
+
+          const cbRaw = cbSnap.docs.map(d => {
+            const cb = d.data() || {};
+            return {
+              id: d.id,
+              tanggal: cb.tanggal || cb.Tanggal || "",
+              guruWali: cb.guruWali || cb.GuruWali || "",
+              namaSiswa: cb.namaSiswa || cb.NamaSiswa || "",
+              catatanPerkembangan: cb.catatanPerkembangan || cb.CatatanPerkembangan || cb.catatan || cb.Catatan || ""
+            };
+          });
+
+          const sRaw = sSnap.docs.map(d => {
+            const s = d.data() || {};
+            return {
+              id: d.id,
+              nis: s.nis || s.NIS || "",
+              namaSiswa: s.namaSiswa || s.NamaSiswa || s.Nama_Siswa || s.nama || s.Nama || "",
+              kelas: s.kelas || s.Kelas || "",
+              tingkatan: s.tingkatan || s.Tingkatan || ""
+            };
+          });
+
           const kmpRaw = kmpSnap.docs.map(d => ({ id: d.id, ...d.data() }));
           const sessions = sessSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+          // Gabungkan daftar guru dari users dan gurumasters
+          let teachers = [...users];
+          gmRaw.forEach(gm => {
+            const exists = teachers.some(u => isTeacherMatch(u.nama, gm.nama) || (u.email && gm.email && u.email.toLowerCase() === gm.email.toLowerCase()));
+            if (!exists) {
+              teachers.push({
+                id: gm.id || ("gm_" + (gm.nip || gm.nama)),
+                nama: gm.nama,
+                email: gm.email || "",
+                nip: gm.nip || "",
+                role: "Guru",
+                mapel: gm.mapel || ""
+              });
+            }
+          });
+
+          // Gabungkan daftar siswa dari students, siswagw, dan rekapabsen
+          let fullStudentList = [...sRaw];
+          sgwRaw.forEach(sgw => {
+            const exists = fullStudentList.some(s => (s.nis && sgw.nis && s.nis.toString().trim() === sgw.nis.toString().trim()) || (s.namaSiswa && sgw.namaSiswa && s.namaSiswa.toLowerCase().trim() === sgw.namaSiswa.toLowerCase().trim()));
+            if (!exists && sgw.namaSiswa) {
+              fullStudentList.push({
+                id: sgw.id || ("sgw_" + (sgw.nis || sgw.namaSiswa)),
+                nis: sgw.nis || "",
+                namaSiswa: sgw.namaSiswa,
+                kelas: sgw.kelas || ""
+              });
+            }
+          });
+          raRaw.forEach(ra => {
+            if (ra.namaSiswa) {
+              const exists = fullStudentList.some(s => s.namaSiswa && s.namaSiswa.toLowerCase().trim() === ra.namaSiswa.toLowerCase().trim());
+              if (!exists) {
+                fullStudentList.push({
+                  id: ra.id || ("ra_" + Math.random()),
+                  nis: ra.nis || "",
+                  namaSiswa: ra.namaSiswa,
+                  kelas: ra.kelas || ""
+                });
+              }
+            }
+          });
 
           let settings = { hariBelajar: 5, daftarKelas: ["X.1", "X.2", "XI.1", "XI.2", "XII.1", "XII.2"] };
           if (setSnap.exists) {
