@@ -5020,6 +5020,44 @@
       exportData("Monitoring Laporan Wali Kelas Masuk (Kurikulum)", headers, rows, `Rekap_Laporan_Wali_Kelas_Sekolah_${new Date().toISOString().substring(0, 10)}`);
     }
 
+    // ==================== TEACHER NAME MATCHING & NORMALIZATION ====================
+    function cleanTeacherNameForMatching(name) {
+      if (!name) return "";
+      let s = String(name).toLowerCase();
+      // Hapus teks dalam tanda kurung seperti (Wakasek), (Guru), (Wali Kelas)
+      s = s.replace(/\(.*?\)/g, ' ').replace(/\[.*?\]/g, ' ').replace(/\{.*?\}/g, ' ');
+      // Hapus sapaan dan gelar depan umum
+      s = s.replace(/\b(ibu|bapak|bpk|bu|pak|ustadzah|ustadz|ustad|dra|drs|prof|dr|ir|hj|h)\.?\s+/gi, ' ');
+      // Hapus gelar akademik berakhiran titik atau koma
+      s = s.replace(/\b(s\.pd\.i|s\.pd\.sd|s\.pdi|s\.pd|m\.pd\.i|m\.pdi|m\.pd|s\.kom|m\.kom|s\.ti|s\.t|m\.t|s\.si|m\.si|s\.sn|m\.sn|s\.ag|m\.ag|s\.sos|m\.sos|s\.e|m\.e|s\.h|m\.h|s\.psi|m\.psi|s\.stat|m\.stat|s\.ab|m\.ab|s\.ap|m\.ap|s\.hum|m\.hum|s\.farm|m\.farm|s\.kel|m\.kel|s\.ip|m\.ip|s\.ik|m\.ik|m\.m|m\.ba|ph\.d|phd|gr)\b/gi, ' ');
+      // Hapus gelar tanpa titik
+      s = s.replace(/\b(spdi|spd|mpdi|mpd|skom|mkom|ssi|msi|ssn|msn|sag|mag|ssos|msos|se|me|sh|mh|spsi|mpsi|mm|mba|phd|gr)\b/gi, ' ');
+      // Hapus karakter non-alphanumeric
+      s = s.replace(/[^a-z0-9\s]/g, ' ');
+      // Rapikan spasi
+      s = s.replace(/\s+/g, ' ').trim();
+      return s;
+    }
+
+    function isTeacherMatch(name1, name2) {
+      if (!name1 || !name2) return false;
+      const c1 = cleanTeacherNameForMatching(name1);
+      const c2 = cleanTeacherNameForMatching(name2);
+      if (!c1 || !c2) return false;
+      if (c1 === c2) return true;
+      if (c1.includes(c2) || c2.includes(c1)) return true;
+      
+      // Token matching jika minimal ada kesamaan kata signifikan
+      const tokens1 = c1.split(' ').filter(w => w.length > 2);
+      const tokens2 = c2.split(' ').filter(w => w.length > 2);
+      if (tokens1.length > 0 && tokens2.length > 0) {
+        const all1In2 = tokens1.every(w => c2.includes(w));
+        const all2In1 = tokens2.every(w => c1.includes(w));
+        if (all1In2 || all2In1) return true;
+      }
+      return false;
+    }
+
     // TOAST NOTIFICATIONS
     function showToast(message, type = "success") {
       const container = document.getElementById('toastContainer');
@@ -6132,9 +6170,9 @@
             };
           }
           else if (role === "Guru") {
-            const myJurnals = jRaw.filter(j => j.guru && j.guru.toLowerCase() === nama.toLowerCase());
-            const myPerangkats = pRaw.filter(p => p.namaGuru && p.namaGuru.toLowerCase() === nama.toLowerCase());
-            const myJadwals = jdRaw.filter(j => j.guru && j.guru.toLowerCase() === nama.toLowerCase());
+            const myJurnals = jRaw.filter(j => j.guru && isTeacherMatch(j.guru, nama));
+            const myPerangkats = pRaw.filter(p => p.namaGuru && isTeacherMatch(p.namaGuru, nama));
+            const myJadwals = jdRaw.filter(j => j.guru && isTeacherMatch(j.guru, nama));
 
             result.stats = {
               totalJurnalGuru: myJurnals.length,
@@ -6845,9 +6883,9 @@
             };
           }
           else if (role === "Guru") {
-            const myJurnals = jRaw.filter(j => j.guru && j.guru.toLowerCase() === nama.toLowerCase());
-            const myPerangkats = pRaw.filter(p => p.namaGuru && p.namaGuru.toLowerCase() === nama.toLowerCase());
-            const myJadwals = jdRaw.filter(j => j.guru && j.guru.toLowerCase() === nama.toLowerCase());
+            const myJurnals = jRaw.filter(j => j.guru && isTeacherMatch(j.guru, nama));
+            const myPerangkats = pRaw.filter(p => p.namaGuru && isTeacherMatch(p.namaGuru, nama));
+            const myJadwals = jdRaw.filter(j => j.guru && isTeacherMatch(j.guru, nama));
 
             result.stats = {
               totalJurnalGuru: myJurnals.length,
@@ -7381,67 +7419,72 @@
     }
 
     // LOAD DATA DASHBOARD
+    let isDashboardLoading = false;
     async function loadDashboardData() {
+      if (isDashboardLoading) return;
+      isDashboardLoading = true;
+
       // Coba load dari cache lokal dulu agar loading terasa instan bagi pengguna
       const hasCache = !!localStorage.getItem(`cache_stats_${appState.user.role}`);
       if (hasCache) {
         loadOfflineCachedData();
       } else {
-        showLoading(true, "Sinkronisasi pertama kali dengan server...");
+        showLoading(true, "Memuat data sistem...");
       }
       
       try {
         const data = await callApi("getDashboard");
-        
-        appState.stats = data.stats;
-        appState.jurnalList = data.jurnalList || [];
-        appState.perangkatList = data.perangkatList || [];
-        appState.nilaiList = data.nilaiList || [];
-        appState.jadwalList = data.jadwalList || [];
-        appState.laporanWaliList = data.laporanWaliList || [];
-        appState.guruJadwalList = data.guruJadwalList || [];
-        appState.guruMasterList = data.guruMasterList || [];
-        appState.settings = data.settings || { hariBelajar: 5 };
-        appState.teacherList = data.teacherList || [];
-        appState.siswaGuruWaliList = data.siswaGuruWaliList || [];
-        appState.jurnal7KAIHList = data.jurnal7KAIHList || [];
-        appState.studentList = data.studentList || [];
-        appState.catatanWaliKelasList = data.catatanWaliKelasList || [];
-        appState.kelasMapelPilihanList = data.kelasMapelPilihanList || [];
-        appState.sesiList = data.sesiList || [];
-        
-        safeLocalStorageSetItem(`cache_stats_${appState.user.role}`, JSON.stringify(data.stats));
-        safeLocalStorageSetItem(`cache_jurnals_${appState.user.role}`, JSON.stringify(data.jurnalList || []));
-        safeLocalStorageSetItem(`cache_perangkats_${appState.user.role}`, JSON.stringify(data.perangkatList || []));
-        safeLocalStorageSetItem(`cache_nilais_${appState.user.role}`, JSON.stringify(data.nilaiList || []));
-        safeLocalStorageSetItem(`cache_jadwals_${appState.user.role}`, JSON.stringify(data.jadwalList || []));
-        safeLocalStorageSetItem(`cache_laporans_${appState.user.role}`, JSON.stringify(data.laporanWaliList || []));
-        safeLocalStorageSetItem(`cache_gurujadwals_${appState.user.role}`, JSON.stringify(data.guruJadwalList || []));
-        safeLocalStorageSetItem(`cache_gurumaster_${appState.user.role}`, JSON.stringify(data.guruMasterList || []));
-        safeLocalStorageSetItem('cache_settings', JSON.stringify(data.settings || { hariBelajar: 5 }));
-        safeLocalStorageSetItem('cache_teachers', JSON.stringify(data.teacherList || []));
-        safeLocalStorageSetItem(`cache_siswagw_${appState.user.role}`, JSON.stringify(data.siswaGuruWaliList || []));
-        safeLocalStorageSetItem(`cache_jurnal7kaih_${appState.user.role}`, JSON.stringify(data.jurnal7KAIHList || []));
-        safeLocalStorageSetItem('cache_students', JSON.stringify(data.studentList || []));
-        safeLocalStorageSetItem(`cache_catatanwali_${appState.user.role}`, JSON.stringify(data.catatanWaliKelasList || []));
-        safeLocalStorageSetItem(`cache_kelas_mapel_pilihan_${appState.user.role}`, JSON.stringify(data.kelasMapelPilihanList || []));
-        safeLocalStorageSetItem('cache_sesi', JSON.stringify(data.sesiList || []));
-        
-        // Sync alarms to SW if role is Guru
-        if (appState.user && appState.user.role === 'Guru') {
-          syncAlarmsToServiceWorker();
+        if (data) {
+          appState.stats = data.stats || {};
+          appState.jurnalList = data.jurnalList || [];
+          appState.perangkatList = data.perangkatList || [];
+          appState.nilaiList = data.nilaiList || [];
+          appState.jadwalList = data.jadwalList || [];
+          appState.laporanWaliList = data.laporanWaliList || [];
+          appState.guruJadwalList = data.guruJadwalList || [];
+          appState.guruMasterList = data.guruMasterList || [];
+          appState.settings = data.settings || { hariBelajar: 5 };
+          appState.teacherList = data.teacherList || [];
+          appState.siswaGuruWaliList = data.siswaGuruWaliList || [];
+          appState.jurnal7KAIHList = data.jurnal7KAIHList || [];
+          appState.studentList = data.studentList || [];
+          appState.catatanWaliKelasList = data.catatanWaliKelasList || [];
+          appState.kelasMapelPilihanList = data.kelasMapelPilihanList || [];
+          appState.sesiList = data.sesiList || [];
+          
+          safeLocalStorageSetItem(`cache_stats_${appState.user.role}`, JSON.stringify(data.stats));
+          safeLocalStorageSetItem(`cache_jurnals_${appState.user.role}`, JSON.stringify(data.jurnalList || []));
+          safeLocalStorageSetItem(`cache_perangkats_${appState.user.role}`, JSON.stringify(data.perangkatList || []));
+          safeLocalStorageSetItem(`cache_nilais_${appState.user.role}`, JSON.stringify(data.nilaiList || []));
+          safeLocalStorageSetItem(`cache_jadwals_${appState.user.role}`, JSON.stringify(data.jadwalList || []));
+          safeLocalStorageSetItem(`cache_laporans_${appState.user.role}`, JSON.stringify(data.laporanWaliList || []));
+          safeLocalStorageSetItem(`cache_gurujadwals_${appState.user.role}`, JSON.stringify(data.guruJadwalList || []));
+          safeLocalStorageSetItem(`cache_gurumaster_${appState.user.role}`, JSON.stringify(data.guruMasterList || []));
+          safeLocalStorageSetItem('cache_settings', JSON.stringify(data.settings || { hariBelajar: 5 }));
+          safeLocalStorageSetItem('cache_teachers', JSON.stringify(data.teacherList || []));
+          safeLocalStorageSetItem(`cache_siswagw_${appState.user.role}`, JSON.stringify(data.siswaGuruWaliList || []));
+          safeLocalStorageSetItem(`cache_jurnal7kaih_${appState.user.role}`, JSON.stringify(data.jurnal7KAIHList || []));
+          safeLocalStorageSetItem('cache_students', JSON.stringify(data.studentList || []));
+          safeLocalStorageSetItem(`cache_catatanwali_${appState.user.role}`, JSON.stringify(data.catatanWaliKelasList || []));
+          safeLocalStorageSetItem(`cache_kelas_mapel_pilihan_${appState.user.role}`, JSON.stringify(data.kelasMapelPilihanList || []));
+          safeLocalStorageSetItem('cache_sesi', JSON.stringify(data.sesiList || []));
+          
+          // Sync alarms to SW if role is Guru
+          if (appState.user && appState.user.role === 'Guru') {
+            syncAlarmsToServiceWorker();
+          }
+          
+          // Render Views
+          renderDashboardData();
         }
-        
-        // Render Views
-        renderDashboardData();
-        
       } catch (err) {
         console.error("Gagal sinkronisasi data server:", err);
         if (!hasCache) {
-          showToast("Gagal sinkronisasi data dari server: " + err.message, "danger");
+          showToast("Koneksi lambat, menampilkan data offline.", "warning");
           loadOfflineCachedData();
         }
       } finally {
+        isDashboardLoading = false;
         showLoading(false);
       }
     }
@@ -8011,9 +8054,17 @@
 
     // OPEN/CLOSE VALIDASI MODAL PERANGKAT
     function openPerangkatModal(id, currentStatus, currentNotes) {
+      const item = (appState.perangkatList || []).find(p => String(p.id) === String(id));
       document.getElementById('modalPerangkatId').value = id;
-      document.getElementById('modalPerangkatStatus').value = currentStatus;
-      document.getElementById('modalPerangkatCatatan').value = currentNotes === "-" ? "" : currentNotes;
+      document.getElementById('modalPerangkatStatus').value = item ? (item.status || "Disetujui") : (currentStatus || "Disetujui");
+      
+      let notes = "";
+      if (item && item.catatan && item.catatan !== "-") {
+        notes = item.catatan;
+      } else if (currentNotes && currentNotes !== "-") {
+        notes = currentNotes;
+      }
+      document.getElementById('modalPerangkatCatatan').value = notes;
       document.getElementById('perangkatModal').style.display = "flex";
     }
     
@@ -8024,15 +8075,31 @@
     async function savePerangkatValidation() {
       const id = document.getElementById('modalPerangkatId').value;
       const status = document.getElementById('modalPerangkatStatus').value;
-      const catatan = document.getElementById('modalPerangkatCatatan').value;
+      const catatan = document.getElementById('modalPerangkatCatatan').value.trim();
       
       showLoading(true, "Mengirim persetujuan validasi...");
       closePerangkatModal();
       
       try {
         await callApi("updatePerangkatStatus", { id, status, catatan });
+        
+        // Optimistic UI update
+        if (appState.perangkatList) {
+          const item = appState.perangkatList.find(p => String(p.id) === String(id));
+          if (item) {
+            item.status = status;
+            item.catatan = catatan || "-";
+          }
+        }
+        if (document.getElementById('ks-perangkat-table-body')) {
+          renderKepalaPerangkatTable();
+        }
+        if (document.getElementById('w-perangkat-table-body')) {
+          renderWakasekPerangkatTable();
+        }
+        
         showToast("Validasi dokumen sukses diperbarui!");
-        // Reload data
+        // Reload data from server
         loadDashboardData();
       } catch (err) {
         showToast("Gagal menyimpan validasi: " + err.message, "danger");
@@ -11915,9 +11982,9 @@
               };
             } 
             else if (role === "Guru") {
-              const myJurnals = jRaw.filter(j => j.guru.toLowerCase() === nama.toLowerCase());
-              const myPerangkats = pRaw.filter(p => p.namaGuru.toLowerCase() === nama.toLowerCase());
-              const myJadwals = jdRaw.filter(j => j.guru.toLowerCase() === nama.toLowerCase());
+              const myJurnals = jRaw.filter(j => j.guru && isTeacherMatch(j.guru, nama));
+              const myPerangkats = pRaw.filter(p => p.namaGuru && isTeacherMatch(p.namaGuru, nama));
+              const myJadwals = jdRaw.filter(j => j.guru && isTeacherMatch(j.guru, nama));
               
               result.stats = {
                 totalJurnalGuru: myJurnals.length,
@@ -13566,7 +13633,6 @@
       tbody.innerHTML = "";
 
       // Count journals filled in the selected month for each teacher
-      const journalCount = {};
       const targetRoles = ["Guru", "Wali Kelas", "Guru Wali", "Wakasek", "Guru BK"];
       const realTeachers = teachers.filter(t => {
         if (!t) return false;
@@ -13574,50 +13640,48 @@
         return roles.some(r => targetRoles.includes(r));
       });
 
-      realTeachers.forEach(t => {
-        const cleanName = cleanTeacherNameForMatching(t.nama);
-        journalCount[cleanName] = 0;
-      });
+      const teacherDetails = realTeachers.map(t => ({
+        nama: t.nama,
+        journalsFilled: 0,
+        status: "Kurang Aktif",
+        isLow: true
+      }));
 
-      journals.forEach(j => {
+      // Filter journals matching selected month
+      const monthJournals = journals.filter(j => {
         if (j && j.guru && j.tanggal) {
           const date = new Date(j.tanggal);
           if (!isNaN(date.getTime())) {
             const ym = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-            if (ym === selectedYearMonth) {
-              const cleanName = cleanTeacherNameForMatching(j.guru);
-              journalCount[cleanName] = (journalCount[cleanName] || 0) + 1;
-            }
+            return ym === selectedYearMonth;
           }
+        }
+        return false;
+      });
+
+      // Match each journal to its teacher using flexible matching
+      monthJournals.forEach(j => {
+        const matched = teacherDetails.find(item => isTeacherMatch(item.nama, j.guru));
+        if (matched) {
+          matched.journalsFilled++;
         }
       });
 
-      let totalTeachingTeachers = realTeachers.length;
+      let totalTeachingTeachers = teacherDetails.length;
       let lowActiveTeachers = 0;
-      const teacherDetails = [];
 
-      realTeachers.forEach(t => {
-        const cleanName = cleanTeacherNameForMatching(t.nama);
-        const filled = journalCount[cleanName] || 0;
-
-        let status = "Kurang Aktif";
-        let isLow = false;
-        if (filled >= 12) {
-          status = "Sangat Aktif";
-        } else if (filled >= 6) {
-          status = "Cukup Aktif";
+      teacherDetails.forEach(item => {
+        if (item.journalsFilled >= 12) {
+          item.status = "Sangat Aktif";
+          item.isLow = false;
+        } else if (item.journalsFilled >= 6) {
+          item.status = "Cukup Aktif";
+          item.isLow = false;
         } else {
-          status = "Kurang Aktif";
-          isLow = true;
+          item.status = "Kurang Aktif";
+          item.isLow = true;
           lowActiveTeachers++;
         }
-
-        teacherDetails.push({
-          nama: t.nama,
-          journalsFilled: filled,
-          status: status,
-          isLow: isLow
-        });
       });
 
       if (countEl) {
@@ -13913,13 +13977,13 @@
     }
 
     function filterKepalaJurnal() {
-      const searchGuru = document.getElementById('ks-filter-guru').value.toLowerCase();
+      const searchGuru = document.getElementById('ks-filter-guru').value.toLowerCase().trim();
       const searchKelas = document.getElementById('ks-filter-kelas').value;
       const order = document.getElementById('ks-filter-date').value;
       
       let filtered = appState.jurnalList.filter(item => {
-        const matchesGuru = item.guru.toLowerCase().includes(searchGuru);
-        const matchesKelas = searchKelas === "" ? true : item.kelas.includes(searchKelas);
+        const matchesGuru = !searchGuru || isTeacherMatch(item.guru, searchGuru) || (item.guru && item.guru.toLowerCase().includes(searchGuru));
+        const matchesKelas = searchKelas === "" ? true : (item.kelas && item.kelas.includes(searchKelas));
         return matchesGuru && matchesKelas;
       });
       
@@ -13930,15 +13994,6 @@
       }
       
       renderKepalaJurnalTable(filtered);
-    }
-
-    function cleanTeacherNameForMatching(name) {
-      if (!name) return "";
-      return String(name).toLowerCase()
-        .replace(/^(bu|pak|drs|dra|h\.|hj\.)\s+/gi, '')
-        .replace(/,\s*(s\.pd\.|m\.pd\.|m\.m\.|s\.kom\.|s\.t\.|s\.si\.|m\.si\.|ph\.d\.|dr\.|s\.pd|m\.pd|m\.m|s\.kom|s\.t|s\.si|m\.si|ph\.d|dr)/gi, '')
-        .replace(/\(.*\)/g, '')
-        .trim();
     }
 
     function getIndonesianDayName(dateString) {
@@ -13968,11 +14023,9 @@
       
       const tidakBerjalanSchedules = daySchedules.filter(sched => {
         const matchingJournal = dateJournals.find(j => {
-          const jClean = cleanTeacherNameForMatching(j.guru);
-          const sClean = cleanTeacherNameForMatching(sched.guru);
-          const teacherMatches = jClean.includes(sClean) || sClean.includes(jClean);
+          const teacherMatches = isTeacherMatch(j.guru, sched.guru);
           const classMatches = j.kelas === sched.kelas;
-          const sesiMatches = j.sesi && sched.jamKe && j.sesi.toString().split(',').map(s => s.trim()).some(s => sched.jamKe.toString().split(',').map(x => x.trim()).includes(s));
+          const sesiMatches = !j.sesi || !sched.jamKe || j.sesi.toString().split(',').map(s => s.trim()).some(s => sched.jamKe.toString().split(',').map(x => x.trim()).includes(s));
           
           return teacherMatches && classMatches && sesiMatches;
         });
@@ -13998,9 +14051,7 @@
 
       const teachersWithNoSchedule = dbTeachers.filter(t => {
         const hasAnySchedule = (appState.jadwalList || []).some(sched => {
-          const sClean = cleanTeacherNameForMatching(sched.guru);
-          const tClean = cleanTeacherNameForMatching(t.nama);
-          return sClean === tClean;
+          return isTeacherMatch(sched.guru, t.nama);
         });
         return !hasAnySchedule;
       });
@@ -14091,21 +14142,15 @@
       const processedTeacherNames = new Set();
       
       daySchedules.forEach(sched => {
-        const tMatch = dbTeachers.find(t => {
-          const sClean = cleanTeacherNameForMatching(sched.guru);
-          const tClean = cleanTeacherNameForMatching(t.nama);
-          return sClean === tClean;
-        });
+        const tMatch = dbTeachers.find(t => isTeacherMatch(sched.guru, t.nama));
         if (tMatch) {
           processedTeacherNames.add(tMatch.nama);
         }
 
         const matchingJournal = dateJournals.find(j => {
-          const jClean = cleanTeacherNameForMatching(j.guru);
-          const sClean = cleanTeacherNameForMatching(sched.guru);
-          const teacherMatches = jClean.includes(sClean) || sClean.includes(jClean);
+          const teacherMatches = isTeacherMatch(j.guru, sched.guru);
           const classMatches = j.kelas === sched.kelas;
-          const sesiMatches = j.sesi && sched.jamKe && j.sesi.toString().split(',').map(s => s.trim()).some(s => sched.jamKe.toString().split(',').map(x => x.trim()).includes(s));
+          const sesiMatches = !j.sesi || !sched.jamKe || j.sesi.toString().split(',').map(s => s.trim()).some(s => sched.jamKe.toString().split(',').map(x => x.trim()).includes(s));
           
           return teacherMatches && classMatches && sesiMatches;
         });
@@ -14150,11 +14195,9 @@
       // Find extra/out-of-schedule journals filled on this date
       const extraJournals = dateJournals.filter(j => {
         const isScheduled = daySchedules.some(sched => {
-          const jClean = cleanTeacherNameForMatching(j.guru);
-          const sClean = cleanTeacherNameForMatching(sched.guru);
-          const teacherMatches = jClean.includes(sClean) || sClean.includes(jClean);
+          const teacherMatches = isTeacherMatch(j.guru, sched.guru);
           const classMatches = j.kelas === sched.kelas;
-          const sesiMatches = j.sesi && sched.jamKe && j.sesi.toString().split(',').map(s => s.trim()).some(s => sched.jamKe.toString().split(',').map(x => x.trim()).includes(s));
+          const sesiMatches = !j.sesi || !sched.jamKe || j.sesi.toString().split(',').map(s => s.trim()).some(s => sched.jamKe.toString().split(',').map(x => x.trim()).includes(s));
           return teacherMatches && classMatches && sesiMatches;
         });
         return !isScheduled;
@@ -14168,11 +14211,7 @@
         tbody.appendChild(trHeader);
         
         extraJournals.forEach(j => {
-          const tMatch = dbTeachers.find(t => {
-            const jClean = cleanTeacherNameForMatching(j.guru);
-            const tClean = cleanTeacherNameForMatching(t.nama);
-            return jClean === tClean;
-          });
+          const tMatch = dbTeachers.find(t => isTeacherMatch(j.guru, t.nama));
           if (tMatch) {
             processedTeacherNames.add(tMatch.nama);
           }
@@ -14221,11 +14260,7 @@
         tbody.appendChild(trHeader);
         
         remainingTeachers.forEach(t => {
-          const hasAnySchedule = (appState.jadwalList || []).some(sched => {
-            const sClean = cleanTeacherNameForMatching(sched.guru);
-            const tClean = cleanTeacherNameForMatching(t.nama);
-            return sClean === tClean;
-          });
+          const hasAnySchedule = (appState.jadwalList || []).some(sched => isTeacherMatch(sched.guru, t.nama));
           
           const tr = document.createElement('tr');
           let statusBadge = "";
@@ -14307,21 +14342,15 @@
 
       // 1. Process Scheduled KBM
       daySchedules.forEach(sched => {
-        const tMatch = dbTeachers.find(t => {
-          const sClean = cleanTeacherNameForMatching(sched.guru);
-          const tClean = cleanTeacherNameForMatching(t.nama);
-          return sClean === tClean;
-        });
+        const tMatch = dbTeachers.find(t => isTeacherMatch(sched.guru, t.nama));
         if (tMatch) {
           processedTeacherNames.add(tMatch.nama);
         }
 
         const matchingJournal = dateJournals.find(j => {
-          const jClean = cleanTeacherNameForMatching(j.guru);
-          const sClean = cleanTeacherNameForMatching(sched.guru);
-          const teacherMatches = jClean.includes(sClean) || sClean.includes(jClean);
+          const teacherMatches = isTeacherMatch(j.guru, sched.guru);
           const classMatches = j.kelas === sched.kelas;
-          const sesiMatches = j.sesi && sched.jamKe && j.sesi.toString().split(',').map(s => s.trim()).some(s => sched.jamKe.toString().split(',').map(x => x.trim()).includes(s));
+          const sesiMatches = !j.sesi || !sched.jamKe || j.sesi.toString().split(',').map(s => s.trim()).some(s => sched.jamKe.toString().split(',').map(x => x.trim()).includes(s));
           return teacherMatches && classMatches && sesiMatches;
         });
         
@@ -14355,22 +14384,16 @@
       // 2. Process Extra/Out of Schedule KBM
       const extraJournals = dateJournals.filter(j => {
         const isScheduled = daySchedules.some(sched => {
-          const jClean = cleanTeacherNameForMatching(j.guru);
-          const sClean = cleanTeacherNameForMatching(sched.guru);
-          const teacherMatches = jClean.includes(sClean) || sClean.includes(jClean);
+          const teacherMatches = isTeacherMatch(j.guru, sched.guru);
           const classMatches = j.kelas === sched.kelas;
-          const sesiMatches = j.sesi && sched.jamKe && j.sesi.toString().split(',').map(s => s.trim()).some(s => sched.jamKe.toString().split(',').map(x => x.trim()).includes(s));
+          const sesiMatches = !j.sesi || !sched.jamKe || j.sesi.toString().split(',').map(s => s.trim()).some(s => sched.jamKe.toString().split(',').map(x => x.trim()).includes(s));
           return teacherMatches && classMatches && sesiMatches;
         });
         return !isScheduled;
       });
       
       extraJournals.forEach(j => {
-        const tMatch = dbTeachers.find(t => {
-          const jClean = cleanTeacherNameForMatching(j.guru);
-          const tClean = cleanTeacherNameForMatching(t.nama);
-          return jClean === tClean;
-        });
+        const tMatch = dbTeachers.find(t => isTeacherMatch(j.guru, t.nama));
         if (tMatch) {
           processedTeacherNames.add(tMatch.nama);
         }
@@ -14401,11 +14424,7 @@
       // 3. Process Remaining Teachers (Unscheduled or Off)
       const remainingTeachers = dbTeachers.filter(t => !processedTeacherNames.has(t.nama));
       remainingTeachers.forEach(t => {
-        const hasAnySchedule = (appState.jadwalList || []).some(sched => {
-          const sClean = cleanTeacherNameForMatching(sched.guru);
-          const tClean = cleanTeacherNameForMatching(t.nama);
-          return sClean === tClean;
-        });
+        const hasAnySchedule = (appState.jadwalList || []).some(sched => isTeacherMatch(sched.guru, t.nama));
 
         let statusStr = "";
         let detailStr = "";
@@ -14520,14 +14539,14 @@
           <td style="font-weight: 600;">${item.namaGuru}</td>
           <td style="color: #cbd5e1;">${fileNameDisplay}</td>
           <td>
-            <button type="button" class="btn btn-primary" onclick="downloadFileDirectly('${item.id}', '${fileNameDisplay}')" style="padding:0.3rem 0.6rem; font-size:0.8rem; font-weight:600; display: inline-flex; align-items: center; gap: 0.35rem;">
+            <button type="button" class="btn btn-primary" onclick="downloadFileDirectly('${item.id}')" style="padding:0.3rem 0.6rem; font-size:0.8rem; font-weight:600; display: inline-flex; align-items: center; gap: 0.35rem;">
               <i class="fa-solid fa-download"></i> Unduh Berkas
             </button>
           </td>
           <td>${statusBadge}</td>
           <td style="color: var(--text-muted); font-size: 0.85rem; max-width: 180px;">${item.catatan || '-'}</td>
           <td>
-            <button class="btn btn-primary" style="padding: 0.35rem 0.75rem; font-size: 0.75rem;" onclick="openPerangkatModal('${item.id}', '${item.status}', '${item.catatan}')">
+            <button class="btn btn-primary" style="padding: 0.35rem 0.75rem; font-size: 0.75rem;" onclick="openPerangkatModal('${item.id}')">
               <i class="fa-solid fa-pen-to-square"></i> Validasi
             </button>
           </td>

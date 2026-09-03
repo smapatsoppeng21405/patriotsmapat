@@ -735,8 +735,10 @@ function getDashboard(role, email, nama, waliKelasClass) {
   }
   
   // Create stats based on role
+  var totalUsersCount = usersRaw.length > 1 ? usersRaw.length - 1 : 0;
+  
   if (role === "Wakasek" || role === "Admin") {
-    var totalGuru = sheetUsers.getDataRange().getValues().length - 1;
+    var totalGuru = totalUsersCount;
     var totalJurnal = result.jurnalList.length;
     
     var pendingPerangkat = 0;
@@ -763,13 +765,13 @@ function getDashboard(role, email, nama, waliKelasClass) {
   } 
   else if (role === "Guru") {
     var guruJurnal = result.jurnalList.filter(function(j) {
-      return j.guru.toLowerCase() === nama.toLowerCase();
+      return isTeacherMatch(j.guru, nama);
     });
     var guruPerangkat = result.perangkatList.filter(function(p) {
-      return p.namaGuru.toLowerCase() === nama.toLowerCase();
+      return isTeacherMatch(p.namaGuru, nama);
     });
     var guruJadwal = result.jadwalList.filter(function(jd) {
-      return jd.guru.toLowerCase() === nama.toLowerCase();
+      return isTeacherMatch(jd.guru, nama);
     });
     
     var pending = 0;
@@ -798,7 +800,7 @@ function getDashboard(role, email, nama, waliKelasClass) {
   }
   else if (role === "Wali Kelas") {
     var myRekap = result.rekapAbsenList.filter(function(ra) {
-      return ra.waliKelas.toLowerCase() === nama.toLowerCase();
+      return isTeacherMatch(ra.waliKelas, nama);
     });
     
     result.stats = {
@@ -827,12 +829,12 @@ function getDashboard(role, email, nama, waliKelasClass) {
     result.siswaGuruWaliList = [];
     result.jurnal7KAIHList = [];
     result.catatanWaliKelasList = result.catatanWaliKelasList.filter(function(cw) {
-      return cw.waliKelas.toLowerCase() === nama.toLowerCase();
+      return isTeacherMatch(cw.waliKelas, nama);
     });
   }
   else if (role === "Guru Wali") {
     var myStudents = result.siswaGuruWaliList.filter(function(s) {
-      return s.guruWali.toLowerCase().indexOf(nama.toLowerCase()) !== -1 || s.guruWali.toLowerCase().indexOf(email.toLowerCase()) !== -1;
+      return isTeacherMatch(s.guruWali, nama) || (s.guruWali && email && s.guruWali.toLowerCase().indexOf(email.toLowerCase()) !== -1);
     });
     
     var myStudentNisList = myStudents.map(function(s) { return s.nis ? s.nis.toString().trim() : ""; });
@@ -841,12 +843,12 @@ function getDashboard(role, email, nama, waliKelasClass) {
     var myJurnal7KAIH = result.jurnal7KAIHList.filter(function(j) {
       var isMatchNis = j.nis && myStudentNisList.indexOf(j.nis.toString().trim()) !== -1;
       var isMatchName = j.namaSiswa && myStudentNamesList.indexOf(j.namaSiswa.toLowerCase().trim()) !== -1;
-      var isMatchGW = j.guruWali && (j.guruWali.toLowerCase().indexOf(nama.toLowerCase()) !== -1 || j.guruWali.toLowerCase().indexOf(email.toLowerCase()) !== -1);
+      var isMatchGW = isTeacherMatch(j.guruWali, nama) || (j.guruWali && email && j.guruWali.toLowerCase().indexOf(email.toLowerCase()) !== -1);
       return isMatchNis || isMatchName || isMatchGW;
     });
     
     var myCatatanBimbingan = result.catatanBimbinganList.filter(function(c) {
-      return c.guruWali.toLowerCase().indexOf(nama.toLowerCase()) !== -1 || c.guruWali.toLowerCase().indexOf(email.toLowerCase()) !== -1;
+      return isTeacherMatch(c.guruWali, nama) || (c.guruWali && email && c.guruWali.toLowerCase().indexOf(email.toLowerCase()) !== -1);
     });
     
     result.stats = {
@@ -876,7 +878,7 @@ function getDashboard(role, email, nama, waliKelasClass) {
     result.catatanWaliKelasList = myCatatanWali;
   }
   else if (role === "Kepala Sekolah") {
-    var totalGuru = sheetUsers.getDataRange().getValues().length - 1;
+    var totalGuru = totalUsersCount;
     var totalJurnal = result.jurnalList.length;
     var pendingPerangkat = 0;
     var approvedPerangkat = 0;
@@ -2049,4 +2051,43 @@ function deleteCatatanWaliKelas(id) {
     }
   }
   throw new Error("Catatan Wali Kelas tidak ditemukan.");
+}
+
+// 26. Helper: Normalisasi & Pembersihan Nama Guru untuk Pencocokan Fleksibel
+function cleanTeacherNameForMatching(name) {
+  if (!name) return "";
+  var s = String(name).toLowerCase();
+  // Hapus teks dalam tanda kurung
+  s = s.replace(/\(.*?\)/g, " ").replace(/\[.*?\]/g, " ").replace(/\{.*?\}/g, " ");
+  // Hapus sapaan dan gelar depan
+  s = s.replace(/\b(ibu|bapak|bpk|bu|pak|ustadzah|ustadz|ustad|dra|drs|prof|dr|ir|hj|h)\.?\s+/gi, " ");
+  // Hapus gelar akademik berakhiran titik atau koma
+  s = s.replace(/\b(s\.pd\.i|s\.pd\.sd|s\.pdi|s\.pd|m\.pd\.i|m\.pdi|m\.pd|s\.kom|m\.kom|s\.ti|s\.t|m\.t|s\.si|m\.si|s\.sn|m\.sn|s\.ag|m\.ag|s\.sos|m\.sos|s\.e|m\.e|s\.h|m\.h|s\.psi|m\.psi|s\.stat|m\.stat|s\.ab|m\.ab|s\.ap|m\.ap|s\.hum|m\.hum|s\.farm|m\.farm|s\.kel|m\.kel|s\.ip|m\.ip|s\.ik|m\.ik|m\.m|m\.ba|ph\.d|phd|gr)\b/gi, " ");
+  // Hapus gelar tanpa titik
+  s = s.replace(/\b(spdi|spd|mpdi|mpd|skom|mkom|ssi|msi|ssn|msn|sag|mag|ssos|msos|se|me|sh|mh|spsi|mpsi|mm|mba|phd|gr)\b/gi, " ");
+  // Hapus karakter non-alphanumeric
+  s = s.replace(/[^a-z0-9\s]/g, " ");
+  // Rapikan spasi
+  s = s.replace(/\s+/g, " ").trim();
+  return s;
+}
+
+// 27. Helper: Cek Apakah Dua Nama Guru Merupakan Guru yang Sama
+function isTeacherMatch(name1, name2) {
+  if (!name1 || !name2) return false;
+  var c1 = cleanTeacherNameForMatching(name1);
+  var c2 = cleanTeacherNameForMatching(name2);
+  if (!c1 || !c2) return false;
+  if (c1 === c2) return true;
+  if (c1.indexOf(c2) !== -1 || c2.indexOf(c1) !== -1) return true;
+  
+  // Token matching (jika minimal 1 kata unik cocok)
+  var tokens1 = c1.split(" ").filter(function(w) { return w.length > 2; });
+  var tokens2 = c2.split(" ").filter(function(w) { return w.length > 2; });
+  if (tokens1.length > 0 && tokens2.length > 0) {
+    var all1In2 = tokens1.every(function(w) { return c2.indexOf(w) !== -1; });
+    var all2In1 = tokens2.every(function(w) { return c1.indexOf(w) !== -1; });
+    if (all1In2 || all2In1) return true;
+  }
+  return false;
 }
