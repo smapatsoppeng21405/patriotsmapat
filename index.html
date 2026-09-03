@@ -6642,18 +6642,21 @@
           }
 
           // PASTIKAN SELURUH DATA UTAMA (290+ Jurnal, 22+ User/Guru, Perangkat, Siswa) SELALU UTUH DI KEDUA SISI
-          result.jurnalList = [...jRaw];
-          result.perangkatList = [...pRaw];
-          result.nilaiList = [...nRaw];
-          result.jadwalList = [...jdRaw];
-          result.laporanWaliList = [...lpRaw];
-          result.guruMasterList = [...gmRaw];
-          result.teacherList = [...teachers];
+          const cachedJurnals = JSON.parse(localStorage.getItem('cache_jurnals')) || JSON.parse(localStorage.getItem('db_jurnals')) || [];
+          const cachedTeachers = JSON.parse(localStorage.getItem('cache_teachers')) || JSON.parse(localStorage.getItem('db_users')) || [];
+
+          result.jurnalList = jRaw.length > 0 ? [...jRaw] : cachedJurnals;
+          result.perangkatList = pRaw.length > 0 ? [...pRaw] : (JSON.parse(localStorage.getItem('cache_perangkats')) || []);
+          result.nilaiList = nRaw.length > 0 ? [...nRaw] : (JSON.parse(localStorage.getItem('cache_nilais')) || []);
+          result.jadwalList = jdRaw.length > 0 ? [...jdRaw] : (JSON.parse(localStorage.getItem('cache_jadwals')) || []);
+          result.laporanWaliList = lpRaw.length > 0 ? [...lpRaw] : (JSON.parse(localStorage.getItem('cache_laporans')) || []);
+          result.guruMasterList = gmRaw.length > 0 ? [...gmRaw] : (JSON.parse(localStorage.getItem('cache_gurumaster')) || []);
+          result.teacherList = teachers.length > 0 ? [...teachers] : cachedTeachers;
           result.rekapAbsenList = [...raRaw];
           result.kondisiSiswaList = [...ksRaw];
           result.jurnal7KAIHList = [...j7kaihRaw];
           result.catatanBimbinganList = [...cbRaw];
-          result.studentList = [...fullStudentList];
+          result.studentList = fullStudentList.length > 0 ? [...fullStudentList] : (JSON.parse(localStorage.getItem('cache_students')) || []);
 
           return result;
         }
