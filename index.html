@@ -6093,22 +6093,37 @@
           let snap = await ref("/").once("value");
           let root = snap.val() || {};
 
-          let jObj = root.jurnals || {};
-          let pObj = root.perangkats || {};
-          let nObj = root.nilais || {};
-          let jdObj = root.jadwals || {};
-          let lpObj = root.laporans || {};
-          let gmObj = root.gurumasters || {};
-          let uObj = root.users || {};
-          let raObj = root.rekapabsen || {};
-          let ksObj = root.kondisisiswa || {};
-          let sgwObj = root.siswagw || {};
-          let j7Obj = root.jurnal7kaih || {};
-          let cbObj = root.catatanbimbingan || {};
-          let sObj = root.students || {};
-          let kmpObj = root.kelasmapelpilihan || {};
-          let rootSettings = root.settings || {};
-          let sessionsObj = root.sessions || root.sesi || {};
+          function findCollection(keys) {
+            let combined = {};
+            const rootKeys = Object.keys(root);
+            for (let target of keys) {
+              if (root[target] && typeof root[target] === 'object') {
+                Object.assign(combined, root[target]);
+              }
+              const matchedKey = rootKeys.find(rk => rk.toLowerCase() === target.toLowerCase());
+              if (matchedKey && root[matchedKey] && typeof root[matchedKey] === 'object') {
+                Object.assign(combined, root[matchedKey]);
+              }
+            }
+            return combined;
+          }
+
+          let jObj = findCollection(["jurnals", "JurnalMengajar", "jurnal", "jurnalMengajar", "Jurnals", "Jurnal"]);
+          let pObj = findCollection(["perangkats", "PerangkatAjar", "perangkat", "perangkatAjar", "Perangkats", "Perangkat"]);
+          let nObj = findCollection(["nilais", "AnalisisNilai", "nilai", "analisisNilai", "Nilais", "Nilai"]);
+          let jdObj = findCollection(["jadwals", "Jadwal", "jadwal", "Jadwals"]);
+          let lpObj = findCollection(["laporans", "LaporanWali", "laporan", "laporanWali", "Laporans", "Laporan"]);
+          let gmObj = findCollection(["gurumasters", "GuruMaster", "gurumaster", "guruMaster", "GuruMasters"]);
+          let uObj = findCollection(["users", "Users", "user", "User"]);
+          let raObj = findCollection(["rekapabsen", "RekapAbsen", "rekapAbsen", "Rekap_Absen"]);
+          let ksObj = findCollection(["kondisisiswa", "KondisiSiswa", "kondisiSiswa", "Kondisi_Siswa"]);
+          let sgwObj = findCollection(["siswagw", "SiswaGuruWali", "siswaGuruWali", "Siswa_Guru_Wali"]);
+          let j7Obj = findCollection(["jurnal7kaih", "Jurnal7KAIH", "jurnal7KAIH", "jurnal7kih", "Jurnal7KIH", "jurnal7Kih", "Jurnal7"]);
+          let cbObj = findCollection(["catatanbimbingan", "CatatanBimbingan", "catatanBimbingan"]);
+          let sObj = findCollection(["students", "Siswa", "siswa", "student", "Students"]);
+          let kmpObj = findCollection(["kelasmapelpilihan", "KelasMapelPilihan", "kelasMapelPilihan"]);
+          let rootSettings = findCollection(["settings", "Settings", "setting", "Setting"]);
+          let sessionsObj = findCollection(["sessions", "Sesi", "sesi", "Sessions"]);
 
           // Jika ada data di Firestore, gabungkan secara otomatis agar tidak ada data yang tertinggal
           if (useFirebase && db) {
@@ -6169,31 +6184,184 @@
             }
           }
 
-          const jRaw = Object.keys(jObj).map(k => ({ id: k, ...jObj[k] }));
+          const jRaw = Object.keys(jObj).map(k => {
+            const item = jObj[k] || {};
+            return {
+              id: k,
+              tanggal: item.tanggal || item.Tanggal || item.tgl || "",
+              guru: item.guru || item.Guru || item.Nama_Guru || item.namaGuru || item.Nama || "",
+              kelas: item.kelas || item.Kelas || "",
+              materi: item.materi || item.Materi || "",
+              kehadiran: item.kehadiran || item.Kehadiran || "",
+              catatan: item.catatan || item.Catatan || "",
+              mode: item.mode || item.Mode || "Tatap Muka",
+              mapel: item.mapel || item.Mapel || "",
+              sesi: item.sesi || item.Sesi || item.jamKe || item.JamKe || ""
+            };
+          });
+
           const pRaw = Object.keys(pObj).map(k => {
             const p = pObj[k] || {};
             return {
               id: k,
-              namaGuru: p.namaGuru || "",
-              jenisDokumen: p.jenisDokumen || "",
-              linkDrive: p.linkDrive || "",
-              status: p.status || "Pending",
-              catatan: p.catatan || "-",
-              fileName: p.fileName || "perangkat_ajar.zip",
-              fileMimeType: p.fileMimeType || "application/zip"
+              namaGuru: p.namaGuru || p.Nama_Guru || p.NamaGuru || p.guru || p.Guru || p.nama || p.Nama || "",
+              jenisDokumen: p.jenisDokumen || p.Jenis_Dokumen || p.JenisDokumen || p.jenis || "",
+              linkDrive: p.linkDrive || p.Link_Drive || p.LinkDrive || p.link || "",
+              status: p.status || p.Status || "Pending",
+              catatan: p.catatan || p.Catatan || "-",
+              fileName: p.fileName || p.FileName || "perangkat_ajar.zip",
+              fileMimeType: p.fileMimeType || p.FileMimeType || "application/zip"
             };
           });
-          const nRaw = Object.keys(nObj).map(k => ({ id: k, ...nObj[k] }));
-          const jdRaw = Object.keys(jdObj).map(k => ({ id: k, ...jdObj[k] }));
-          const lpRaw = Object.keys(lpObj).map(k => ({ id: k, ...lpObj[k] }));
-          const gmRaw = Object.keys(gmObj).map(k => ({ id: k, ...gmObj[k] }));
-          const users = Object.keys(uObj).map(k => ({ id: k, ...uObj[k] }));
-          const raRaw = Object.keys(raObj).map(k => ({ id: k, ...raObj[k] }));
-          const ksRaw = Object.keys(ksObj).map(k => ({ id: k, ...ksObj[k] }));
-          const sgwRaw = Object.keys(sgwObj).map(k => ({ id: k, ...sgwObj[k] }));
-          const j7kaihRaw = Object.keys(j7Obj).map(k => ({ id: k, ...j7Obj[k] }));
-          const cbRaw = Object.keys(cbObj).map(k => ({ id: k, ...cbObj[k] }));
-          const sRaw = Object.keys(sObj).map(k => ({ id: k, ...sObj[k] }));
+
+          const nRaw = Object.keys(nObj).map(k => {
+            const n = nObj[k] || {};
+            return {
+              id: k,
+              kelas: n.kelas || n.Kelas || "",
+              mapel: n.mapel || n.Mapel || "",
+              rataNilai: parseFloat(n.rataNilai || n.Rata_Nilai || n.rata_nilai || n.rata || 0),
+              jumlahSiswaRemidial: parseInt(n.jumlahSiswaRemidial || n.Jumlah_Siswa_Remidial || n.remidial || 0)
+            };
+          });
+
+          const jdRaw = Object.keys(jdObj).map(k => {
+            const s = jdObj[k] || {};
+            return {
+              id: k,
+              hari: s.hari || s.Hari || "",
+              jamKe: s.jamKe || s.JamKe || s.sesi || s.Sesi || "",
+              kelas: s.kelas || s.Kelas || "",
+              guru: s.guru || s.Guru || s.namaGuru || s.NamaGuru || "",
+              mapel: s.mapel || s.Mapel || ""
+            };
+          });
+
+          const lpRaw = Object.keys(lpObj).map(k => {
+            const lp = lpObj[k] || {};
+            return {
+              id: k,
+              tanggal: lp.tanggal || lp.Tanggal || "",
+              waliKelas: lp.waliKelas || lp.WaliKelas || "",
+              kelas: lp.kelas || lp.Kelas || "",
+              kategori: lp.kategori || lp.Kategori || "",
+              judul: lp.judul || lp.Judul || "",
+              isi: lp.isi || lp.Isi || "",
+              tindakLanjut: lp.tindakLanjut || lp.TindakLanjut || lp.tindak_lanjut || ""
+            };
+          });
+
+          const gmRaw = Object.keys(gmObj).map(k => {
+            const gm = gmObj[k] || {};
+            return {
+              id: k,
+              guru: gm.guru || gm.Guru || gm.NamaGuru || gm.namaGuru || gm.nama || gm.Nama || "",
+              nama: gm.nama || gm.Nama || gm.Guru || gm.guru || gm.NamaGuru || gm.namaGuru || "",
+              mapel: gm.mapel || gm.Mapel || "",
+              kelas: gm.kelas || gm.Kelas || "",
+              jumlahJam: parseInt(gm.jumlahJam || gm.JumlahJam || gm.jam || gm.Jam || 0),
+              email: gm.email || gm.Email || "",
+              nip: gm.nip || gm.NIP || ""
+            };
+          });
+
+          const users = Object.keys(uObj).map(k => {
+            const u = uObj[k] || {};
+            return {
+              id: k,
+              nama: u.nama || u.Nama || u.Nama_Guru || u.namaGuru || "",
+              email: u.email || u.Email || "",
+              role: u.role || u.Role || "Guru",
+              password: u.password || u.Password || "",
+              nip: u.nip || u.NIP || "",
+              waliKelasClass: u.waliKelasClass || u.WaliKelasClass || u.kelas || u.Kelas || "",
+              mapel: u.mapel || u.Mapel || ""
+            };
+          });
+
+          const raRaw = Object.keys(raObj).map(k => {
+            const ra = raObj[k] || {};
+            return {
+              id: k,
+              bulan: ra.bulan || ra.Bulan || "",
+              tahun: ra.tahun || ra.Tahun || "",
+              waliKelas: ra.waliKelas || ra.WaliKelas || "",
+              kelas: ra.kelas || ra.Kelas || "",
+              namaSiswa: ra.namaSiswa || ra.NamaSiswa || ra.nama || ra.Nama || "",
+              hadir: parseInt(ra.hadir || ra.Hadir) || 0,
+              sakit: parseInt(ra.sakit || ra.Sakit) || 0,
+              izin: parseInt(ra.izin || ra.Izin) || 0,
+              alpa: parseInt(ra.alpa || ra.Alpa) || 0
+            };
+          });
+
+          const ksRaw = Object.keys(ksObj).map(k => {
+            const ks = ksObj[k] || {};
+            return {
+              id: k,
+              bulan: ks.bulan || ks.Bulan || "",
+              tahun: ks.tahun || ks.Tahun || "",
+              waliKelas: ks.waliKelas || ks.WaliKelas || "",
+              kelas: ks.kelas || ks.Kelas || "",
+              namaSiswa: ks.namaSiswa || ks.NamaSiswa || "",
+              kehadiran: ks.kehadiran || ks.Kehadiran || "",
+              prestasiAkademik: ks.prestasiAkademik || ks.PrestasiAkademik || "-",
+              prestasiNonAkademik: ks.prestasiNonAkademik || ks.PrestasiNonAkademik || "-",
+              tujuanSetelahLulus: ks.tujuanSetelahLulus || ks.TujuanSetelahLulus || "-"
+            };
+          });
+
+          const sgwRaw = Object.keys(sgwObj).map(k => {
+            const sgw = sgwObj[k] || {};
+            return {
+              id: k,
+              nis: sgw.nis || sgw.NIS || "",
+              namaSiswa: sgw.namaSiswa || sgw.NamaSiswa || sgw.nama || sgw.Nama || "",
+              kelas: sgw.kelas || sgw.Kelas || "",
+              guruWali: sgw.guruWali || sgw.GuruWali || ""
+            };
+          });
+
+          const j7kaihRaw = Object.keys(j7Obj).map(k => {
+            const j7 = j7Obj[k] || {};
+            return {
+              id: k,
+              tanggal: j7.tanggal || j7.Tanggal || "",
+              nis: j7.nis || j7.NIS || "",
+              namaSiswa: j7.namaSiswa || j7.NamaSiswa || "",
+              guruWali: j7.guruWali || j7.GuruWali || "",
+              bangunPagi: j7.bangunPagi || j7.BangunPagi || "",
+              beribadah: j7.beribadah || j7.Beribadah || "",
+              berolahraga: j7.berolahraga || j7.Berolahraga || "",
+              makanSehat: j7.makanSehat || j7.MakanSehat || "",
+              gemarBelajar: j7.gemarBelajar || j7.GemarBelajar || "",
+              bermasyarakat: j7.bermasyarakat || j7.Bermasyarakat || "",
+              tidurCepat: j7.tidurCepat || j7.TidurCepat || ""
+            };
+          });
+
+          const cbRaw = Object.keys(cbObj).map(k => {
+            const cb = cbObj[k] || {};
+            return {
+              id: k,
+              tanggal: cb.tanggal || cb.Tanggal || "",
+              guruWali: cb.guruWali || cb.GuruWali || "",
+              namaSiswa: cb.namaSiswa || cb.NamaSiswa || "",
+              catatanPerkembangan: cb.catatanPerkembangan || cb.CatatanPerkembangan || cb.catatan || cb.Catatan || ""
+            };
+          });
+
+          const sRaw = Object.keys(sObj).map(k => {
+            const s = sObj[k] || {};
+            return {
+              id: k,
+              nis: s.nis || s.NIS || "",
+              namaSiswa: s.namaSiswa || s.NamaSiswa || s.Nama_Siswa || s.nama || s.Nama || "",
+              kelas: s.kelas || s.Kelas || "",
+              tingkatan: s.tingkatan || s.Tingkatan || ""
+            };
+          });
+
           const kmpRaw = Object.keys(kmpObj).map(k => ({ id: k, ...kmpObj[k] }));
           const sesiRaw = Object.keys(sessionsObj).map(k => ({ id: k, ...sessionsObj[k] }));
 
