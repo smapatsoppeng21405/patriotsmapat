@@ -5220,8 +5220,6 @@
         return;
       }
 
-      // Buka dasbor utama secara instan 0 milidetik
-      showAuthView(false);
       showLoading(true, "Menyiapkan sesi & memuat data...");
       
       try {
@@ -5383,9 +5381,9 @@
       appState.user = finalUser;
       localStorage.setItem('si_kurikulum_user', JSON.stringify(finalUser));
       
+      await setupSessionUI();
       showAuthView(false);
       showToast(`Selamat datang kembali, ${profile.nama} (${formatRoleDisplay(profile.role)})!`);
-      await setupSessionUI();
     }
 
     // ROLE SWITCHER SIDEBAR
