@@ -6398,34 +6398,30 @@
         payload.currentUserWaliKelasClass = appState.user.waliKelasClass || "";
       }
 
-      const withApiTimeout = (promise, ms = 12000) => {
-        let timer;
-        const timeoutPromise = new Promise((_, reject) => {
-          timer = setTimeout(() => reject(new Error("Database connection timeout")), ms);
-        });
-        return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timer));
-      };
-      
-      const activeGasUrl = localStorage.getItem("GAS_API_URL") || GAS_API_URL;
-      const preferGas = localStorage.getItem("DB_MODE") === "gas" || (activeGasUrl !== "" && localStorage.getItem("DB_MODE") !== "firebase");
+      const activeGasUrl = "https://script.google.com/macros/s/AKfycbxaIe9k2Tq-SlLGjtHlqSqg413Y8QVqZr4Gq_YS8FX5jukrIj-SFMheqzjiFVJswfNWKg/exec";
+      localStorage.setItem("GAS_API_URL", activeGasUrl);
+      localStorage.setItem("DB_MODE", "gas");
 
-      // 1. UTAMAKAN GOOGLE APPS SCRIPT JIKA TERHUBUNG
-      if (activeGasUrl !== "" && preferGas) {
-        try {
-          const response = await fetch(activeGasUrl, {
-            method: 'POST',
-            mode: 'cors',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action, payload })
-          });
-          const result = await response.json();
-          if (result.status === 'success') return result.data;
-        } catch (gasErr) {
-          console.warn("GAS primary call note:", gasErr);
+      // UTAMAKAN GOOGLE APPS SCRIPT WEB APP
+      try {
+        const response = await fetch(activeGasUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action, payload })
+        });
+        const result = await response.json();
+        if (result.status === 'success') {
+          return result.data;
+        } else {
+          throw new Error(result.message || result.data || "NIP atau Kata Sandi yang Anda masukkan salah.");
         }
+      } catch (gasErr) {
+        console.warn("GAS API Call:", gasErr);
+        throw gasErr;
       }
-      
-      // BACA DATA DARI REALTIME DATABASE & FIRESTORE SECARA BERSAMAAN (HYBRID MODE)
+    }
+
+      // FALLBACK DEPRECATED
       if (action === "getDashboard") {
         let combinedData = { stats: {}, jurnalList: [], perangkatList: [], nilaiList: [], jadwalList: [], laporanWaliList: [], guruMasterList: [], teacherList: [], rekapAbsenList: [], kondisiSiswaList: [], jurnal7KAIHList: [], catatanBimbinganList: [], studentList: [] };
 
