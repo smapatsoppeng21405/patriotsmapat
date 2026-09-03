@@ -9830,10 +9830,10 @@
           console.warn("GAS download API note:", apiErr);
         }
 
-        const linkDrive = (res && res.linkDrive) || (item && item.linkDrive) || "";
-        const fileBase64 = (res && res.fileBase64) || (item && item.fileBase64) || "";
-        const finalFileName = (res && res.fileName) || fileNameToUse || (item && `${item.jenisDokumen || 'Perangkat'}_${(item.namaGuru || "Guru").replace(/\s+/g, '_')}.pdf`) || "perangkat_ajar.pdf";
-        const mimeType = (res && res.mimeType) || (item && item.fileMimeType) || "application/octet-stream";
+        let linkDrive = (res && res.linkDrive) || (item && item.linkDrive) || "";
+        let fileBase64 = (res && res.fileBase64) || (item && item.fileBase64) || "";
+        let finalFileName = (res && res.fileName) || fileNameToUse || (item && `${item.jenisDokumen || 'Perangkat'}_${(item.namaGuru || "Guru").replace(/\s+/g, '_')}.pdf`) || "perangkat_ajar.pdf";
+        let mimeType = (res && res.mimeType) || (item && item.fileMimeType) || "application/octet-stream";
 
         // A. JIKA TERSEDIA FILE BASE64 LENGKAP
         if (fileBase64 && fileBase64.length > 50) {
