@@ -9884,8 +9884,13 @@
           // Abaikan link dummy sampel lama yang tidak valid
           if (!linkDrive.includes("Gagal") && !linkDrive.includes("dummy") && linkDrive.length > 20) {
             if (linkDrive.includes("drive.google.com") && linkDrive.includes("id=")) {
-              const fId = linkDrive.split("id=")[1].split("&")[0];
-              linkDrive = `https://drive.google.com/file/d/${fId}/view?usp=sharing`;
+          const fId = linkDrive.split("id=")[1].split("&")[0].split("/")[0].trim();
+          if (fId && !fId.includes("mock")) {
+            linkDrive = `https://drive.google.com/file/d/${fId}/view?usp=sharing`;
+          } else {
+            linkDrive = "";
+          }
+        }/view?usp=sharing`;
             }
             
             if (popupWindow) {
