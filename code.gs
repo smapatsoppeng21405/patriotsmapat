@@ -524,14 +524,16 @@ function getDashboard(role, email, nama, waliKelasClass) {
   // Format Jadwal list
   for (var i = 1; i < jadwalRaw.length; i++) {
     var row = jadwalRaw[i];
-    result.jadwalList.push({
-      id: row[0],
-      hari: row[1],
-      jamKe: row[2],
-      kelas: row[3],
-      guru: row[4],
-      mapel: row[5]
-    });
+    if (row[0] && row[1]) {
+      result.jadwalList.push({
+        id: row[0],
+        hari: row[1],
+        jamKe: row[2],
+        kelas: row[3],
+        guru: row[4],
+        mapel: row[5]
+      });
+    }
   }
 
   // Format Laporan Wali Kelas list
@@ -1376,7 +1378,7 @@ function saveGeneratedSchedule(payload) {
   // Hapus semua data lama (sisakan baris header)
   var lastRow = sheet.getLastRow();
   if (lastRow > 1) {
-    sheet.getRange(2, 1, lastRow - 1, 6).clearContent();
+    sheet.deleteRows(2, lastRow - 1);
   }
   
   var scheduleList = payload.scheduleList || [];

@@ -8042,7 +8042,7 @@
           if (data.nilaiList && data.nilaiList.length > 0) appState.nilaiList = data.nilaiList;
           if (data.jadwalList && data.jadwalList.length > 0) appState.jadwalList = data.jadwalList;
           if (data.laporanWaliList && data.laporanWaliList.length > 0) appState.laporanWaliList = data.laporanWaliList;
-          if (data.guruJadwalList && data.guruJadwalList.length > 0) appState.guruJadwalList = data.guruJadwalList;
+          if (data.guruJadwalList) appState.guruJadwalList = data.guruJadwalList;
           if (data.guruMasterList && data.guruMasterList.length > 0) appState.guruMasterList = data.guruMasterList;
           if (data.settings) appState.settings = data.settings;
           if (data.teacherList && data.teacherList.length > 0) appState.teacherList = data.teacherList;
@@ -8069,6 +8069,7 @@
           safeLocalStorageSetItem('cache_perangkats', JSON.stringify(appState.perangkatList || []));
           safeLocalStorageSetItem('cache_nilais', JSON.stringify(appState.nilaiList || []));
           safeLocalStorageSetItem('cache_jadwals', JSON.stringify(appState.jadwalList || []));
+          safeLocalStorageSetItem('cache_gurujadwals', JSON.stringify(appState.guruJadwalList || []));
           safeLocalStorageSetItem('cache_laporans', JSON.stringify(appState.laporanWaliList || []));
           safeLocalStorageSetItem('cache_teachers', JSON.stringify(appState.teacherList || []));
           safeLocalStorageSetItem('cache_students', JSON.stringify(appState.studentList || []));
@@ -10562,7 +10563,7 @@
       teachers.forEach(t => {
         const display = `${t.nama} (${t.role})`;
         const opt = document.createElement('option');
-        opt.value = display;
+        opt.value = t.nama;
         opt.textContent = display;
         select.appendChild(opt);
       });
@@ -11650,7 +11651,11 @@
       const teacherNip = appState.user ? appState.user.nip : "";
       const teacherEmail = appState.user ? appState.user.email : "";
 
-      let list = (appState.guruJadwalList || []).filter(j => {
+      const sourceList = (appState.guruJadwalList && appState.guruJadwalList.length > 0) 
+        ? appState.guruJadwalList 
+        : (appState.jadwalList || []);
+
+      let list = sourceList.filter(j => {
         const gName = j.guru || j.namaGuru || "";
         const gEmail = j.email || j.Email || "";
         const gNip = j.nip || j.NIP || "";
@@ -11662,18 +11667,15 @@
         return matchName || matchNip || matchEmail;
       });
 
-      if (list.length === 0 && appState.jadwalList) {
+      if (list.length === 0 && appState.jadwalList && appState.jadwalList.length > 0) {
         list = appState.jadwalList.filter(j => {
           const gName = j.guru || j.namaGuru || "";
-          const gEmail = j.email || j.Email || "";
-          const gNip = j.nip || j.NIP || "";
-
-          const matchName = teacherName && isTeacherMatch(gName, teacherName);
-          const matchNip = teacherNip && (gNip === teacherNip || gName.includes(teacherNip));
-          const matchEmail = teacherEmail && (gEmail.toLowerCase() === teacherEmail.toLowerCase() || gName.toLowerCase() === teacherEmail.toLowerCase());
-
-          return matchName || matchNip || matchEmail;
+          return teacherName && isTeacherMatch(gName, teacherName);
         });
+      }
+
+      if (list.length === 0 && appState.guruJadwalList && appState.guruJadwalList.length > 0) {
+        list = appState.guruJadwalList;
       }
 
       if (list.length === 0) {
@@ -13507,21 +13509,21 @@
         { id: "SES-008", namaSesi: "Sesi 8", jamMulai: "13:15", jamSelesai: "14:00" }
       ];
       
-      localStorage.setItem('db_users', JSON.stringify(mockUsers));
-      localStorage.setItem('db_jurnals', JSON.stringify(mockJurnals));
-      localStorage.setItem('db_perangkats', JSON.stringify(mockPerangkats));
-      localStorage.setItem('db_nilais', JSON.stringify(mockNilais));
-      localStorage.setItem('db_jadwals', JSON.stringify(mockJadwals));
-      localStorage.setItem('db_laporans', JSON.stringify(mockLaporans));
-      localStorage.setItem('db_gurumasters', JSON.stringify(mockGuruMasters));
-      localStorage.setItem('db_settings', JSON.stringify(mockSettings));
-      localStorage.setItem('db_rekap_absen', JSON.stringify(mockRekapAbsen));
-      localStorage.setItem('db_kondisi_siswa', JSON.stringify(mockKondisiSiswa));
-      localStorage.setItem('db_siswagw', JSON.stringify(mockSiswaGW));
-      localStorage.setItem('db_jurnal7kaih', JSON.stringify(mockJurnal7KAIH));
-      localStorage.setItem('db_catatanbimbingan', JSON.stringify(mockCatatanBimbingan));
-      localStorage.setItem('db_students', JSON.stringify(mockStudents));
-      localStorage.setItem('db_sesi', JSON.stringify(mockSesi));
+      if (!localStorage.getItem('db_users')) localStorage.setItem('db_users', JSON.stringify(mockUsers));
+      if (!localStorage.getItem('db_jurnals')) localStorage.setItem('db_jurnals', JSON.stringify(mockJurnals));
+      if (!localStorage.getItem('db_perangkats')) localStorage.setItem('db_perangkats', JSON.stringify(mockPerangkats));
+      if (!localStorage.getItem('db_nilais')) localStorage.setItem('db_nilais', JSON.stringify(mockNilais));
+      if (!localStorage.getItem('db_jadwals')) localStorage.setItem('db_jadwals', JSON.stringify(mockJadwals));
+      if (!localStorage.getItem('db_laporans')) localStorage.setItem('db_laporans', JSON.stringify(mockLaporans));
+      if (!localStorage.getItem('db_gurumasters')) localStorage.setItem('db_gurumasters', JSON.stringify(mockGuruMasters));
+      if (!localStorage.getItem('db_settings')) localStorage.setItem('db_settings', JSON.stringify(mockSettings));
+      if (!localStorage.getItem('db_rekap_absen')) localStorage.setItem('db_rekap_absen', JSON.stringify(mockRekapAbsen));
+      if (!localStorage.getItem('db_kondisi_siswa')) localStorage.setItem('db_kondisi_siswa', JSON.stringify(mockKondisiSiswa));
+      if (!localStorage.getItem('db_siswagw')) localStorage.setItem('db_siswagw', JSON.stringify(mockSiswaGW));
+      if (!localStorage.getItem('db_jurnal7kaih')) localStorage.setItem('db_jurnal7kaih', JSON.stringify(mockJurnal7KAIH));
+      if (!localStorage.getItem('db_catatanbimbingan')) localStorage.setItem('db_catatanbimbingan', JSON.stringify(mockCatatanBimbingan));
+      if (!localStorage.getItem('db_students')) localStorage.setItem('db_students', JSON.stringify(mockStudents));
+      if (!localStorage.getItem('db_sesi')) localStorage.setItem('db_sesi', JSON.stringify(mockSesi));
     }
 
     // ==================== PATRIOT SMAPAT: EXCEL IMPORT & ROLE FUNCTIONS ====================
