@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wakasek-kurikulum-v53-fix-mapil-and-siswagw';
+const CACHE_NAME = 'wakasek-kurikulum-v60-nip-login-sync';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

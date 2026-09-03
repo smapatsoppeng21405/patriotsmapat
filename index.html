@@ -5577,13 +5577,9 @@
         
         currentLoginProfiles = profiles;
         
-        if (profiles.length > 1) {
-          showLoading(false);
-          showRoleChoiceOverlay(profiles);
-          return;
-        }
+        // Pilih profil utama secara otomatis tanpa hambatan modal
+        const primaryProfile = profiles.find(p => p && (p.role === "Wakasek" || p.role === "Admin" || p.role === "Kepala Sekolah")) || profiles[0];
         
-        const primaryProfile = profiles[0];
         await completeUserLogin(primaryProfile, profiles);
       } catch (err) {
         showLoading(false);
