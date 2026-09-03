@@ -7938,22 +7938,18 @@
       }
     }
 
-    // LOAD DATA DASHBOARD (INSTANT CACHE + BACKGROUND REVALIDATE)
+    // LOAD DATA DASHBOARD (INSTANT 0MS CACHE + BACKGROUND PARALLEL SYNC)
     let isDashboardLoading = false;
     async function loadDashboardData() {
       if (isDashboardLoading) return;
       isDashboardLoading = true;
 
-      // Coba load dari cache lokal dulu agar tampilan langsung muncul instan 0 milidetik
-      const hasCache = !!localStorage.getItem(`cache_stats_${appState.user.role}`);
-      if (hasCache) {
-        loadOfflineCachedData();
-        showLoading(false); // Langsung tutup loading overlay agar tidak memblokir user
-      } else {
-        showLoading(true, "Memuat data sistem...");
-      }
+      // 1. Tampilkan data dari cache lokal seketika (0 milidetik) tanpa menunda
+      loadOfflineCachedData();
+      showLoading(false); // Tutup spinner pemuatan langsung pada milidetik ke-0
       
       try {
+        // 2. Tarik data terbaru dari Firebase secara asinkronus di latar belakang
         const data = await callApi("getDashboard");
         if (data) {
           appState.stats = data.stats || {};
@@ -7999,11 +7995,7 @@
           renderDashboardData();
         }
       } catch (err) {
-        console.error("Sinkronisasi server latar belakang:", err);
-        if (!hasCache) {
-          showToast("Koneksi lambat, menampilkan data offline.", "warning");
-          loadOfflineCachedData();
-        }
+        console.warn("Sinkronisasi server latar belakang:", err);
       } finally {
         isDashboardLoading = false;
         showLoading(false);
@@ -8695,16 +8687,25 @@
         
         const teacherName = appState.user ? appState.user.nama : "";
         const teacherNip = appState.user ? appState.user.nip : "";
+        const teacherEmail = appState.user ? appState.user.email : "";
+
+        // STRICT FILTERING: Hanya tampilkan jurnal milik guru yang sedang login
         const myJurnals = (appState.jurnalList || []).filter(j => {
           const gName = j.guru || j.namaGuru || j.NamaGuru || j.Nama_Guru || "";
-          return isTeacherMatch(gName, teacherName) || (teacherNip && gName.includes(teacherNip));
-        });
-        const displayJurnals = (myJurnals.length > 0) ? myJurnals : appState.jurnalList;
+          const gEmail = j.email || j.Email || "";
+          const gNip = j.nip || j.NIP || "";
 
-        if (displayJurnals.length === 0) {
-          jtBody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted);">Belum ada riwayat mengajar Anda.</td></tr>`;
+          const matchName = teacherName && isTeacherMatch(gName, teacherName);
+          const matchNip = teacherNip && (gNip === teacherNip || gName.includes(teacherNip));
+          const matchEmail = teacherEmail && (gEmail.toLowerCase() === teacherEmail.toLowerCase() || gName.toLowerCase() === teacherEmail.toLowerCase());
+
+          return matchName || matchNip || matchEmail;
+        });
+
+        if (myJurnals.length === 0) {
+          jtBody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted);">Belum ada riwayat mengajar terdaftar untuk akun Anda.</td></tr>`;
         } else {
-          displayJurnals.forEach(item => {
+          myJurnals.forEach(item => {
             const tr = document.createElement('tr');
             const formattedDate = item.tanggal ? new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
             tr.innerHTML = `
@@ -8735,16 +8736,25 @@
         
         const teacherName = appState.user ? appState.user.nama : "";
         const teacherNip = appState.user ? appState.user.nip : "";
+        const teacherEmail = appState.user ? appState.user.email : "";
+
+        // STRICT FILTERING: Hanya tampilkan perangkat milik guru yang sedang login
         const myPerangkats = (appState.perangkatList || []).filter(p => {
           const gName = p.namaGuru || p.guru || "";
-          return isTeacherMatch(gName, teacherName) || (teacherNip && gName.includes(teacherNip));
-        });
-        const displayPerangkats = (myPerangkats.length > 0) ? myPerangkats : appState.perangkatList;
+          const gEmail = p.email || p.Email || "";
+          const gNip = p.nip || p.NIP || "";
 
-        if (displayPerangkats.length === 0) {
-          ptBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">Belum ada ajuan perangkat ajar.</td></tr>`;
+          const matchName = teacherName && isTeacherMatch(gName, teacherName);
+          const matchNip = teacherNip && (gNip === teacherNip || gName.includes(teacherNip));
+          const matchEmail = teacherEmail && (gEmail.toLowerCase() === teacherEmail.toLowerCase() || gName.toLowerCase() === teacherEmail.toLowerCase());
+
+          return matchName || matchNip || matchEmail;
+        });
+
+        if (myPerangkats.length === 0) {
+          ptBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">Belum ada ajuan perangkat ajar terdaftar untuk akun Anda.</td></tr>`;
         } else {
-          displayPerangkats.forEach(item => {
+          myPerangkats.forEach(item => {
             const tr = document.createElement('tr');
             
             let statusBadge = `<span class="badge badge-warning"><i class="fa-solid fa-hourglass-start"></i> Pending</span>`;
@@ -11529,17 +11539,36 @@
       
       const teacherName = appState.user ? appState.user.nama : "";
       const teacherNip = appState.user ? appState.user.nip : "";
-      let list = appState.guruJadwalList || [];
-      if (list.length === 0 || list.length === appState.jadwalList.length) {
-        const matched = (appState.jadwalList || []).filter(j => {
+      const teacherEmail = appState.user ? appState.user.email : "";
+
+      let list = (appState.guruJadwalList || []).filter(j => {
+        const gName = j.guru || j.namaGuru || "";
+        const gEmail = j.email || j.Email || "";
+        const gNip = j.nip || j.NIP || "";
+
+        const matchName = teacherName && isTeacherMatch(gName, teacherName);
+        const matchNip = teacherNip && (gNip === teacherNip || gName.includes(teacherNip));
+        const matchEmail = teacherEmail && (gEmail.toLowerCase() === teacherEmail.toLowerCase() || gName.toLowerCase() === teacherEmail.toLowerCase());
+
+        return matchName || matchNip || matchEmail;
+      });
+
+      if (list.length === 0 && appState.jadwalList) {
+        list = appState.jadwalList.filter(j => {
           const gName = j.guru || j.namaGuru || "";
-          return isTeacherMatch(gName, teacherName) || (teacherNip && gName.includes(teacherNip));
+          const gEmail = j.email || j.Email || "";
+          const gNip = j.nip || j.NIP || "";
+
+          const matchName = teacherName && isTeacherMatch(gName, teacherName);
+          const matchNip = teacherNip && (gNip === teacherNip || gName.includes(teacherNip));
+          const matchEmail = teacherEmail && (gEmail.toLowerCase() === teacherEmail.toLowerCase() || gName.toLowerCase() === teacherEmail.toLowerCase());
+
+          return matchName || matchNip || matchEmail;
         });
-        list = matched.length > 0 ? matched : appState.jadwalList;
       }
 
       if (list.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Belum ada jadwal mengajar terdaftar.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Belum ada jadwal mengajar terdaftar untuk akun Anda.</td></tr>';
         return;
       }
       
