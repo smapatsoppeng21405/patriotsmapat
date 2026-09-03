@@ -9814,27 +9814,76 @@
     async function downloadFileDirectly(id, defaultFileName) {
       showLoading(true, "Mengunduh berkas perangkat ajar...");
       try {
-        const res = await callApi("downloadPerangkatFile", { id });
+        const item = (appState.perangkatList || []).find(p => String(p.id) === String(id));
+        let fileNameToUse = defaultFileName || "";
         
-        // Konversi base64 ke blob
-        const byteCharacters = atob(res.base64);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        if (item && item.catatan && item.catatan.includes("Nama File: ")) {
+          fileNameToUse = item.catatan.split("Nama File: ")[1].split("\n")[0].trim();
+        } else if (item && item.fileName) {
+          fileNameToUse = item.fileName;
         }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: res.mimeType || 'application/octet-stream' });
-        
-        // Triger unduh di browser
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = res.fileName || defaultFileName || "perangkat_ajar.zip";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(link.href);
-        
-        showToast("Unduhan berhasil dimulai.");
+
+        let res = null;
+        try {
+          res = await callApi("downloadPerangkatFile", { id });
+        } catch (apiErr) {
+          console.warn("GAS download API note:", apiErr);
+        }
+
+        const linkDrive = (res && res.linkDrive) || (item && item.linkDrive) || "";
+        const fileBase64 = (res && res.fileBase64) || (item && item.fileBase64) || "";
+        const finalFileName = (res && res.fileName) || fileNameToUse || (item && `${item.jenisDokumen || 'Perangkat'}_${(item.namaGuru || "Guru").replace(/\s+/g, '_')}.pdf`) || "perangkat_ajar.pdf";
+        const mimeType = (res && res.mimeType) || (item && item.fileMimeType) || "application/octet-stream";
+
+        // A. JIKA TERSEDIA FILE BASE64 LENGKAP
+        if (fileBase64 && fileBase64.length > 50) {
+          const cleanBase64 = fileBase64.includes("base64,") ? fileBase64.split("base64,")[1] : fileBase64;
+          const byteCharacters = atob(cleanBase64);
+          const byteNumbers = new Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          const blob = new Blob([byteArray], { type: mimeType });
+          
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = finalFileName;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(a.href);
+          
+          showToast(`Berhasil mengunduh "${finalFileName}"`, "success");
+          return;
+        }
+
+        // B. JIKA LINK DRIVE BERUPA DATA URL
+        if (linkDrive.startsWith("data:")) {
+          const a = document.createElement('a');
+          a.href = linkDrive;
+          a.download = finalFileName;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          showToast(`Berhasil mengunduh "${finalFileName}"`, "success");
+          return;
+        }
+
+        // C. JIKA LINK DRIVE BERUPA URL INTERNET / GOOGLE DRIVE
+        if (linkDrive.startsWith("http://") || linkDrive.startsWith("https://")) {
+          const a = document.createElement('a');
+          a.href = linkDrive;
+          a.target = "_blank";
+          a.download = finalFileName;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          showToast(`Membuka link berkas "${finalFileName}"`, "success");
+          return;
+        }
+
+        throw new Error("Tautan berkas atau isi file tidak ditemukan. Harap minta Guru mengunggah ulang berkas ini.");
       } catch (err) {
         showToast("Gagal mengunduh berkas: " + err.message, "danger");
       } finally {
@@ -24991,7 +25040,7 @@
           <td style="font-weight: 600;">${item.namaGuru}</td>
           <td style="color: #cbd5e1;">${fileNameDisplay}</td>
           <td>
-            <button type="button" class="btn btn-primary" onclick="downloadFileDirectly('${item.id}')" style="padding:0.3rem 0.6rem; font-size:0.8rem; font-weight:600; display: inline-flex; align-items: center; gap: 0.35rem;">
+            <button type="button" class="btn btn-primary" onclick="downloadFileDirectly('${item.id}', '${fileNameDisplay}')" style="padding:0.3rem 0.6rem; font-size:0.8rem; font-weight:600; display: inline-flex; align-items: center; gap: 0.35rem;">
               <i class="fa-solid fa-download"></i> Unduh Berkas
             </button>
           </td>
