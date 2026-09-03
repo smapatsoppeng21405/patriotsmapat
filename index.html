@@ -8022,7 +8022,17 @@
             if (mockTeachers.length > 0) appState.teacherList = mockTeachers;
           }
 
-          // Simpan ke cache lokal
+          // Simpan ke cache lokal global & role
+          safeLocalStorageSetItem('cache_jurnals', JSON.stringify(appState.jurnalList || []));
+          safeLocalStorageSetItem('cache_perangkats', JSON.stringify(appState.perangkatList || []));
+          safeLocalStorageSetItem('cache_nilais', JSON.stringify(appState.nilaiList || []));
+          safeLocalStorageSetItem('cache_jadwals', JSON.stringify(appState.jadwalList || []));
+          safeLocalStorageSetItem('cache_laporans', JSON.stringify(appState.laporanWaliList || []));
+          safeLocalStorageSetItem('cache_teachers', JSON.stringify(appState.teacherList || []));
+          safeLocalStorageSetItem('cache_students', JSON.stringify(appState.studentList || []));
+          safeLocalStorageSetItem('cache_sesi', JSON.stringify(appState.sesiList || []));
+          safeLocalStorageSetItem('cache_settings', JSON.stringify(appState.settings || { hariBelajar: 5 }));
+
           if (appState.user && appState.user.role) {
             safeLocalStorageSetItem(`cache_stats_${appState.user.role}`, JSON.stringify(appState.stats || {}));
             safeLocalStorageSetItem(`cache_jurnals_${appState.user.role}`, JSON.stringify(appState.jurnalList || []));
@@ -8037,10 +8047,6 @@
             safeLocalStorageSetItem(`cache_catatanwali_${appState.user.role}`, JSON.stringify(appState.catatanWaliKelasList || []));
             safeLocalStorageSetItem(`cache_kelas_mapel_pilihan_${appState.user.role}`, JSON.stringify(appState.kelasMapelPilihanList || []));
           }
-          safeLocalStorageSetItem('cache_settings', JSON.stringify(appState.settings || { hariBelajar: 5 }));
-          safeLocalStorageSetItem('cache_teachers', JSON.stringify(appState.teacherList || []));
-          safeLocalStorageSetItem('cache_students', JSON.stringify(appState.studentList || []));
-          safeLocalStorageSetItem('cache_sesi', JSON.stringify(appState.sesiList || []));
           
           if (appState.user && appState.user.role === 'Guru') {
             syncAlarmsToServiceWorker();
@@ -8060,25 +8066,27 @@
       }
     }
 
-    // LOAD LOCAL OFFLINE CACHE ON ERROR
+    // LOAD LOCAL OFFLINE CACHE (UNIFIED GLOBAL FALLBACK ENGINE)
     function loadOfflineCachedData() {
-      appState.stats = JSON.parse(localStorage.getItem(`cache_stats_${appState.user.role}`)) || {};
-      appState.jurnalList = JSON.parse(localStorage.getItem(`cache_jurnals_${appState.user.role}`)) || [];
-      appState.perangkatList = JSON.parse(localStorage.getItem(`cache_perangkats_${appState.user.role}`)) || [];
-      appState.nilaiList = JSON.parse(localStorage.getItem(`cache_nilais_${appState.user.role}`)) || [];
-      appState.jadwalList = JSON.parse(localStorage.getItem(`cache_jadwals_${appState.user.role}`)) || [];
-      appState.laporanWaliList = JSON.parse(localStorage.getItem(`cache_laporans_${appState.user.role}`)) || [];
-      appState.guruJadwalList = JSON.parse(localStorage.getItem(`cache_gurujadwals_${appState.user.role}`)) || [];
-      appState.guruMasterList = JSON.parse(localStorage.getItem(`cache_gurumaster_${appState.user.role}`)) || [];
+      const role = appState.user ? appState.user.role : "";
+
+      appState.jurnalList = JSON.parse(localStorage.getItem('cache_jurnals')) || JSON.parse(localStorage.getItem(`cache_jurnals_${role}`)) || JSON.parse(localStorage.getItem('db_jurnals')) || [];
+      appState.perangkatList = JSON.parse(localStorage.getItem('cache_perangkats')) || JSON.parse(localStorage.getItem(`cache_perangkats_${role}`)) || JSON.parse(localStorage.getItem('db_perangkats')) || [];
+      appState.nilaiList = JSON.parse(localStorage.getItem('cache_nilais')) || JSON.parse(localStorage.getItem(`cache_nilais_${role}`)) || JSON.parse(localStorage.getItem('db_nilais')) || [];
+      appState.jadwalList = JSON.parse(localStorage.getItem('cache_jadwals')) || JSON.parse(localStorage.getItem(`cache_jadwals_${role}`)) || JSON.parse(localStorage.getItem('db_jadwals')) || [];
+      appState.laporanWaliList = JSON.parse(localStorage.getItem('cache_laporans')) || JSON.parse(localStorage.getItem(`cache_laporans_${role}`)) || JSON.parse(localStorage.getItem('db_laporans')) || [];
+      appState.guruJadwalList = JSON.parse(localStorage.getItem('cache_gurujadwals')) || JSON.parse(localStorage.getItem(`cache_gurujadwals_${role}`)) || [];
+      appState.guruMasterList = JSON.parse(localStorage.getItem('cache_gurumaster')) || JSON.parse(localStorage.getItem(`cache_gurumaster_${role}`)) || [];
       appState.settings = JSON.parse(localStorage.getItem('cache_settings')) || { hariBelajar: 5 };
-      appState.teacherList = JSON.parse(localStorage.getItem('cache_teachers')) || [];
-      appState.siswaGuruWaliList = JSON.parse(localStorage.getItem(`cache_siswagw_${appState.user.role}`)) || [];
-      appState.jurnal7KAIHList = JSON.parse(localStorage.getItem(`cache_jurnal7kaih_${appState.user.role}`)) || [];
-      appState.studentList = JSON.parse(localStorage.getItem('cache_students')) || [];
-      appState.catatanWaliKelasList = JSON.parse(localStorage.getItem(`cache_catatanwali_${appState.user.role}`)) || [];
-      appState.kelasMapelPilihanList = JSON.parse(localStorage.getItem(`cache_kelas_mapel_pilihan_${appState.user.role}`)) || [];
+      appState.teacherList = JSON.parse(localStorage.getItem('cache_teachers')) || JSON.parse(localStorage.getItem('db_users')) || [];
+      appState.siswaGuruWaliList = JSON.parse(localStorage.getItem('cache_siswagw')) || JSON.parse(localStorage.getItem(`cache_siswagw_${role}`)) || [];
+      appState.jurnal7KAIHList = JSON.parse(localStorage.getItem('cache_jurnal7kaih')) || JSON.parse(localStorage.getItem(`cache_jurnal7kaih_${role}`)) || [];
+      appState.studentList = JSON.parse(localStorage.getItem('cache_students')) || JSON.parse(localStorage.getItem('db_students')) || [];
+      appState.catatanWaliKelasList = JSON.parse(localStorage.getItem('cache_catatanwali')) || JSON.parse(localStorage.getItem(`cache_catatanwali_${role}`)) || [];
+      appState.kelasMapelPilihanList = JSON.parse(localStorage.getItem('cache_kelas_mapel_pilihan')) || JSON.parse(localStorage.getItem(`cache_kelas_mapel_pilihan_${role}`)) || [];
       appState.sesiList = JSON.parse(localStorage.getItem('cache_sesi')) || [];
-      
+      appState.stats = JSON.parse(localStorage.getItem('cache_stats')) || JSON.parse(localStorage.getItem(`cache_stats_${role}`)) || {};
+
       renderDashboardData();
     }
 
