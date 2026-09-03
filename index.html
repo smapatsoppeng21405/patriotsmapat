@@ -1097,39 +1097,20 @@
 
       <form id="loginForm" onsubmit="handleLogin(event)">
         <div class="form-group">
-          <label for="loginEmail">NIP atau Email Login</label>
-          <input type="text" id="loginEmail" class="form-control" placeholder="Masukkan NIP, Email, atau Nama...">
+          <label for="loginEmail">Nomor Induk Pegawai (NIP)</label>
+          <input type="text" id="loginEmail" class="form-control" placeholder="Masukkan NIP Anda (Contoh: 198104242005022011)" required>
           <i class="fa-solid fa-id-card form-icon"></i>
         </div>
 
-        <div class="form-group" style="margin-bottom: 1.25rem;">
-          <label for="loginPassword">Password / PIN (Opsional)</label>
-          <input type="password" id="loginPassword" class="form-control" placeholder="••••••••">
+        <div class="form-group" style="margin-bottom: 1.5rem;">
+          <label for="loginPassword">Kata Sandi (Password)</label>
+          <input type="password" id="loginPassword" class="form-control" placeholder="Default: Smapatjaya_21405" required>
           <i class="fa-solid fa-lock form-icon"></i>
         </div>
 
-        <button type="submit" class="btn btn-primary" style="width: 100%; font-size: 1rem; padding: 0.8rem; margin-bottom: 1rem;">
+        <button type="submit" class="btn btn-primary" style="width: 100%; font-size: 1rem; padding: 0.85rem; margin-bottom: 0.5rem; font-weight: 700;">
           <i class="fa-solid fa-right-to-bracket"></i> Masuk Aplikasi
         </button>
-
-        <div style="text-align: center; margin-bottom: 0.75rem;">
-          <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Atau Masuk Langsung Sesuai Peran (1-Klik)</span>
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 1rem;">
-          <button type="button" class="btn" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); padding: 0.6rem; font-size: 0.8rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.35rem;" onclick="directRoleLogin('Kepala Sekolah')">
-            <i class="fa-solid fa-crown"></i> Kepala Sekolah
-          </button>
-          <button type="button" class="btn" style="background: rgba(139, 92, 246, 0.15); color: var(--accent); border: 1px solid rgba(139, 92, 246, 0.3); padding: 0.6rem; font-size: 0.8rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.35rem;" onclick="directRoleLogin('Wakasek')">
-            <i class="fa-solid fa-user-shield"></i> Wakasek
-          </button>
-          <button type="button" class="btn" style="background: rgba(99, 102, 241, 0.15); color: var(--primary); border: 1px solid rgba(99, 102, 241, 0.3); padding: 0.6rem; font-size: 0.8rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.35rem;" onclick="directRoleLogin('Admin')">
-            <i class="fa-solid fa-user-gear"></i> Admin
-          </button>
-          <button type="button" class="btn" style="background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.3); padding: 0.6rem; font-size: 0.8rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.35rem;" onclick="directRoleLogin('Guru')">
-            <i class="fa-solid fa-chalkboard-user"></i> Guru
-          </button>
-        </div>
       </form>
 
       <div style="text-align: center; margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1.25rem;">
@@ -5573,23 +5554,27 @@
       const emailInput = document.getElementById('loginEmail').value.trim();
       const passwordInput = document.getElementById('loginPassword').value.trim();
       
-      if (!emailInput) {
-        // Jika input kosong, otomatis arahkan ke role selector
-        showRoleChoiceOverlay([
-          { role: "Kepala Sekolah", nama: "Kepala Sekolah SMAN 4 Soppeng", email: "kepala@sekolah.com", nip: "kepala@sekolah.com" },
-          { role: "Wakasek", nama: "Wakasek Kurikulum", email: "wakasek@sekolah.com", nip: "wakasek@sekolah.com" },
-          { role: "Admin", nama: "Admin Sistem", email: "admin@sekolah.com", nip: "admin@sekolah.com" },
-          { role: "Guru", nama: "Guru Terdaftar", email: "guru@sekolah.com", nip: "guru@sekolah.com" },
-          { role: "Wali Kelas", nama: "Wali Kelas", email: "walikelas@sekolah.com", nip: "walikelas@sekolah.com" }
-        ]);
+      if (!emailInput || !passwordInput) {
+        showToast("Silakan masukkan NIP dan Kata Sandi Anda!", "warning");
         return;
       }
 
-      showLoading(true, "Menyiapkan sesi & memuat data...");
+      showLoading(true, "Memverifikasi NIP & Kata Sandi...");
       
       try {
         const response = await callApi("login", { email: emailInput, password: passwordInput });
-        const profiles = (response && response.multiple) ? response.profiles : [response];
+        
+        let profiles = [];
+        if (response && Array.isArray(response.profiles) && response.profiles.length > 0) {
+          profiles = response.profiles;
+        } else if (response && response.user) {
+          profiles = [response.user];
+        } else if (response && response.role) {
+          profiles = [response];
+        } else {
+          profiles = [{ role: "Guru", nama: emailInput, email: emailInput }];
+        }
+        
         currentLoginProfiles = profiles;
         
         if (profiles.length > 1) {
@@ -5598,32 +5583,12 @@
           return;
         }
         
-        // Pilih profil utama (Wakasek/Admin/Kepala Sekolah jika ada, atau profil pertama)
-        const primaryProfile = profiles.find(p => p.role === "Wakasek" || p.role === "Admin" || p.role === "Kepala Sekolah") || profiles[0];
-        
+        const primaryProfile = profiles[0];
         await completeUserLogin(primaryProfile, profiles);
       } catch (err) {
-        console.warn("Kredensial login sync note, pembukaan pemilihan peran:", err);
-        const emailLower = emailInput.toLowerCase();
-        let defaultRole = "Kepala Sekolah";
-        if (emailLower.includes("wakasek") || emailLower.includes("kurikulum")) defaultRole = "Wakasek";
-        else if (emailLower.includes("admin")) defaultRole = "Admin";
-        else if (emailLower.includes("guru")) defaultRole = "Guru";
-        else if (emailLower.includes("wali")) defaultRole = "Wali Kelas";
-
-        const candidateRoles = [
-          { role: "Kepala Sekolah", nama: emailInput || "Kepala Sekolah SMAN 4 Soppeng", email: emailInput, nip: emailInput },
-          { role: "Wakasek", nama: emailInput || "Wakasek Kurikulum", email: emailInput, nip: emailInput },
-          { role: "Admin", nama: emailInput || "Admin Sistem", email: emailInput, nip: emailInput },
-          { role: "Guru", nama: emailInput || "Guru Terdaftar", email: emailInput, nip: emailInput },
-          { role: "Wali Kelas", nama: emailInput || "Wali Kelas", email: emailInput, nip: emailInput }
-        ];
-        
-        currentLoginProfiles = candidateRoles;
         showLoading(false);
-        showRoleChoiceOverlay(candidateRoles);
-      } finally {
-        showLoading(false);
+        console.error("Login Error:", err);
+        showToast("❌ NIP atau Kata Sandi salah! Pastikan NIP dan Password (Smapatjaya_21405) sudah benar.", "danger");
       }
     }
 
