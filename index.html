@@ -7938,64 +7938,86 @@
       }
     }
 
-    // LOAD DATA DASHBOARD (INSTANT 0MS CACHE + BACKGROUND PARALLEL SYNC)
+    // LOAD DATA DASHBOARD (FAIL-SAFE DATA ENGINE)
     let isDashboardLoading = false;
     async function loadDashboardData() {
       if (isDashboardLoading) return;
       isDashboardLoading = true;
 
-      // 1. Tampilkan data dari cache lokal seketika (0 milidetik) tanpa menunda
+      // 1. Muat cache lokal terlebih dahulu jika ada
       loadOfflineCachedData();
-      showLoading(false); // Tutup spinner pemuatan langsung pada milidetik ke-0
+
+      // Jika data memori/cache masih kosong, perlihatkan pemuatan data
+      const isDataEmpty = (!appState.jurnalList || appState.jurnalList.length === 0) && (!appState.teacherList || appState.teacherList.length === 0);
+      if (isDataEmpty) {
+        showLoading(true, "Memuat data dari Firebase server...");
+      }
       
       try {
-        // 2. Tarik data terbaru dari Firebase secara asinkronus di latar belakang
         const data = await callApi("getDashboard");
         if (data) {
-          appState.stats = data.stats || {};
-          appState.jurnalList = data.jurnalList || [];
-          appState.perangkatList = data.perangkatList || [];
-          appState.nilaiList = data.nilaiList || [];
-          appState.jadwalList = data.jadwalList || [];
-          appState.laporanWaliList = data.laporanWaliList || [];
-          appState.guruJadwalList = data.guruJadwalList || [];
-          appState.guruMasterList = data.guruMasterList || [];
-          appState.settings = data.settings || { hariBelajar: 5 };
-          appState.teacherList = data.teacherList || [];
-          appState.siswaGuruWaliList = data.siswaGuruWaliList || [];
-          appState.jurnal7KAIHList = data.jurnal7KAIHList || [];
-          appState.studentList = data.studentList || [];
-          appState.catatanWaliKelasList = data.catatanWaliKelasList || [];
-          appState.kelasMapelPilihanList = data.kelasMapelPilihanList || [];
-          appState.sesiList = data.sesiList || [];
+          if (data.stats && Object.keys(data.stats).length > 0) appState.stats = data.stats;
           
-          safeLocalStorageSetItem(`cache_stats_${appState.user.role}`, JSON.stringify(data.stats));
-          safeLocalStorageSetItem(`cache_jurnals_${appState.user.role}`, JSON.stringify(data.jurnalList || []));
-          safeLocalStorageSetItem(`cache_perangkats_${appState.user.role}`, JSON.stringify(data.perangkatList || []));
-          safeLocalStorageSetItem(`cache_nilais_${appState.user.role}`, JSON.stringify(data.nilaiList || []));
-          safeLocalStorageSetItem(`cache_jadwals_${appState.user.role}`, JSON.stringify(data.jadwalList || []));
-          safeLocalStorageSetItem(`cache_laporans_${appState.user.role}`, JSON.stringify(data.laporanWaliList || []));
-          safeLocalStorageSetItem(`cache_gurujadwals_${appState.user.role}`, JSON.stringify(data.guruJadwalList || []));
-          safeLocalStorageSetItem(`cache_gurumaster_${appState.user.role}`, JSON.stringify(data.guruMasterList || []));
-          safeLocalStorageSetItem('cache_settings', JSON.stringify(data.settings || { hariBelajar: 5 }));
-          safeLocalStorageSetItem('cache_teachers', JSON.stringify(data.teacherList || []));
-          safeLocalStorageSetItem(`cache_siswagw_${appState.user.role}`, JSON.stringify(data.siswaGuruWaliList || []));
-          safeLocalStorageSetItem(`cache_jurnal7kaih_${appState.user.role}`, JSON.stringify(data.jurnal7KAIHList || []));
-          safeLocalStorageSetItem('cache_students', JSON.stringify(data.studentList || []));
-          safeLocalStorageSetItem(`cache_catatanwali_${appState.user.role}`, JSON.stringify(data.catatanWaliKelasList || []));
-          safeLocalStorageSetItem(`cache_kelas_mapel_pilihan_${appState.user.role}`, JSON.stringify(data.kelasMapelPilihanList || []));
-          safeLocalStorageSetItem('cache_sesi', JSON.stringify(data.sesiList || []));
+          // SAFETY GUARD: Jangan pernah menimpa data yang sudah ada dengan array kosong
+          if (data.jurnalList && data.jurnalList.length > 0) appState.jurnalList = data.jurnalList;
+          if (data.perangkatList && data.perangkatList.length > 0) appState.perangkatList = data.perangkatList;
+          if (data.nilaiList && data.nilaiList.length > 0) appState.nilaiList = data.nilaiList;
+          if (data.jadwalList && data.jadwalList.length > 0) appState.jadwalList = data.jadwalList;
+          if (data.laporanWaliList && data.laporanWaliList.length > 0) appState.laporanWaliList = data.laporanWaliList;
+          if (data.guruJadwalList && data.guruJadwalList.length > 0) appState.guruJadwalList = data.guruJadwalList;
+          if (data.guruMasterList && data.guruMasterList.length > 0) appState.guruMasterList = data.guruMasterList;
+          if (data.settings) appState.settings = data.settings;
+          if (data.teacherList && data.teacherList.length > 0) appState.teacherList = data.teacherList;
+          if (data.siswaGuruWaliList && data.siswaGuruWaliList.length > 0) appState.siswaGuruWaliList = data.siswaGuruWaliList;
+          if (data.jurnal7KAIHList && data.jurnal7KAIHList.length > 0) appState.jurnal7KAIHList = data.jurnal7KAIHList;
+          if (data.studentList && data.studentList.length > 0) appState.studentList = data.studentList;
+          if (data.catatanWaliKelasList && data.catatanWaliKelasList.length > 0) appState.catatanWaliKelasList = data.catatanWaliKelasList;
+          if (data.kelasMapelPilihanList && data.kelasMapelPilihanList.length > 0) appState.kelasMapelPilihanList = data.kelasMapelPilihanList;
+          if (data.sesiList && data.sesiList.length > 0) appState.sesiList = data.sesiList;
           
-          // Sync alarms to SW if role is Guru
+          // Jika data masih kosong akibat masalah jaringan, inisialisasi dari mock DB cadangan
+          if (!appState.jurnalList || appState.jurnalList.length === 0) {
+            if (typeof initializeMockDatabase === "function") initializeMockDatabase();
+            const mockJurnals = JSON.parse(localStorage.getItem('db_jurnals')) || [];
+            if (mockJurnals.length > 0) appState.jurnalList = mockJurnals;
+          }
+          if (!appState.teacherList || appState.teacherList.length === 0) {
+            const mockTeachers = JSON.parse(localStorage.getItem('db_users')) || [];
+            if (mockTeachers.length > 0) appState.teacherList = mockTeachers;
+          }
+
+          // Simpan ke cache lokal
+          if (appState.user && appState.user.role) {
+            safeLocalStorageSetItem(`cache_stats_${appState.user.role}`, JSON.stringify(appState.stats || {}));
+            safeLocalStorageSetItem(`cache_jurnals_${appState.user.role}`, JSON.stringify(appState.jurnalList || []));
+            safeLocalStorageSetItem(`cache_perangkats_${appState.user.role}`, JSON.stringify(appState.perangkatList || []));
+            safeLocalStorageSetItem(`cache_nilais_${appState.user.role}`, JSON.stringify(appState.nilaiList || []));
+            safeLocalStorageSetItem(`cache_jadwals_${appState.user.role}`, JSON.stringify(appState.jadwalList || []));
+            safeLocalStorageSetItem(`cache_laporans_${appState.user.role}`, JSON.stringify(appState.laporanWaliList || []));
+            safeLocalStorageSetItem(`cache_gurujadwals_${appState.user.role}`, JSON.stringify(appState.guruJadwalList || []));
+            safeLocalStorageSetItem(`cache_gurumaster_${appState.user.role}`, JSON.stringify(appState.guruMasterList || []));
+            safeLocalStorageSetItem(`cache_siswagw_${appState.user.role}`, JSON.stringify(appState.siswaGuruWaliList || []));
+            safeLocalStorageSetItem(`cache_jurnal7kaih_${appState.user.role}`, JSON.stringify(appState.jurnal7KAIHList || []));
+            safeLocalStorageSetItem(`cache_catatanwali_${appState.user.role}`, JSON.stringify(appState.catatanWaliKelasList || []));
+            safeLocalStorageSetItem(`cache_kelas_mapel_pilihan_${appState.user.role}`, JSON.stringify(appState.kelasMapelPilihanList || []));
+          }
+          safeLocalStorageSetItem('cache_settings', JSON.stringify(appState.settings || { hariBelajar: 5 }));
+          safeLocalStorageSetItem('cache_teachers', JSON.stringify(appState.teacherList || []));
+          safeLocalStorageSetItem('cache_students', JSON.stringify(appState.studentList || []));
+          safeLocalStorageSetItem('cache_sesi', JSON.stringify(appState.sesiList || []));
+          
           if (appState.user && appState.user.role === 'Guru') {
             syncAlarmsToServiceWorker();
           }
           
-          // Render Views
           renderDashboardData();
         }
       } catch (err) {
         console.warn("Sinkronisasi server latar belakang:", err);
+        if (!appState.jurnalList || appState.jurnalList.length === 0) {
+          if (typeof initializeMockDatabase === "function") initializeMockDatabase();
+          loadOfflineCachedData();
+        }
       } finally {
         isDashboardLoading = false;
         showLoading(false);
