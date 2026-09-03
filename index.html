@@ -8076,6 +8076,16 @@
           safeLocalStorageSetItem('cache_sesi', JSON.stringify(appState.sesiList || []));
           safeLocalStorageSetItem('cache_settings', JSON.stringify(appState.settings || { hariBelajar: 5 }));
 
+          // Update db_* keys so offline mock engine also uses real synced data instead of default mock data
+          safeLocalStorageSetItem('db_jurnals', JSON.stringify(appState.jurnalList || []));
+          safeLocalStorageSetItem('db_perangkats', JSON.stringify(appState.perangkatList || []));
+          safeLocalStorageSetItem('db_nilais', JSON.stringify(appState.nilaiList || []));
+          safeLocalStorageSetItem('db_jadwals', JSON.stringify(appState.jadwalList || []));
+          safeLocalStorageSetItem('db_laporans', JSON.stringify(appState.laporanWaliList || []));
+          safeLocalStorageSetItem('db_gurumasters', JSON.stringify(appState.guruMasterList || []));
+          safeLocalStorageSetItem('db_users', JSON.stringify(appState.teacherList || []));
+          safeLocalStorageSetItem('db_students', JSON.stringify(appState.studentList || []));
+
           if (appState.user && appState.user.role) {
             safeLocalStorageSetItem(`cache_stats_${appState.user.role}`, JSON.stringify(appState.stats || {}));
             safeLocalStorageSetItem(`cache_jurnals_${appState.user.role}`, JSON.stringify(appState.jurnalList || []));
@@ -12568,14 +12578,14 @@
             const email = payload.currentUserEmail;
             const nama = payload.currentUserName;
             
-            const jRaw = JSON.parse(localStorage.getItem('db_jurnals')) || [];
-            const pRaw = JSON.parse(localStorage.getItem('db_perangkats')) || [];
-            const nRaw = JSON.parse(localStorage.getItem('db_nilais')) || [];
-            const jdRaw = JSON.parse(localStorage.getItem('db_jadwals')) || [];
-            const lpRaw = JSON.parse(localStorage.getItem('db_laporans')) || [];
-            const gmRaw = JSON.parse(localStorage.getItem('db_gurumasters')) || [];
+            const jRaw = JSON.parse(localStorage.getItem('cache_jurnals')) || JSON.parse(localStorage.getItem('db_jurnals')) || [];
+            const pRaw = JSON.parse(localStorage.getItem('cache_perangkats')) || JSON.parse(localStorage.getItem('db_perangkats')) || [];
+            const nRaw = JSON.parse(localStorage.getItem('cache_nilais')) || JSON.parse(localStorage.getItem('db_nilais')) || [];
+            const jdRaw = JSON.parse(localStorage.getItem('cache_jadwals')) || JSON.parse(localStorage.getItem('db_jadwals')) || [];
+            const lpRaw = JSON.parse(localStorage.getItem('cache_laporans')) || JSON.parse(localStorage.getItem('db_laporans')) || [];
+            const gmRaw = JSON.parse(localStorage.getItem('cache_gurumaster')) || JSON.parse(localStorage.getItem('db_gurumasters')) || [];
             
-            const dbSettings = JSON.parse(localStorage.getItem('db_settings')) || { hariBelajar: 5, daftarKelas: ["X.1", "X.2", "XI.1", "XI.2", "XII.1", "XII.2"] };
+            const dbSettings = JSON.parse(localStorage.getItem('cache_settings')) || JSON.parse(localStorage.getItem('db_settings')) || { hariBelajar: 5, daftarKelas: ["X.1", "X.2", "XI.1", "XI.2", "XII.1", "XII.2"] };
             let settings = { hariBelajar: 5, daftarKelas: ["X.1", "X.2", "XI.1", "XI.2", "XII.1", "XII.2"] };
             if (dbSettings) {
               if (dbSettings.hari_belajar) settings.hariBelajar = parseInt(dbSettings.hari_belajar) || 5;
@@ -12589,13 +12599,13 @@
                 settings.daftarKelas = dbSettings.daftarKelas;
               }
             }
-             const users = JSON.parse(localStorage.getItem('db_users')) || [];
+             const users = JSON.parse(localStorage.getItem('cache_teachers')) || JSON.parse(localStorage.getItem('db_users')) || [];
              const raRaw = JSON.parse(localStorage.getItem('db_rekap_absen')) || [];
              const ksRaw = JSON.parse(localStorage.getItem('db_kondisi_siswa')) || [];
-             const sgwRaw = JSON.parse(localStorage.getItem('db_siswagw')) || [];
-             const j7kaihRaw = JSON.parse(localStorage.getItem('db_jurnal7kaih')) || [];
+             const sgwRaw = JSON.parse(localStorage.getItem('cache_siswagw')) || JSON.parse(localStorage.getItem('db_siswagw')) || [];
+             const j7kaihRaw = JSON.parse(localStorage.getItem('cache_jurnal7kaih')) || JSON.parse(localStorage.getItem('db_jurnal7kaih')) || [];
              const cbRaw = JSON.parse(localStorage.getItem('db_catatanbimbingan')) || [];
-             const sRaw = JSON.parse(localStorage.getItem('db_students')) || [];
+             const sRaw = JSON.parse(localStorage.getItem('cache_students')) || JSON.parse(localStorage.getItem('db_students')) || [];
              const kmpRaw = JSON.parse(localStorage.getItem('db_kelas_mapel_pilihan')) || [];
              
              const teachers = users;
