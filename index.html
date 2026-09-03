@@ -6080,41 +6080,73 @@
           const email = payload.currentUserEmail;
           const nama = payload.currentUserName;
 
-          const snap = await ref("/").once("value");
-          const root = snap.val() || {};
+          const [
+            jSnap, pSnap, nSnap, jdSnap, lpSnap, gmSnap,
+            uSnap, raSnap, ksSnap, sgwSnap, j7Snap, cbSnap, sSnap, kmpSnap, setSnap, sessSnap
+          ] = await Promise.all([
+            ref("jurnals").once("value"),
+            ref("perangkats").once("value"),
+            ref("nilais").once("value"),
+            ref("jadwals").once("value"),
+            ref("laporans").once("value"),
+            ref("gurumasters").once("value"),
+            ref("users").once("value"),
+            ref("rekapabsen").once("value"),
+            ref("kondisisiswa").once("value"),
+            ref("siswagw").once("value"),
+            ref("jurnal7kaih").once("value"),
+            ref("catatanbimbingan").once("value"),
+            ref("students").once("value"),
+            ref("kelasmapelpilihan").once("value"),
+            ref("settings").once("value"),
+            ref("sessions").once("value")
+          ]);
 
-          const jObj = root.jurnals || {};
-          const pObj = root.perangkats || {};
-          const nObj = root.nilais || {};
-          const jdObj = root.jadwals || {};
-          const lpObj = root.laporans || {};
-          const gmObj = root.gurumasters || {};
-          const uObj = root.users || {};
-          const raObj = root.rekapabsen || {};
-          const ksObj = root.kondisisiswa || {};
-          const sgwObj = root.siswagw || {};
-          const j7Obj = root.jurnal7kaih || {};
-          const cbObj = root.catatanbimbingan || {};
-          const sObj = root.students || {};
-          const kmpObj = root.kelasmapelpilihan || {};
-          const sessionsObj = root.sessions || root.sesi || {};
+          const jObj = jSnap.val() || {};
+          const pObj = pSnap.val() || {};
+          const nObj = nSnap.val() || {};
+          const jdObj = jdSnap.val() || {};
+          const lpObj = lpSnap.val() || {};
+          const gmObj = gmSnap.val() || {};
+          const uObj = uSnap.val() || {};
+          const raObj = raSnap.val() || {};
+          const ksObj = ksSnap.val() || {};
+          const sgwObj = sgwSnap.val() || {};
+          const j7Obj = j7Snap.val() || {};
+          const cbObj = cbSnap.val() || {};
+          const sObj = sSnap.val() || {};
+          const kmpObj = kmpSnap.val() || {};
+          const rootSettings = setSnap.val() || {};
+          const sessionsObj = sessSnap.val() || {};
 
           let settings = { hariBelajar: 5, daftarKelas: ["X.1", "X.2", "XI.1", "XI.2", "XII.1", "XII.2"] };
-          if (root.settings) {
-            if (root.settings.hari_belajar) settings.hariBelajar = parseInt(root.settings.hari_belajar) || 5;
-            else if (root.settings.hariBelajar) settings.hariBelajar = parseInt(root.settings.hariBelajar) || 5;
+          if (rootSettings) {
+            if (rootSettings.hari_belajar) settings.hariBelajar = parseInt(rootSettings.hari_belajar) || 5;
+            else if (rootSettings.hariBelajar) settings.hariBelajar = parseInt(rootSettings.hariBelajar) || 5;
             
-            if (root.settings.daftar_kelas) {
-              settings.daftarKelas = typeof root.settings.daftar_kelas === "string" 
-                ? root.settings.daftar_kelas.split(",").map(s => s.trim()).filter(Boolean)
-                : root.settings.daftar_kelas;
-            } else if (root.settings.daftarKelas) {
-              settings.daftarKelas = root.settings.daftarKelas;
+            if (rootSettings.daftar_kelas) {
+              settings.daftarKelas = typeof rootSettings.daftar_kelas === "string" 
+                ? rootSettings.daftar_kelas.split(",").map(s => s.trim()).filter(Boolean)
+                : rootSettings.daftar_kelas;
+            } else if (rootSettings.daftarKelas) {
+              settings.daftarKelas = rootSettings.daftarKelas;
             }
           }
 
           const jRaw = Object.keys(jObj).map(k => ({ id: k, ...jObj[k] }));
-          const pRaw = Object.keys(pObj).map(k => ({ id: k, ...pObj[k] }));
+          const pRaw = Object.keys(pObj).map(k => {
+            const p = pObj[k] || {};
+            return {
+              id: k,
+              namaGuru: p.namaGuru || "",
+              jenisDokumen: p.jenisDokumen || "",
+              linkDrive: p.linkDrive || "",
+              status: p.status || "Pending",
+              catatan: p.catatan || "-",
+              fileName: p.fileName || "perangkat_ajar.zip",
+              fileMimeType: p.fileMimeType || "application/zip"
+            };
+          });
           const nRaw = Object.keys(nObj).map(k => ({ id: k, ...nObj[k] }));
           const jdRaw = Object.keys(jdObj).map(k => ({ id: k, ...jdObj[k] }));
           const lpRaw = Object.keys(lpObj).map(k => ({ id: k, ...lpObj[k] }));
@@ -6813,7 +6845,19 @@
           ]);
 
           const jRaw = jSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-          const pRaw = pSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+          const pRaw = pSnap.docs.map(d => {
+            const p = d.data() || {};
+            return {
+              id: d.id,
+              namaGuru: p.namaGuru || "",
+              jenisDokumen: p.jenisDokumen || "",
+              linkDrive: p.linkDrive || "",
+              status: p.status || "Pending",
+              catatan: p.catatan || "-",
+              fileName: p.fileName || "perangkat_ajar.zip",
+              fileMimeType: p.fileMimeType || "application/zip"
+            };
+          });
           const nRaw = nSnap.docs.map(d => ({ id: d.id, ...d.data() }));
           const jdRaw = jdSnap.docs.map(d => ({ id: d.id, ...d.data() }));
           const lpRaw = lpSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -7418,16 +7462,17 @@
       }
     }
 
-    // LOAD DATA DASHBOARD
+    // LOAD DATA DASHBOARD (INSTANT CACHE + BACKGROUND REVALIDATE)
     let isDashboardLoading = false;
     async function loadDashboardData() {
       if (isDashboardLoading) return;
       isDashboardLoading = true;
 
-      // Coba load dari cache lokal dulu agar loading terasa instan bagi pengguna
+      // Coba load dari cache lokal dulu agar tampilan langsung muncul instan 0 milidetik
       const hasCache = !!localStorage.getItem(`cache_stats_${appState.user.role}`);
       if (hasCache) {
         loadOfflineCachedData();
+        showLoading(false); // Langsung tutup loading overlay agar tidak memblokir user
       } else {
         showLoading(true, "Memuat data sistem...");
       }
@@ -7478,7 +7523,7 @@
           renderDashboardData();
         }
       } catch (err) {
-        console.error("Gagal sinkronisasi data server:", err);
+        console.error("Sinkronisasi server latar belakang:", err);
         if (!hasCache) {
           showToast("Koneksi lambat, menampilkan data offline.", "warning");
           loadOfflineCachedData();
