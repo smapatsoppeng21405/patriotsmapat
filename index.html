@@ -4435,8 +4435,38 @@
     let guruJurnalChartInstance = null;
     let currentAlarmAudio = null;
 
+    function purgeDefaultMockData() {
+      if (!useRTDB && !useFirebase) return;
+      const dummyIds = ["JR-1", "JR-2", "JR-3", "PR-1", "PR-2", "NL-1", "NL-2", "NL-3", "SCH-001", "SCH-002", "SCH-003", "LW-1", "GM-1", "GM-2", "GM-3", "RA-1", "RA-2", "RA-3", "KS-1", "KS-2", "SGW-1", "SGW-2", "SGW-3", "JK-1", "CB-1", "SIS-1", "SIS-2", "SIS-3", "USR001", "USR002", "USR003", "USR004", "USR005", "USR006"];
+      const dummyEmails = ["wakasek@sekolah.com", "guru@sekolah.com", "walikelas@sekolah.com", "guruwali@sekolah.com", "kepala@sekolah.com", "admin@sekolah.com"];
+
+      ['db_jurnals', 'cache_jurnals', 'db_perangkats', 'cache_perangkats', 'db_nilais', 'cache_nilais', 'db_jadwals', 'cache_jadwals', 'db_laporans', 'cache_laporans', 'db_gurumasters', 'cache_gurumaster', 'db_rekap_absen', 'db_kondisi_siswa', 'db_siswagw', 'cache_siswagw', 'db_jurnal7kaih', 'cache_jurnal7kaih', 'db_catatanbimbingan', 'db_students', 'cache_students'].forEach(key => {
+        let arr = JSON.parse(localStorage.getItem(key)) || [];
+        if (Array.isArray(arr) && arr.length > 0) {
+          const filtered = arr.filter(item => {
+            if (!item) return false;
+            if (item.id && dummyIds.includes(item.id)) return false;
+            if (item.guru && item.guru.includes("Bu Siti (Guru Matematika)")) return false;
+            if (item.namaGuru && item.namaGuru.includes("Bu Siti (Guru Matematika)")) return false;
+            if (item.waliKelas && item.waliKelas.includes("Pak Joko (Wali Kelas 10A)")) return false;
+            return true;
+          });
+          localStorage.setItem(key, JSON.stringify(filtered));
+        }
+      });
+
+      let users = JSON.parse(localStorage.getItem('db_users')) || [];
+      if (Array.isArray(users) && users.length > 0) {
+        const filteredUsers = users.filter(u => u && u.email && !dummyEmails.includes(u.email.toLowerCase()) && !dummyIds.includes(u.id));
+        localStorage.setItem('db_users', JSON.stringify(filteredUsers));
+      }
+    }
+
     // INITIALIZATION RUN
     window.addEventListener('DOMContentLoaded', () => {
+      // Bersihkan data dummy lokal jika terhubung ke Firebase
+      purgeDefaultMockData();
+
       // Pastikan database mockup hanya diinisialisasi jika benar-benar belum ada data dan mode offline murni
       const users = JSON.parse(localStorage.getItem('db_users')) || [];
       if (!useRTDB && !useFirebase && users.length === 0) {
@@ -6656,22 +6686,18 @@
             result.siswaGuruWaliList = myStudents.length > 0 ? myStudents : [...sgwRaw];
           }
 
-          // PASTIKAN SELURUH DATA UTAMA (290+ Jurnal, 22+ User/Guru, Perangkat, Siswa) SELALU UTUH DI KEDUA SISI
-          const cachedJurnals = JSON.parse(localStorage.getItem('cache_jurnals')) || JSON.parse(localStorage.getItem('db_jurnals')) || [];
-          const cachedTeachers = JSON.parse(localStorage.getItem('cache_teachers')) || JSON.parse(localStorage.getItem('db_users')) || [];
-
-          result.jurnalList = jRaw.length > 0 ? [...jRaw] : cachedJurnals;
-          result.perangkatList = pRaw.length > 0 ? [...pRaw] : (JSON.parse(localStorage.getItem('cache_perangkats')) || []);
-          result.nilaiList = nRaw.length > 0 ? [...nRaw] : (JSON.parse(localStorage.getItem('cache_nilais')) || []);
-          result.jadwalList = jdRaw.length > 0 ? [...jdRaw] : (JSON.parse(localStorage.getItem('cache_jadwals')) || []);
-          result.laporanWaliList = lpRaw.length > 0 ? [...lpRaw] : (JSON.parse(localStorage.getItem('cache_laporans')) || []);
-          result.guruMasterList = gmRaw.length > 0 ? [...gmRaw] : (JSON.parse(localStorage.getItem('cache_gurumaster')) || []);
-          result.teacherList = teachers.length > 0 ? [...teachers] : cachedTeachers;
+          result.jurnalList = [...jRaw];
+          result.perangkatList = [...pRaw];
+          result.nilaiList = [...nRaw];
+          result.jadwalList = [...jdRaw];
+          result.laporanWaliList = [...lpRaw];
+          result.guruMasterList = [...gmRaw];
+          result.teacherList = [...teachers];
           result.rekapAbsenList = [...raRaw];
           result.kondisiSiswaList = [...ksRaw];
           result.jurnal7KAIHList = [...j7kaihRaw];
           result.catatanBimbinganList = [...cbRaw];
-          result.studentList = fullStudentList.length > 0 ? [...fullStudentList] : (JSON.parse(localStorage.getItem('cache_students')) || []);
+          result.studentList = [...fullStudentList];
 
           return result;
         }
@@ -13431,6 +13457,7 @@
 
     // INITIALIZE STATS FOR QUICK START DEMO
     function initializeMockDatabase() {
+      if (useRTDB || useFirebase) return;
       localStorage.setItem('db_sikurikulum_initialized', 'true');
       
       const mockUsers = [
