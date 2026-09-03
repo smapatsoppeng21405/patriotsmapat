@@ -5755,8 +5755,11 @@
       // Buat Menu Navigasi Sesuai Role
       buildNavigationMenu();
       
-      // Ambil Data Dashboard
-      await loadDashboardData();
+      // Render data tampilan secara instan 0 milidetik dari memori/cache
+      renderDashboardData();
+      
+      // Sinkronkan data terbaru dari server di latar belakang secara senyap
+      loadDashboardData();
     }
 
     // DISCHARGE SESSION (LOGOUT)
@@ -5846,10 +5849,27 @@
         list.appendChild(li);
       });
       
+      // Helper check if teacher has any schedule in system
+      const hasSchedule = () => {
+        if (!appState.user) return true;
+        const tName = appState.user.nama || "";
+        const tNip = appState.user.nip || "";
+        const tEmail = appState.user.email || "";
+
+        if (appState.guruJadwalList && appState.guruJadwalList.length > 0) return true;
+        if (appState.jadwalList && appState.jadwalList.length > 0) {
+          return appState.jadwalList.some(j => {
+            const gName = j.guru || j.namaGuru || "";
+            return isTeacherMatch(gName, tName) || (tNip && gName.includes(tNip)) || (tEmail && j.email && j.email.toLowerCase() === tEmail.toLowerCase());
+          });
+        }
+        return false;
+      };
+
       // Load default pane pertama
       if (menuItems.length > 0) {
         let firstPane = menuItems[0].pane;
-        if (appState.user && appState.user.role === "Guru" && (!appState.guruJadwalList || appState.guruJadwalList.length === 0)) {
+        if (appState.user && appState.user.role === "Guru" && !hasSchedule()) {
           firstPane = "pane-guru-jadwal";
         }
         switchPane(firstPane);
@@ -5858,9 +5878,25 @@
 
     // SIDEBAR NAVIGATION SWITCH PANE
     function switchPane(paneId, element = null) {
-      // Wajibkan semua guru untuk memasukkan jadwal pelajarannya
-      if (appState.user && appState.user.role === "Guru" && (!appState.guruJadwalList || appState.guruJadwalList.length === 0) && paneId !== "pane-guru-jadwal") {
-        showToast("⚠️ Anda wajib memasukkan jadwal pelajaran Anda terlebih dahulu sebelum menggunakan fitur lain!", "warning");
+      const hasSchedule = () => {
+        if (!appState.user) return true;
+        const tName = appState.user.nama || "";
+        const tNip = appState.user.nip || "";
+        const tEmail = appState.user.email || "";
+
+        if (appState.guruJadwalList && appState.guruJadwalList.length > 0) return true;
+        if (appState.jadwalList && appState.jadwalList.length > 0) {
+          return appState.jadwalList.some(j => {
+            const gName = j.guru || j.namaGuru || "";
+            return isTeacherMatch(gName, tName) || (tNip && gName.includes(tNip)) || (tEmail && j.email && j.email.toLowerCase() === tEmail.toLowerCase());
+          });
+        }
+        return false;
+      };
+
+      // Wajibkan semua guru untuk memasukkan jadwal pelajarannya hanya jika benar-benar belum ada di sistem
+      if (appState.user && appState.user.role === "Guru" && !hasSchedule() && paneId !== "pane-guru-jadwal") {
+        showToast("⚠️ Anda belum mendaftarkan jadwal pelajaran. Silakan isi jadwal terlebih dahulu.", "warning");
         paneId = "pane-guru-jadwal";
         element = null;
       }
