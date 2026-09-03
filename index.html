@@ -5772,7 +5772,7 @@
           { text: "Ringkasan", pane: "pane-wakasek-ringkasan", icon: "fa-chart-pie" },
           { text: "Data Utama Guru", pane: "pane-wakasek-gurumaster", icon: "fa-user-gear" },
           { text: "Data Utama Siswa", pane: "pane-wakasek-siswamaster", icon: "fa-users-gear" },
-          ...(role === "Admin" ? [{ text: "Manajemen Sesi", pane: "pane-admin-sesi", icon: "fa-clock" }] : []),
+          ...(role === "Admin" || role === "Wakasek" ? [{ text: "Manajemen Sesi", pane: "pane-admin-sesi", icon: "fa-clock" }] : []),
           { text: "Monitoring Jurnal", pane: "pane-wakasek-jurnal", icon: "fa-book-open" },
           { text: "Daftar Perangkat", pane: "pane-wakasek-perangkat", icon: "fa-file-shield" },
           { text: "Laporan Wali Kelas", pane: "pane-wakasek-laporanwali", icon: "fa-envelope-open-text" },
@@ -14564,6 +14564,27 @@
       }
     }
 
+    // Helper format jam ke HH:mm untuk input type="time"
+    function formatTimeForInput(val) {
+      if (!val) return "";
+      const str = String(val).trim();
+      if (str.includes("T") && str.includes("Z")) {
+        try {
+          const d = new Date(str);
+          const h = String(d.getHours()).padStart(2, '0');
+          const m = String(d.getMinutes()).padStart(2, '0');
+          return `${h}:${m}`;
+        } catch (e) {}
+      }
+      const match = str.match(/(\d{1,2}):(\d{2})/);
+      if (match) {
+        const h = match[1].padStart(2, '0');
+        const m = match[2];
+        return `${h}:${m}`;
+      }
+      return str;
+    }
+
     // ===== ADMIN: SESSION MANAGEMENT FUNCTIONS =====
     function renderSesiTable() {
       const tbody = document.getElementById('admin-sesi-table-body');
@@ -14580,10 +14601,13 @@
       
       sorted.forEach(item => {
         const tr = document.createElement('tr');
+        const jamMulaiDisp = formatTimeForInput(item.jamMulai) || item.jamMulai || "-";
+        const jamSelesaiDisp = formatTimeForInput(item.jamSelesai) || item.jamSelesai || "-";
+        
         tr.innerHTML = `
           <td style="font-weight: 600; color: #cbd5e1;">${item.namaSesi}</td>
-          <td><span class="badge badge-primary">${item.jamMulai}</span></td>
-          <td><span class="badge badge-primary">${item.jamSelesai}</span></td>
+          <td><span class="badge badge-primary">${jamMulaiDisp}</span></td>
+          <td><span class="badge badge-primary">${jamSelesaiDisp}</span></td>
           <td>
             <button type="button" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-right: 0.25rem;" onclick="editSesi('${item.id}')">
               <i class="fa-solid fa-edit"></i> Edit
@@ -14632,12 +14656,15 @@
       }
       
       document.getElementById('sesiId').value = item.id;
-      document.getElementById('sesiNama').value = item.namaSesi;
-      document.getElementById('sesiJamMulai').value = item.jamMulai;
-      document.getElementById('sesiJamSelesai').value = item.jamSelesai;
+      document.getElementById('sesiNama').value = item.namaSesi || "";
+      document.getElementById('sesiJamMulai').value = formatTimeForInput(item.jamMulai);
+      document.getElementById('sesiJamSelesai').value = formatTimeForInput(item.jamSelesai);
       
       document.getElementById('btnCancelEditSesi').style.display = "inline-block";
       document.getElementById('titleFormSesi').textContent = "Edit Sesi Pelajaran";
+      
+      const formEl = document.getElementById('formSesi');
+      if (formEl) formEl.scrollIntoView({ behavior: 'smooth' });
     }
 
     function resetSesiForm() {
