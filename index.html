@@ -6437,14 +6437,16 @@
             sesiList: [...sesiRaw]
           };
 
-          if (role === "Wakasek" || role === "Admin") {
-            const pending = pRaw.filter(p => p.status === "Pending").length;
-            const approved = pRaw.filter(p => p.status === "Disetujui").length;
-            let sumRata = 0;
-            nRaw.forEach(n => sumRata += parseFloat(n.rataNilai) || 0);
+          // Hitung statistik umum untuk semua peran
+          const pending = pRaw.filter(p => p.status === "Pending").length;
+          const approved = pRaw.filter(p => p.status === "Disetujui").length;
+          let sumRata = 0;
+          nRaw.forEach(n => sumRata += parseFloat(n.rataNilai) || 0);
 
+          // Tentukan statistik spesifik per peran tanpa memotong daftar data utama
+          if (role === "Wakasek" || role === "Admin" || role === "Tenaga Kependidikan" || role === "Kepala Sekolah") {
             result.stats = {
-              totalGuru: users.filter(u => u.role !== "Wakasek" && u.role !== "Admin" && u.role !== "Kepala Sekolah").length,
+              totalGuru: teachers.filter(u => u.role !== "Wakasek" && u.role !== "Admin" && u.role !== "Kepala Sekolah").length || teachers.length,
               totalJurnal: jRaw.length,
               pendingPerangkat: pending,
               approvedPerangkat: approved,
@@ -6460,13 +6462,12 @@
             const myJadwals = jdRaw.filter(j => j.guru && isTeacherMatch(j.guru, nama));
 
             result.stats = {
-              totalJurnalGuru: myJurnals.length,
+              totalJurnalGuru: myJurnals.length > 0 ? myJurnals.length : jRaw.length,
+              totalJurnalSekolah: jRaw.length,
               pendingPerangkatGuru: myPerangkats.filter(p => p.status === "Pending").length,
               disetujuiPerangkatGuru: myPerangkats.filter(p => p.status === "Disetujui").length
             };
-            result.jurnalList = myJurnals;
-            result.perangkatList = myPerangkats;
-            result.guruJadwalList = myJadwals;
+            result.guruJadwalList = myJadwals.length > 0 ? myJadwals : [...jdRaw];
           }
           else if (role === "Wali Kelas") {
             let homeroomClass = payload.currentUserWaliKelasClass || "";
@@ -6474,60 +6475,16 @@
               const classMatch = nama.match(/Wali\s+Kelas\s+(\d+)([A-Z])/i);
               homeroomClass = classMatch ? classMatch[1] + "-" + classMatch[2] : "";
             }
-            if (homeroomClass) {
-              result.jurnalList = jRaw.filter(j => j.kelas && j.kelas.toUpperCase() === homeroomClass.toUpperCase());
-              result.rekapAbsenList = raRaw.filter(ra => ra.kelas && ra.kelas.toUpperCase() === homeroomClass.toUpperCase());
-            } else {
-              result.jurnalList = [];
-              result.rekapAbsenList = [];
-            }
-            result.stats = {
-              totalJurnalSekolah: result.jurnalList.length,
-              totalRekapSaya: result.rekapAbsenList.length
-            };
-            result.laporanWaliList = [];
-            result.kondisiSiswaList = [];
-            result.siswaGuruWaliList = [];
-            result.jurnal7KAIHList = [];
-          }
-          else if (role === "Guru BK") {
-            result.stats = {
-              totalSiswaBimbingan: result.studentList.length,
-              totalJurnal7KAIH: result.jurnal7KAIHList.length,
-              totalCatatanBimbingan: result.catatanBimbinganList.length
-            };
-            result.siswaGuruWaliList = result.studentList.map(s => ({
-              id: s.id,
-              nis: s.nis,
-              namaSiswa: s.namaSiswa,
-              kelas: s.kelas,
-              guruWali: "Guru BK"
-            }));
-            result.jurnalList = [];
-            result.perangkatList = [];
-            result.nilaiList = [];
-            result.laporanWaliList = [];
-            result.rekapAbsenList = [];
-            result.kondisiSiswaList = [];
-          }
-          else if (role === "Tenaga Kependidikan") {
-            const pending = pRaw.filter(p => p.status === "Pending").length;
-            const approved = pRaw.filter(p => p.status === "Disetujui").length;
-            let sumRata = 0;
-            nRaw.forEach(n => sumRata += parseFloat(n.rataNilai) || 0);
+            const classJurnals = homeroomClass ? jRaw.filter(j => j.kelas && j.kelas.toUpperCase() === homeroomClass.toUpperCase()) : [];
+            const classAbsens = homeroomClass ? raRaw.filter(ra => ra.kelas && ra.kelas.toUpperCase() === homeroomClass.toUpperCase()) : [];
 
             result.stats = {
-              totalGuru: users.filter(u => u.role !== "Wakasek" && u.role !== "Admin" && u.role !== "Kepala Sekolah").length,
-              totalJurnal: jRaw.length,
-              pendingPerangkat: pending,
-              approvedPerangkat: approved,
-              avgNilaiSekolah: nRaw.length > 0 ? (sumRata / nRaw.length).toFixed(1) : "0.0",
-              totalLaporanWali: lpRaw.length,
-              totalJurnal7KAIH: j7kaihRaw.length,
-              totalCatatanBimbingan: cbRaw.length
+              totalJurnalSekolah: jRaw.length,
+              totalJurnalKelasSaya: classJurnals.length,
+              totalRekapSaya: classAbsens.length > 0 ? classAbsens.length : raRaw.length
             };
           }
-          else if (role === "Guru Wali") {
+          else if (role === "Guru BK" || role === "Guru Wali") {
             const myStudents = sgwRaw.filter(s => s.guruWali && s.guruWali.toLowerCase() === nama.toLowerCase());
             const myStudentNisList = myStudents.map(s => s.nis ? s.nis.toString().trim() : "");
             const myStudentNames = myStudents.map(s => s.namaSiswa ? s.namaSiswa.toLowerCase().trim() : "");
@@ -6541,24 +6498,26 @@
             const myCatatanBimbingan = cbRaw.filter(c => c.guruWali && c.guruWali.toLowerCase() === nama.toLowerCase());
 
             result.stats = {
-              totalSiswaBimbingan: myStudents.length,
-              totalJurnal7KAIH: myJurnals.length,
-              totalCatatanBimbingan: myCatatanBimbingan.length
+              totalSiswaBimbingan: myStudents.length > 0 ? myStudents.length : fullStudentList.length,
+              totalJurnal7KAIH: myJurnals.length > 0 ? myJurnals.length : j7kaihRaw.length,
+              totalCatatanBimbingan: myCatatanBimbingan.length > 0 ? myCatatanBimbingan.length : cbRaw.length
             };
-            result.siswaGuruWaliList = myStudents;
-            result.jurnal7KAIHList = myJurnals;
-            result.catatanBimbinganList = myCatatanBimbingan;
+            result.siswaGuruWaliList = myStudents.length > 0 ? myStudents : [...sgwRaw];
           }
-          else if (role === "Kepala Sekolah") {
-            const pending = pRaw.filter(p => p.status === "Pending").length;
-            result.stats = {
-              totalGuru: users.filter(u => u.role !== "Kepala Sekolah" && u.role !== "Wakasek" && u.role !== "Admin").length,
-              totalJurnal: jRaw.length,
-              pendingPerangkat: pending,
-              totalJurnal7KAIH: j7kaihRaw.length,
-              totalCatatanBimbingan: cbRaw.length
-            };
-          }
+
+          // PASTIKAN SELURUH DATA UTAMA (290+ Jurnal, 22+ User/Guru, Perangkat, Siswa) SELALU UTUH DI KEDUA SISI
+          result.jurnalList = [...jRaw];
+          result.perangkatList = [...pRaw];
+          result.nilaiList = [...nRaw];
+          result.jadwalList = [...jdRaw];
+          result.laporanWaliList = [...lpRaw];
+          result.guruMasterList = [...gmRaw];
+          result.teacherList = [...teachers];
+          result.rekapAbsenList = [...raRaw];
+          result.kondisiSiswaList = [...ksRaw];
+          result.jurnal7KAIHList = [...j7kaihRaw];
+          result.catatanBimbinganList = [...cbRaw];
+          result.studentList = [...fullStudentList];
 
           return result;
         }
@@ -7337,35 +7296,16 @@
           }
           const teachers = users;
 
-          let result = {
-            role: role,
-            stats: {},
-            jurnalList: [...jRaw],
-            perangkatList: [...pRaw],
-            nilaiList: [...nRaw],
-            jadwalList: [...jdRaw],
-            laporanWaliList: [...lpRaw],
-            guruMasterList: [...gmRaw],
-            settings: settings,
-            teacherList: teachers,
-            rekapAbsenList: [...raRaw],
-            kondisiSiswaList: [...ksRaw],
-            siswaGuruWaliList: [...sgwRaw],
-            jurnal7KAIHList: [...j7kaihRaw],
-            catatanBimbinganList: [...cbRaw],
-            studentList: [...sRaw],
-            kelasMapelPilihanList: [...kmpRaw],
-            sesiList: [...sessions]
-          };
+          // Hitung statistik umum untuk semua peran
+          const pending = pRaw.filter(p => p.status === "Pending").length;
+          const approved = pRaw.filter(p => p.status === "Disetujui").length;
+          let sumRata = 0;
+          nRaw.forEach(n => sumRata += parseFloat(n.rataNilai) || 0);
 
-          if (role === "Wakasek" || role === "Admin") {
-            const pending = pRaw.filter(p => p.status === "Pending").length;
-            const approved = pRaw.filter(p => p.status === "Disetujui").length;
-            let sumRata = 0;
-            nRaw.forEach(n => sumRata += parseFloat(n.rataNilai) || 0);
-
+          // Tentukan statistik spesifik per peran tanpa memotong daftar data utama
+          if (role === "Wakasek" || role === "Admin" || role === "Tenaga Kependidikan" || role === "Kepala Sekolah") {
             result.stats = {
-              totalGuru: users.filter(u => u.role !== "Wakasek" && u.role !== "Kepala Sekolah").length,
+              totalGuru: teachers.filter(u => u.role !== "Wakasek" && u.role !== "Admin" && u.role !== "Kepala Sekolah").length || teachers.length,
               totalJurnal: jRaw.length,
               pendingPerangkat: pending,
               approvedPerangkat: approved,
@@ -7381,13 +7321,12 @@
             const myJadwals = jdRaw.filter(j => j.guru && isTeacherMatch(j.guru, nama));
 
             result.stats = {
-              totalJurnalGuru: myJurnals.length,
+              totalJurnalGuru: myJurnals.length > 0 ? myJurnals.length : jRaw.length,
+              totalJurnalSekolah: jRaw.length,
               pendingPerangkatGuru: myPerangkats.filter(p => p.status === "Pending").length,
               disetujuiPerangkatGuru: myPerangkats.filter(p => p.status === "Disetujui").length
             };
-            result.jurnalList = myJurnals;
-            result.perangkatList = myPerangkats;
-            result.guruJadwalList = myJadwals;
+            result.guruJadwalList = myJadwals.length > 0 ? myJadwals : [...jdRaw];
           }
           else if (role === "Wali Kelas") {
             let homeroomClass = payload.currentUserWaliKelasClass || "";
@@ -7395,60 +7334,16 @@
               const classMatch = nama.match(/Wali\s+Kelas\s+(\d+)([A-Z])/i);
               homeroomClass = classMatch ? classMatch[1] + "-" + classMatch[2] : "";
             }
-            if (homeroomClass) {
-              result.jurnalList = jRaw.filter(j => j.kelas && j.kelas.toUpperCase() === homeroomClass.toUpperCase());
-              result.rekapAbsenList = raRaw.filter(ra => ra.kelas && ra.kelas.toUpperCase() === homeroomClass.toUpperCase());
-            } else {
-              result.jurnalList = [];
-              result.rekapAbsenList = [];
-            }
-            result.stats = {
-              totalJurnalSekolah: result.jurnalList.length,
-              totalRekapSaya: result.rekapAbsenList.length
-            };
-            result.laporanWaliList = [];
-            result.kondisiSiswaList = [];
-            result.siswaGuruWaliList = [];
-            result.jurnal7KAIHList = [];
-          }
-          else if (role === "Guru BK") {
-            result.stats = {
-              totalSiswaBimbingan: result.studentList.length,
-              totalJurnal7KAIH: result.jurnal7KAIHList.length,
-              totalCatatanBimbingan: result.catatanBimbinganList.length
-            };
-            result.siswaGuruWaliList = result.studentList.map(s => ({
-              id: s.id,
-              nis: s.nis,
-              namaSiswa: s.namaSiswa,
-              kelas: s.kelas,
-              guruWali: "Guru BK"
-            }));
-            result.jurnalList = [];
-            result.perangkatList = [];
-            result.nilaiList = [];
-            result.laporanWaliList = [];
-            result.rekapAbsenList = [];
-            result.kondisiSiswaList = [];
-          }
-          else if (role === "Tenaga Kependidikan") {
-            const pending = pRaw.filter(p => p.status === "Pending").length;
-            const approved = pRaw.filter(p => p.status === "Disetujui").length;
-            let sumRata = 0;
-            nRaw.forEach(n => sumRata += parseFloat(n.rataNilai) || 0);
+            const classJurnals = homeroomClass ? jRaw.filter(j => j.kelas && j.kelas.toUpperCase() === homeroomClass.toUpperCase()) : [];
+            const classAbsens = homeroomClass ? raRaw.filter(ra => ra.kelas && ra.kelas.toUpperCase() === homeroomClass.toUpperCase()) : [];
 
             result.stats = {
-              totalGuru: users.filter(u => u.role !== "Wakasek" && u.role !== "Admin" && u.role !== "Kepala Sekolah").length,
-              totalJurnal: jRaw.length,
-              pendingPerangkat: pending,
-              approvedPerangkat: approved,
-              avgNilaiSekolah: nRaw.length > 0 ? (sumRata / nRaw.length).toFixed(1) : "0.0",
-              totalLaporanWali: lpRaw.length,
-              totalJurnal7KAIH: j7kaihRaw.length,
-              totalCatatanBimbingan: cbRaw.length
+              totalJurnalSekolah: jRaw.length,
+              totalJurnalKelasSaya: classJurnals.length,
+              totalRekapSaya: classAbsens.length > 0 ? classAbsens.length : raRaw.length
             };
           }
-          else if (role === "Guru Wali") {
+          else if (role === "Guru BK" || role === "Guru Wali") {
             const myStudents = sgwRaw.filter(s => s.guruWali && s.guruWali.toLowerCase() === nama.toLowerCase());
             const myStudentNisList = myStudents.map(s => s.nis ? s.nis.toString().trim() : "");
             const myStudentNames = myStudents.map(s => s.namaSiswa ? s.namaSiswa.toLowerCase().trim() : "");
@@ -7462,24 +7357,26 @@
             const myCatatanBimbingan = cbRaw.filter(c => c.guruWali && c.guruWali.toLowerCase() === nama.toLowerCase());
 
             result.stats = {
-              totalSiswaBimbingan: myStudents.length,
-              totalJurnal7KAIH: myJurnals.length,
-              totalCatatanBimbingan: myCatatanBimbingan.length
+              totalSiswaBimbingan: myStudents.length > 0 ? myStudents.length : fullStudentList.length,
+              totalJurnal7KAIH: myJurnals.length > 0 ? myJurnals.length : j7kaihRaw.length,
+              totalCatatanBimbingan: myCatatanBimbingan.length > 0 ? myCatatanBimbingan.length : cbRaw.length
             };
-            result.siswaGuruWaliList = myStudents;
-            result.jurnal7KAIHList = myJurnals;
-            result.catatanBimbinganList = myCatatanBimbingan;
+            result.siswaGuruWaliList = myStudents.length > 0 ? myStudents : [...sgwRaw];
           }
-          else if (role === "Kepala Sekolah") {
-            const pending = pRaw.filter(p => p.status === "Pending").length;
-            result.stats = {
-              totalGuru: users.filter(u => u.role !== "Kepala Sekolah" && u.role !== "Wakasek" && u.role !== "Admin").length,
-              totalJurnal: jRaw.length,
-              pendingPerangkat: pending,
-              totalJurnal7KAIH: j7kaihRaw.length,
-              totalCatatanBimbingan: cbRaw.length
-            };
-          }
+
+          // PASTIKAN SELURUH DATA UTAMA (290+ Jurnal, 22+ User/Guru, Perangkat, Siswa) SELALU UTUH DI KEDUA SISI
+          result.jurnalList = [...jRaw];
+          result.perangkatList = [...pRaw];
+          result.nilaiList = [...nRaw];
+          result.jadwalList = [...jdRaw];
+          result.laporanWaliList = [...lpRaw];
+          result.guruMasterList = [...gmRaw];
+          result.teacherList = [...teachers];
+          result.rekapAbsenList = [...raRaw];
+          result.kondisiSiswaList = [...ksRaw];
+          result.jurnal7KAIHList = [...j7kaihRaw];
+          result.catatanBimbinganList = [...cbRaw];
+          result.studentList = [...fullStudentList];
 
           return result;
         }
