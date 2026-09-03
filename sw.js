@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wakasek-kurikulum-v60-nip-login-sync';
+const CACHE_NAME = 'wakasek-kurikulum-v61-role-selector-login';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
