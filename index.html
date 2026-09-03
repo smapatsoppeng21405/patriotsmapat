@@ -6090,25 +6090,70 @@
           const email = payload.currentUserEmail;
           const nama = payload.currentUserName;
 
-          const snap = await ref("/").once("value");
-          const root = snap.val() || {};
+          let snap = await ref("/").once("value");
+          let root = snap.val() || {};
 
-          const jObj = root.jurnals || {};
-          const pObj = root.perangkats || {};
-          const nObj = root.nilais || {};
-          const jdObj = root.jadwals || {};
-          const lpObj = root.laporans || {};
-          const gmObj = root.gurumasters || {};
-          const uObj = root.users || {};
-          const raObj = root.rekapabsen || {};
-          const ksObj = root.kondisisiswa || {};
-          const sgwObj = root.siswagw || {};
-          const j7Obj = root.jurnal7kaih || {};
-          const cbObj = root.catatanbimbingan || {};
-          const sObj = root.students || {};
-          const kmpObj = root.kelasmapelpilihan || {};
-          const rootSettings = root.settings || {};
-          const sessionsObj = root.sessions || root.sesi || {};
+          let jObj = root.jurnals || {};
+          let pObj = root.perangkats || {};
+          let nObj = root.nilais || {};
+          let jdObj = root.jadwals || {};
+          let lpObj = root.laporans || {};
+          let gmObj = root.gurumasters || {};
+          let uObj = root.users || {};
+          let raObj = root.rekapabsen || {};
+          let ksObj = root.kondisisiswa || {};
+          let sgwObj = root.siswagw || {};
+          let j7Obj = root.jurnal7kaih || {};
+          let cbObj = root.catatanbimbingan || {};
+          let sObj = root.students || {};
+          let kmpObj = root.kelasmapelpilihan || {};
+          let rootSettings = root.settings || {};
+          let sessionsObj = root.sessions || root.sesi || {};
+
+          // Jika ada data di Firestore, gabungkan secara otomatis agar tidak ada data yang tertinggal
+          if (useFirebase && db) {
+            try {
+              const [
+                fsJurnals, fsPerangkats, fsNilais, fsJadwals, fsLaporans,
+                fsGuruMasters, fsUsers, fsRekapAbsen, fsKondisiSiswa, fsSiswaGw,
+                fsJurnal7KAIH, fsCatatanBimbingan, fsStudents, fsKelasMapel, fsSessions
+              ] = await Promise.all([
+                db.collection("jurnals").get().catch(() => ({ docs: [] })),
+                db.collection("perangkats").get().catch(() => ({ docs: [] })),
+                db.collection("nilais").get().catch(() => ({ docs: [] })),
+                db.collection("jadwals").get().catch(() => ({ docs: [] })),
+                db.collection("laporans").get().catch(() => ({ docs: [] })),
+                db.collection("gurumasters").get().catch(() => ({ docs: [] })),
+                db.collection("users").get().catch(() => ({ docs: [] })),
+                db.collection("rekapabsen").get().catch(() => ({ docs: [] })),
+                db.collection("kondisisiswa").get().catch(() => ({ docs: [] })),
+                db.collection("siswagw").get().catch(() => ({ docs: [] })),
+                db.collection("jurnal7kaih").get().catch(() => ({ docs: [] })),
+                db.collection("catatanbimbingan").get().catch(() => ({ docs: [] })),
+                db.collection("students").get().catch(() => ({ docs: [] })),
+                db.collection("kelasmapelpilihan").get().catch(() => ({ docs: [] })),
+                db.collection("sessions").get().catch(() => ({ docs: [] }))
+              ]);
+
+              fsJurnals.docs.forEach(d => { if (!jObj[d.id]) jObj[d.id] = d.data(); });
+              fsPerangkats.docs.forEach(d => { if (!pObj[d.id]) pObj[d.id] = d.data(); });
+              fsNilais.docs.forEach(d => { if (!nObj[d.id]) nObj[d.id] = d.data(); });
+              fsJadwals.docs.forEach(d => { if (!jdObj[d.id]) jdObj[d.id] = d.data(); });
+              fsLaporans.docs.forEach(d => { if (!lpObj[d.id]) lpObj[d.id] = d.data(); });
+              fsGuruMasters.docs.forEach(d => { if (!gmObj[d.id]) gmObj[d.id] = d.data(); });
+              fsUsers.docs.forEach(d => { if (!uObj[d.id]) uObj[d.id] = d.data(); });
+              fsRekapAbsen.docs.forEach(d => { if (!raObj[d.id]) raObj[d.id] = d.data(); });
+              fsKondisiSiswa.docs.forEach(d => { if (!ksObj[d.id]) ksObj[d.id] = d.data(); });
+              fsSiswaGw.docs.forEach(d => { if (!sgwObj[d.id]) sgwObj[d.id] = d.data(); });
+              fsJurnal7KAIH.docs.forEach(d => { if (!j7Obj[d.id]) j7Obj[d.id] = d.data(); });
+              fsCatatanBimbingan.docs.forEach(d => { if (!cbObj[d.id]) cbObj[d.id] = d.data(); });
+              fsStudents.docs.forEach(d => { if (!sObj[d.id]) sObj[d.id] = d.data(); });
+              fsKelasMapel.docs.forEach(d => { if (!kmpObj[d.id]) kmpObj[d.id] = d.data(); });
+              fsSessions.docs.forEach(d => { if (!sessionsObj[d.id]) sessionsObj[d.id] = d.data(); });
+            } catch (errFS) {
+              console.warn("Sinkronisasi Firestore gabungan note:", errFS);
+            }
+          }
 
           let settings = { hariBelajar: 5, daftarKelas: ["X.1", "X.2", "XI.1", "XI.2", "XII.1", "XII.2"] };
           if (rootSettings) {
@@ -6152,7 +6197,48 @@
           const kmpRaw = Object.keys(kmpObj).map(k => ({ id: k, ...kmpObj[k] }));
           const sesiRaw = Object.keys(sessionsObj).map(k => ({ id: k, ...sessionsObj[k] }));
 
-          const teachers = users;
+          // Gabungkan daftar guru dari users dan gurumasters
+          let teachers = [...users];
+          gmRaw.forEach(gm => {
+            const exists = teachers.some(u => isTeacherMatch(u.nama, gm.nama) || (u.email && gm.email && u.email.toLowerCase() === gm.email.toLowerCase()));
+            if (!exists) {
+              teachers.push({
+                id: gm.id || ("gm_" + (gm.nip || gm.nama)),
+                nama: gm.nama,
+                email: gm.email || "",
+                nip: gm.nip || "",
+                role: "Guru",
+                mapel: gm.mapel || ""
+              });
+            }
+          });
+
+          // Gabungkan daftar siswa dari students, siswagw, dan rekapabsen
+          let fullStudentList = [...sRaw];
+          sgwRaw.forEach(sgw => {
+            const exists = fullStudentList.some(s => (s.nis && sgw.nis && s.nis.toString().trim() === sgw.nis.toString().trim()) || (s.namaSiswa && sgw.namaSiswa && s.namaSiswa.toLowerCase().trim() === sgw.namaSiswa.toLowerCase().trim()));
+            if (!exists && sgw.namaSiswa) {
+              fullStudentList.push({
+                id: sgw.id || ("sgw_" + (sgw.nis || sgw.namaSiswa)),
+                nis: sgw.nis || "",
+                namaSiswa: sgw.namaSiswa,
+                kelas: sgw.kelas || ""
+              });
+            }
+          });
+          raRaw.forEach(ra => {
+            if (ra.namaSiswa) {
+              const exists = fullStudentList.some(s => s.namaSiswa && s.namaSiswa.toLowerCase().trim() === ra.namaSiswa.toLowerCase().trim());
+              if (!exists) {
+                fullStudentList.push({
+                  id: ra.id || ("ra_" + Math.random()),
+                  nis: ra.nis || "",
+                  namaSiswa: ra.namaSiswa,
+                  kelas: ra.kelas || ""
+                });
+              }
+            }
+          });
 
           let result = {
             role: role,
@@ -6170,7 +6256,7 @@
             siswaGuruWaliList: [...sgwRaw],
             jurnal7KAIHList: [...j7kaihRaw],
             catatanBimbinganList: [...cbRaw],
-            studentList: [...sRaw],
+            studentList: fullStudentList,
             kelasMapelPilihanList: [...kmpRaw],
             sesiList: [...sesiRaw]
           };
