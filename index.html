@@ -1138,6 +1138,10 @@
         </button>
 
         <div style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
+          <button type="button" class="btn" style="background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.3); width: 100%; padding: 0.65rem; font-size: 0.85rem; font-weight: 600;" onclick="triggerFirebaseJsonImport()">
+            <i class="fa-solid fa-file-import"></i> Impor & Pindahkan File JSON Firebase ke Google Sheets
+          </button>
+          <input type="file" id="firebaseJsonFileInput" accept=".json" style="display:none" onchange="handleFirebaseJsonFileUpload(event)">
           <button type="button" class="btn" style="background: rgba(245, 158, 11, 0.1); color: var(--warning); border: 1px solid rgba(245, 158, 11, 0.3); width: 100%; padding: 0.65rem; font-size: 0.85rem; font-weight: 600;" onclick="resetAppAndSyncFirebase()">
             <i class="fa-solid fa-rotate-right"></i> Reset Cache & Sinkronkan Ulang Firebase
           </button>
@@ -1389,6 +1393,10 @@
           <!-- PWA UPDATE BUTTON -->
           <button class="btn btn-secondary" id="updatePwaBtn" onclick="forceUpdateApp()" style="padding: 0.45rem 0.85rem; font-size: 0.85rem; background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.3); color: var(--text-main); border-radius: 0.5rem; display: inline-flex; align-items: center; gap: 0.35rem;" title="Klik untuk mengunduh versi terbaru aplikasi">
             <i class="fa-solid fa-rotate" style="color: var(--accent);"></i> Update Aplikasi
+          </button>
+
+          <button class="topbar-btn" onclick="openGasMigrationModal()" title="Pengaturan Web App URL & Migrasi Database GAS">
+            <i class="fa-solid fa-database" style="color: var(--primary);"></i> Database GAS
           </button>
 
           <!-- ONLINE / OFFLINE STATUS -->
@@ -4359,7 +4367,7 @@
     };
 
     // 2. GOOGLE APPS SCRIPT (GAS) URL API (FALLBACK DATABASE)
-    const GAS_API_URL = ""; 
+    let GAS_API_URL = localStorage.getItem("GAS_API_URL") || "https://script.google.com/macros/s/AKfycbw-V76QymmQwU0rzIV2jKiIMRvcYRJkTc9VOrftwISeYjaxT8z3yy6qH23Z6svaqDYOXw/exec"; 
 
     // FIREBASE INITIALIZATION ENGINE
     let db = null;
@@ -5348,6 +5356,22 @@
       return s;
     }
 
+    
+    function isUserMatch(val, user) {
+      if (!val || !user) return false;
+      const target = String(val).trim().toLowerCase();
+      const email = (user.email || "").toString().trim().toLowerCase();
+      const nip = (user.nip || "").toString().trim().toLowerCase();
+      const id = (user.id || "").toString().trim().toLowerCase();
+      const nama = user.nama || user.guru || "";
+
+      if (email && target === email) return true;
+      if (nip && target === nip) return true;
+      if (id && target === id) return true;
+      if (nama && isTeacherMatch(val, nama)) return true;
+      return false;
+    }
+
     function isTeacherMatch(name1, name2) {
       if (!name1 || !name2) return false;
       const str1 = name1.toString().trim().toLowerCase();
@@ -5891,11 +5915,18 @@
     function getStudentsForClass(className) {
       if (className && className.toUpperCase().startsWith("KELAS MAPIL")) {
         const kmpList = appState.kelasMapelPilihanList || [];
-        const myMapil = kmpList.filter(k => 
-          k.guruEmail === appState.user.email && 
-          k.namaKelas.toUpperCase() === className.toUpperCase()
-        );
-        return myMapil.map(k => k.namaSiswa).filter(Boolean);
+        const user = appState.user;
+        let myMapil = kmpList;
+        if (user && user.role !== "Admin" && user.role !== "Wakasek" && user.role !== "Kepala Sekolah") {
+          myMapil = kmpList.filter(k => 
+            isUserMatch(k.guruEmail, user) || 
+            isUserMatch(k.guruNip, user) || 
+            isUserMatch(k.guruNama, user) || 
+            isUserMatch(k.guru, user)
+          );
+        }
+        myMapil = myMapil.filter(k => k.namaKelas && k.namaKelas.toUpperCase() === className.toUpperCase());
+        return [...new Set(myMapil.map(k => k.namaSiswa).filter(Boolean))];
       }
 
       let names = [];
@@ -6410,6 +6441,25 @@
         return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timer));
       };
       
+      const activeGasUrl = localStorage.getItem("GAS_API_URL") || GAS_API_URL;
+      const preferGas = localStorage.getItem("DB_MODE") === "gas" || (activeGasUrl !== "" && localStorage.getItem("DB_MODE") !== "firebase");
+
+      // 1. UTAMAKAN GOOGLE APPS SCRIPT JIKA TERHUBUNG
+      if (activeGasUrl !== "" && preferGas) {
+        try {
+          const response = await fetch(activeGasUrl, {
+            method: 'POST',
+            mode: 'cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action, payload })
+          });
+          const result = await response.json();
+          if (result.status === 'success') return result.data;
+        } catch (gasErr) {
+          console.warn("GAS primary call note:", gasErr);
+        }
+      }
+      
       // BACA DATA DARI REALTIME DATABASE & FIRESTORE SECARA BERSAMAAN (HYBRID MODE)
       if (action === "getDashboard") {
         let combinedData = { stats: {}, jurnalList: [], perangkatList: [], nilaiList: [], jadwalList: [], laporanWaliList: [], guruMasterList: [], teacherList: [], rekapAbsenList: [], kondisiSiswaList: [], jurnal7KAIHList: [], catatanBimbinganList: [], studentList: [] };
@@ -6670,7 +6720,96 @@
           };
         }
 
-        else if (action === "getDashboard") {
+        
+        else if (action === "deleteGuruMaster" || action === "deleteTeacher" || action === "deleteUser") {
+          const ids = payload.ids ? payload.ids : (payload.id ? [payload.id] : []);
+          console.log("🔥 [RTDB Delete Teacher] IDs:", ids);
+          for (const targetId of ids) {
+            if (!targetId) continue;
+            await Promise.all([
+              ref("gurumasters/" + targetId).remove().catch(e => console.warn(e)),
+              ref("users/" + targetId).remove().catch(e => console.warn(e)),
+              ref("teachers/" + targetId).remove().catch(e => console.warn(e)),
+              ref("GuruMaster/" + targetId).remove().catch(e => console.warn(e)),
+              ref("Users/" + targetId).remove().catch(e => console.warn(e))
+            ]);
+          }
+          return { success: true };
+        }
+        else if (action === "deleteAllTeachers") {
+          console.log("🔥 [RTDB Delete All Teachers]");
+          await Promise.all([
+            ref("gurumasters").remove().catch(e => console.warn(e)),
+            ref("users").remove().catch(e => console.warn(e)),
+            ref("teachers").remove().catch(e => console.warn(e)),
+            ref("GuruMaster").remove().catch(e => console.warn(e)),
+            ref("Users").remove().catch(e => console.warn(e))
+          ]);
+          return { success: true };
+        }
+        else if (action === "deleteStudent") {
+          const ids = payload.ids ? payload.ids : (payload.id ? [payload.id] : []);
+          console.log("🔥 [RTDB Delete Student] IDs:", ids);
+          for (const targetId of ids) {
+            if (!targetId) continue;
+            await Promise.all([
+              ref("students/" + targetId).remove().catch(e => console.warn(e)),
+              ref("Siswa/" + targetId).remove().catch(e => console.warn(e)),
+              ref("siswa/" + targetId).remove().catch(e => console.warn(e))
+            ]);
+          }
+          return { success: true };
+        }
+        else if (action === "deleteAllStudents") {
+          console.log("🔥 [RTDB Delete All Students]");
+          await Promise.all([
+            ref("students").remove().catch(e => console.warn(e)),
+            ref("Siswa").remove().catch(e => console.warn(e)),
+            ref("siswa").remove().catch(e => console.warn(e))
+          ]);
+          return { success: true };
+        }
+        else if (action === "deleteJurnal") {
+          const ids = payload.ids ? payload.ids : (payload.id ? [payload.id] : []);
+          console.log("🔥 [RTDB Delete Jurnal] IDs:", ids);
+          for (const targetId of ids) {
+            if (!targetId) continue;
+            await Promise.all([
+              ref("jurnals/" + targetId).remove().catch(e => console.warn(e)),
+              ref("JurnalMengajar/" + targetId).remove().catch(e => console.warn(e))
+            ]);
+          }
+          return { success: true };
+        }
+        else if (action === "deleteJadwal") {
+          const ids = payload.ids ? payload.ids : (payload.id ? [payload.id] : []);
+          console.log("🔥 [RTDB Delete Jadwal] IDs:", ids);
+          for (const targetId of ids) {
+            if (!targetId) continue;
+            await Promise.all([
+              ref("jadwals/" + targetId).remove().catch(e => console.warn(e)),
+              ref("Jadwal/" + targetId).remove().catch(e => console.warn(e))
+            ]);
+          }
+          return { success: true };
+        }
+        else if (action === "deletePerangkat") {
+          if (payload.id) await ref("perangkats/" + payload.id).remove().catch(e => console.warn(e));
+          return { success: true };
+        }
+        else if (action === "deleteSiswaGW") {
+          if (payload.id) await ref("siswagw/" + payload.id).remove().catch(e => console.warn(e));
+          return { success: true };
+        }
+        else if (action === "deleteJurnal7KAIH") {
+          if (payload.id) await ref("jurnal7kaih/" + payload.id).remove().catch(e => console.warn(e));
+          return { success: true };
+        }
+        else if (action === "deleteCatatanBimbingan") {
+          if (payload.id) await ref("catatanbimbingan/" + payload.id).remove().catch(e => console.warn(e));
+          return { success: true };
+        }
+  else if (action === "getDashboard") {
           const role = payload.currentUserRole;
           const email = payload.currentUserEmail;
           const nama = payload.currentUserName;
@@ -7066,7 +7205,7 @@
             };
           }
           else if (role === "Guru BK" || role === "Guru Wali") {
-            const myStudents = sgwRaw.filter(s => s.guruWali && s.guruWali.toLowerCase() === nama.toLowerCase());
+            const myStudents = sgwRaw.filter(s => s.guruWali && (s.guruWali.toLowerCase() === nama.toLowerCase() || isTeacherMatch(s.guruWali, nama)));
             const myStudentNisList = myStudents.map(s => s.nis ? s.nis.toString().trim() : "");
             const myStudentNames = myStudents.map(s => s.namaSiswa ? s.namaSiswa.toLowerCase().trim() : "");
 
@@ -8460,18 +8599,18 @@
           if (data.stats && Object.keys(data.stats).length > 0) appState.stats = data.stats;
           
           if (useRTDB || useFirebase) {
-            if (data.jurnalList && data.jurnalList.length > appState.jurnalList.length) appState.jurnalList = data.jurnalList;
-            if (data.perangkatList && data.perangkatList.length > appState.perangkatList.length) appState.perangkatList = data.perangkatList;
-            if (data.nilaiList && data.nilaiList.length > appState.nilaiList.length) appState.nilaiList = data.nilaiList;
-            if (data.jadwalList && data.jadwalList.length > appState.jadwalList.length) appState.jadwalList = data.jadwalList;
-            if (data.laporanWaliList && data.laporanWaliList.length > appState.laporanWaliList.length) appState.laporanWaliList = data.laporanWaliList;
+            if (data.jurnalList) appState.jurnalList = data.jurnalList;
+            if (data.perangkatList) appState.perangkatList = data.perangkatList;
+            if (data.nilaiList) appState.nilaiList = data.nilaiList;
+            if (data.jadwalList) appState.jadwalList = data.jadwalList;
+            if (data.laporanWaliList) appState.laporanWaliList = data.laporanWaliList;
             if (data.guruJadwalList) appState.guruJadwalList = data.guruJadwalList;
-            if (data.guruMasterList && data.guruMasterList.length > appState.guruMasterList.length) appState.guruMasterList = data.guruMasterList;
+            if (data.guruMasterList) appState.guruMasterList = data.guruMasterList;
             if (data.settings) appState.settings = data.settings;
-            if (data.teacherList && data.teacherList.length > appState.teacherList.length) appState.teacherList = data.teacherList;
+            if (data.teacherList) appState.teacherList = data.teacherList;
             if (data.siswaGuruWaliList) appState.siswaGuruWaliList = data.siswaGuruWaliList;
             if (data.jurnal7KAIHList) appState.jurnal7KAIHList = data.jurnal7KAIHList;
-            if (data.studentList && data.studentList.length > appState.studentList.length) appState.studentList = data.studentList;
+            if (data.studentList) appState.studentList = data.studentList;
             if (data.catatanWaliKelasList) appState.catatanWaliKelasList = data.catatanWaliKelasList;
             if (data.kelasMapelPilihanList) appState.kelasMapelPilihanList = data.kelasMapelPilihanList;
             if (data.sesiList) appState.sesiList = data.sesiList;
@@ -9521,8 +9660,17 @@
       showLoading(true, "Menghapus jurnal...");
       try {
         await callApi("deleteJurnal", { id });
+        
+        appState.jurnalList = (appState.jurnalList || []).filter(j => j.id !== id);
+        if (typeof REAL_SMAPAT_DATABASE_SNAPSHOT !== 'undefined' && REAL_SMAPAT_DATABASE_SNAPSHOT.jurnals) {
+          REAL_SMAPAT_DATABASE_SNAPSHOT.jurnals = REAL_SMAPAT_DATABASE_SNAPSHOT.jurnals.filter(j => j.id !== id);
+        }
+        safeLocalStorageSetItem('db_jurnals', JSON.stringify(appState.jurnalList));
+        safeLocalStorageSetItem('cache_jurnals', JSON.stringify(appState.jurnalList));
+
         showToast("Jurnal mengajar berhasil dihapus.");
-        await loadDashboardData();
+        if (typeof renderGuruJurnalHistory === 'function') renderGuruJurnalHistory();
+        if (typeof renderWakasekJurnalTable === 'function') renderWakasekJurnalTable();
       } catch (err) {
         showToast("Gagal menghapus jurnal: " + err.message, "danger");
       } finally {
@@ -11252,11 +11400,25 @@
       }
       if (!confirm("Apakah Anda yakin ingin menghapus akun guru ini? Menghapus guru dapat berdampak pada roster dan tugas mengajar yang sudah terdaftar.")) return;
       
-      showLoading(true, "Menyapus akun guru...");
+      showLoading(true, "Menghapus akun guru...");
       try {
         await callApi("deleteTeacher", { id });
+        await callApi("deleteGuruMaster", { id });
+        
+        // Filter out locally immediately
+        appState.teacherList = (appState.teacherList || []).filter(u => u.id !== id && u.nip !== id);
+        appState.guruMasterList = (appState.guruMasterList || []).filter(g => g.id !== id);
+        if (typeof REAL_SMAPAT_DATABASE_SNAPSHOT !== 'undefined') {
+          if (REAL_SMAPAT_DATABASE_SNAPSHOT.users) REAL_SMAPAT_DATABASE_SNAPSHOT.users = REAL_SMAPAT_DATABASE_SNAPSHOT.users.filter(u => u.id !== id && u.nip !== id);
+          if (REAL_SMAPAT_DATABASE_SNAPSHOT.gurumasters) REAL_SMAPAT_DATABASE_SNAPSHOT.gurumasters = REAL_SMAPAT_DATABASE_SNAPSHOT.gurumasters.filter(g => g.id !== id);
+        }
+        safeLocalStorageSetItem('db_users', JSON.stringify(appState.teacherList));
+        safeLocalStorageSetItem('cache_teachers', JSON.stringify(appState.teacherList));
+        safeLocalStorageSetItem('db_gurumasters', JSON.stringify(appState.guruMasterList));
+
         showToast("Akun guru berhasil dihapus.");
-        await loadDashboardData();
+        renderTeacherTable();
+        renderGuruMasterTable();
       } catch (err) {
         showToast("Gagal menghapus akun: " + err.message, "danger");
       } finally {
@@ -11311,15 +11473,25 @@
       showLoading(true, `Menghapus ${ids.length} guru...`);
       try {
         await callApi("deleteTeacher", { ids });
-        showToast(`Berhasil menghapus ${ids.length} guru.`);
+        await callApi("deleteGuruMaster", { ids });
         
-        // Reset select all checkbox
+        appState.teacherList = (appState.teacherList || []).filter(u => !ids.includes(u.id) && !ids.includes(u.nip));
+        appState.guruMasterList = (appState.guruMasterList || []).filter(g => !ids.includes(g.id));
+        if (typeof REAL_SMAPAT_DATABASE_SNAPSHOT !== 'undefined') {
+          if (REAL_SMAPAT_DATABASE_SNAPSHOT.users) REAL_SMAPAT_DATABASE_SNAPSHOT.users = REAL_SMAPAT_DATABASE_SNAPSHOT.users.filter(u => !ids.includes(u.id) && !ids.includes(u.nip));
+          if (REAL_SMAPAT_DATABASE_SNAPSHOT.gurumasters) REAL_SMAPAT_DATABASE_SNAPSHOT.gurumasters = REAL_SMAPAT_DATABASE_SNAPSHOT.gurumasters.filter(g => !ids.includes(g.id));
+        }
+        safeLocalStorageSetItem('db_users', JSON.stringify(appState.teacherList));
+        safeLocalStorageSetItem('cache_teachers', JSON.stringify(appState.teacherList));
+        safeLocalStorageSetItem('db_gurumasters', JSON.stringify(appState.guruMasterList));
+
+        showToast(`Berhasil menghapus ${ids.length} guru.`);
         const selectAllHeader = document.getElementById('selectAllTeachers');
         if (selectAllHeader) selectAllHeader.checked = false;
-        
-        document.getElementById('bulkDeleteTeacherContainer').style.display = "none";
-        
-        await loadDashboardData();
+        const cont = document.getElementById('bulkDeleteTeacherContainer');
+        if (cont) cont.style.display = "none";
+        renderTeacherTable();
+        renderGuruMasterTable();
       } catch (err) {
         showToast("Gagal menghapus guru: " + err.message, "danger");
       } finally {
@@ -11492,8 +11664,17 @@
       showLoading(true, "Menghapus data siswa...");
       try {
         await callApi("deleteStudent", { id });
+        
+        // Filter out locally immediately
+        appState.studentList = (appState.studentList || []).filter(s => s.id !== id && s.nis !== id);
+        if (typeof REAL_SMAPAT_DATABASE_SNAPSHOT !== 'undefined' && REAL_SMAPAT_DATABASE_SNAPSHOT.students) {
+          REAL_SMAPAT_DATABASE_SNAPSHOT.students = REAL_SMAPAT_DATABASE_SNAPSHOT.students.filter(s => s.id !== id && s.nis !== id);
+        }
+        safeLocalStorageSetItem('db_students', JSON.stringify(appState.studentList));
+        safeLocalStorageSetItem('cache_students', JSON.stringify(appState.studentList));
+
         showToast("Data siswa berhasil dihapus.");
-        await loadDashboardData();
+        renderStudentTable();
       } catch (err) {
         showToast("Gagal menghapus data siswa: " + err.message, "danger");
       } finally {
@@ -11606,17 +11787,22 @@
       showLoading(true, `Menghapus ${ids.length} siswa...`);
       try {
         await callApi("deleteStudent", { ids });
-        showToast(`Berhasil menghapus ${ids.length} siswa.`);
         
-        // Reset select all checkbox
+        appState.studentList = (appState.studentList || []).filter(s => !ids.includes(s.id) && !ids.includes(s.nis));
+        if (typeof REAL_SMAPAT_DATABASE_SNAPSHOT !== 'undefined' && REAL_SMAPAT_DATABASE_SNAPSHOT.students) {
+          REAL_SMAPAT_DATABASE_SNAPSHOT.students = REAL_SMAPAT_DATABASE_SNAPSHOT.students.filter(s => !ids.includes(s.id) && !ids.includes(s.nis));
+        }
+        safeLocalStorageSetItem('db_students', JSON.stringify(appState.studentList));
+        safeLocalStorageSetItem('cache_students', JSON.stringify(appState.studentList));
+
+        showToast(`Berhasil menghapus ${ids.length} siswa.`);
         const selectAllHeader = document.getElementById('selectAllStudents');
         if (selectAllHeader) selectAllHeader.checked = false;
-        
-        document.getElementById('bulkDeleteContainer').style.display = "none";
-        
-        await loadDashboardData();
+        const btn = document.getElementById('bulkDeleteBtn');
+        if (btn) btn.style.display = "none";
+        renderStudentTable();
       } catch (err) {
-        showToast("Gagal menghapus siswa: " + err.message, "danger");
+        showToast("Gagal menghapus data siswa: " + err.message, "danger");
       } finally {
         showLoading(false);
       }
@@ -11676,9 +11862,9 @@
     function generateStudentTemplateFile() {
       const headers = [["NIS", "Nama Siswa", "Kelas", "Tingkatan"]];
       const sampleData = [
-        ["12345", "Ahmad Dani", "10-A", "X"],
-        ["12346", "Budi Santoso", "11-A", "XI"],
-        ["12347", "Citra Lestari", "12-A", "XII"]
+        ["7587", "ALVIA RESKY ANUGRAH", "XII.1", "XII"],
+        ["7588", "ARYANANDA IBRAHIM", "XII.1", "XII"],
+        ["7589", "HAFSHAH SYARIF", "XII.1", "XII"]
       ];
       const data = headers.concat(sampleData);
       
@@ -12076,8 +12262,16 @@
       showLoading(true, "Menghapus jadwal...");
       try {
         await callApi("deleteJadwal", { id });
+        
+        appState.jadwalList = (appState.jadwalList || []).filter(j => j.id !== id);
+        if (typeof REAL_SMAPAT_DATABASE_SNAPSHOT !== 'undefined' && REAL_SMAPAT_DATABASE_SNAPSHOT.jadwals) {
+          REAL_SMAPAT_DATABASE_SNAPSHOT.jadwals = REAL_SMAPAT_DATABASE_SNAPSHOT.jadwals.filter(j => j.id !== id);
+        }
+        safeLocalStorageSetItem('db_jadwals', JSON.stringify(appState.jadwalList));
+        safeLocalStorageSetItem('cache_jadwals', JSON.stringify(appState.jadwalList));
+
         showToast("Jadwal berhasil dihapus.");
-        await loadDashboardData();
+        if (typeof renderWakasekJadwalTable === 'function') renderWakasekJadwalTable();
       } catch (err) {
         showToast("Gagal menghapus jadwal: " + err.message, "danger");
       } finally {
@@ -12431,34 +12625,40 @@
       tbody.innerHTML = "";
       
       const list = appState.kelasMapelPilihanList || [];
-      const myEmail = appState.user.email;
+      const user = appState.user;
       
-      // Filter list berdasarkan email guru yang login (case-insensitive)
-      let myMapil = list.filter(item => item.guruEmail && myEmail && item.guruEmail.toLowerCase().trim() === myEmail.toLowerCase().trim());
+      let myMapil = list;
+      if (user && user.role !== "Admin" && user.role !== "Wakasek" && user.role !== "Kepala Sekolah") {
+        myMapil = list.filter(item => {
+          return isUserMatch(item.guruEmail, user) || 
+                 isUserMatch(item.guruNip, user) || 
+                 isUserMatch(item.guruNama, user) || 
+                 isUserMatch(item.guru, user);
+        });
+      }
       
-      // Filter berdasarkan dropdown filter rombel
-      const filterVal = document.getElementById('filterMapilKelas').value;
+      const filterSelect = document.getElementById('filterMapilKelas');
+      const filterVal = filterSelect ? filterSelect.value : '';
       if (filterVal) {
         myMapil = myMapil.filter(item => item.namaKelas === filterVal);
       }
       
       if (myMapil.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Belum ada roster siswa bimbingan mapel pilihan Anda.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Belum ada roster siswa bimbingan mapel pilihan.</td></tr>`;
         return;
       }
       
-      // Sort berdasarkan nama kelas lalu nama siswa
       myMapil.sort((a, b) => {
-        if (a.namaKelas !== b.namaKelas) return a.namaKelas.localeCompare(b.namaKelas);
-        return a.namaSiswa.localeCompare(b.namaSiswa);
+        if (a.namaKelas !== b.namaKelas) return (a.namaKelas || '').localeCompare(b.namaKelas || '');
+        return (a.namaSiswa || '').localeCompare(b.namaSiswa || '');
       });
       
       myMapil.forEach((item, idx) => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td>${idx + 1}</td>
-          <td><span class="badge badge-primary">${item.namaKelas}</span></td>
-          <td style="font-weight:600; color:#cbd5e1;">${item.namaSiswa}</td>
+          <td><span class="badge badge-primary">${item.namaKelas || '-'}</span></td>
+          <td style="font-weight:600; color:#cbd5e1;">${item.namaSiswa || '-'}</td>
           <td style="font-family:monospace; font-size:0.85rem;">${item.nis || '-'}</td>
           <td style="text-align:center;">
             <button type="button" class="btn btn-danger" onclick="deleteSiswaMapil('${item.id}', '${item.namaSiswa}')" style="padding:0.25rem 0.5rem; font-size:0.75rem;">
@@ -12470,7 +12670,6 @@
       });
     }
 
-    // Render Laporan Wali Kelas Sendiri
     function renderWaliKelasLaporanTable() {
       const tbody = document.getElementById('wk-laporan-table-body');
       if (!tbody) return;
@@ -17416,30 +17615,6 @@
       "tanggal": "2026-09-03"
     },
     {
-      "id": "JR-001",
-      "catatan": "Siswa memahami materi dengan antusias dan mengerjakan soal latihan tepat waktu.",
-      "guru": "Pak Joko (Wali Kelas 10A)",
-      "kehadiran": "Hadir: 30, Sakit: 0, Alfa: 0",
-      "kelas": "10-B",
-      "mapel": "Fisika Mekanika",
-      "materi": "Hukum Newton tentang Gerak dan Gravitasi Bumi",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 1",
-      "tanggal": "2026-06-30"
-    },
-    {
-      "id": "JR-002",
-      "catatan": "Siswa yang sakit diberikan bimbingan susulan dan materi suplemen digital.",
-      "guru": "Ibu Rahma (Guru Wali)",
-      "kehadiran": "Hadir: 31, Sakit: 1, Alfa: 0",
-      "kelas": "11-B",
-      "mapel": "Biologi Molekuler",
-      "materi": "Struktur Sel dan Pembelahan Sel Biologi",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 2",
-      "tanggal": "2026-06-30"
-    },
-    {
       "id": "JR-003",
       "catatan": "Siswa menunjukkan peningkatan pemahaman materi secara signifikan.",
       "guru": "Ibu Nurul (Guru Inggris)",
@@ -17500,18 +17675,6 @@
       "tanggal": "2026-07-01"
     },
     {
-      "id": "JR-008",
-      "catatan": "KBM tatap muka berjalan lancar. Seluruh kelompok presentasi tugas dengan baik.",
-      "guru": "Bu Siti (Guru Matematika)",
-      "kehadiran": "Hadir: 32, Sakit: 0, Alfa: 0",
-      "kelas": "12-A",
-      "mapel": "Matematika Aljabar",
-      "materi": "Persamaan dan Pertidaksamaan Aljabar Kuadrat",
-      "mode": "Daring",
-      "sesi": "Sesi 3",
-      "tanggal": "2026-07-01"
-    },
-    {
       "id": "JR-009",
       "catatan": "Simulasi dan praktik mandiri berhasil diselesaikan oleh seluruh peserta didik.",
       "guru": "Pak Budi (Wakasek)",
@@ -17522,18 +17685,6 @@
       "mode": "Tatap Muka",
       "sesi": "Sesi 4",
       "tanggal": "2026-07-01"
-    },
-    {
-      "id": "JR-010",
-      "catatan": "KBM tatap muka berjalan lancar. Seluruh kelompok presentasi tugas dengan baik.",
-      "guru": "Bu Siti (Guru Matematika)",
-      "kehadiran": "Hadir: 30, Sakit: 0, Alfa: 0",
-      "kelas": "12-A",
-      "mapel": "Matematika Aljabar",
-      "materi": "Persamaan dan Pertidaksamaan Aljabar Kuadrat",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 1",
-      "tanggal": "2026-07-02"
     },
     {
       "id": "JR-011",
@@ -17620,18 +17771,6 @@
       "tanggal": "2026-07-05"
     },
     {
-      "id": "JR-018",
-      "catatan": "Siswa menunjukkan peningkatan pemahaman materi secara signifikan.",
-      "guru": "Pak Joko (Wali Kelas 10A)",
-      "kehadiran": "Hadir: 30, Sakit: 1, Alfa: 0",
-      "kelas": "11-B",
-      "mapel": "Fisika Mekanika",
-      "materi": "Hukum Newton tentang Gerak dan Gravitasi Bumi",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 4",
-      "tanggal": "2026-07-05"
-    },
-    {
       "id": "JR-019",
       "catatan": "Siswa yang sakit diberikan bimbingan susulan dan materi suplemen digital.",
       "guru": "Pak Agung (Guru PJOK)",
@@ -17641,30 +17780,6 @@
       "materi": "Teknik Dasar Permainan Bola Voli & Kebugaran Jasmani",
       "mode": "Tatap Muka",
       "sesi": "Sesi 1",
-      "tanggal": "2026-07-06"
-    },
-    {
-      "id": "JR-020",
-      "catatan": "Siswa menunjukkan peningkatan pemahaman materi secara signifikan.",
-      "guru": "Pak Joko (Wali Kelas 10A)",
-      "kehadiran": "Hadir: 31, Sakit: 1, Alfa: 0",
-      "kelas": "11-B",
-      "mapel": "Fisika Mekanika",
-      "materi": "Hukum Newton tentang Gerak dan Gravitasi Bumi",
-      "mode": "Daring",
-      "sesi": "Sesi 2",
-      "tanggal": "2026-07-06"
-    },
-    {
-      "id": "JR-021",
-      "catatan": "Seluruh rangkaian pembelajaran tuntas sesuai dengan target alokasi jam.",
-      "guru": "Ibu Rahma (Guru Wali)",
-      "kehadiran": "Hadir: 32, Sakit: 0, Alfa: 0",
-      "kelas": "12-B",
-      "mapel": "Biologi Molekuler",
-      "materi": "Struktur Sel dan Pembelahan Sel Biologi",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 3",
       "tanggal": "2026-07-06"
     },
     {
@@ -17728,18 +17843,6 @@
       "tanggal": "2026-07-07"
     },
     {
-      "id": "JR-027",
-      "catatan": "Diskusi kelas aktif, tanya jawab interaktif antar siswa berjalan sangat hidup.",
-      "guru": "Bu Siti (Guru Matematika)",
-      "kehadiran": "Hadir: 30, Sakit: 1, Alfa: 0",
-      "kelas": "10-A",
-      "mapel": "Matematika Aljabar",
-      "materi": "Persamaan dan Pertidaksamaan Aljabar Kuadrat",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 4",
-      "tanggal": "2026-07-07"
-    },
-    {
       "id": "JR-028",
       "catatan": "Simulasi dan praktik mandiri berhasil diselesaikan oleh seluruh peserta didik.",
       "guru": "Pak Dedi (Guru Sejarah)",
@@ -17749,18 +17852,6 @@
       "materi": "Sejarah Perjuangan Kemerdekaan Indonesia 1945",
       "mode": "Daring",
       "sesi": "Sesi 1",
-      "tanggal": "2026-07-08"
-    },
-    {
-      "id": "JR-029",
-      "catatan": "Diskusi kelas aktif, tanya jawab interaktif antar siswa berjalan sangat hidup.",
-      "guru": "Bu Siti (Guru Matematika)",
-      "kehadiran": "Hadir: 31, Sakit: 1, Alfa: 0",
-      "kelas": "10-A",
-      "mapel": "Matematika Aljabar",
-      "materi": "Persamaan dan Pertidaksamaan Aljabar Kuadrat",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 2",
       "tanggal": "2026-07-08"
     },
     {
@@ -17798,18 +17889,6 @@
       "mode": "Daring",
       "sesi": "Sesi 5",
       "tanggal": "2026-07-08"
-    },
-    {
-      "id": "JR-033",
-      "catatan": "Siswa memahami materi dengan antusias dan mengerjakan soal latihan tepat waktu.",
-      "guru": "Ibu Rahma (Guru Wali)",
-      "kehadiran": "Hadir: 30, Sakit: 0, Alfa: 0",
-      "kelas": "11-B",
-      "mapel": "Biologi Molekuler",
-      "materi": "Struktur Sel dan Pembelahan Sel Biologi",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 1",
-      "tanggal": "2026-07-09"
     },
     {
       "id": "JR-034",
@@ -17869,30 +17948,6 @@
       "materi": "Teknik Dasar Permainan Bola Voli & Kebugaran Jasmani",
       "mode": "Tatap Muka",
       "sesi": "Sesi 2",
-      "tanggal": "2026-07-12"
-    },
-    {
-      "id": "JR-039",
-      "catatan": "Siswa memahami materi dengan antusias dan mengerjakan soal latihan tepat waktu.",
-      "guru": "Pak Joko (Wali Kelas 10A)",
-      "kehadiran": "Hadir: 32, Sakit: 0, Alfa: 0",
-      "kelas": "12-B",
-      "mapel": "Fisika Mekanika",
-      "materi": "Hukum Newton tentang Gerak dan Gravitasi Bumi",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 3",
-      "tanggal": "2026-07-12"
-    },
-    {
-      "id": "JR-040",
-      "catatan": "Siswa yang sakit diberikan bimbingan susulan dan materi suplemen digital.",
-      "guru": "Ibu Rahma (Guru Wali)",
-      "kehadiran": "Hadir: 30, Sakit: 1, Alfa: 0",
-      "kelas": "10-B",
-      "mapel": "Biologi Molekuler",
-      "materi": "Struktur Sel dan Pembelahan Sel Biologi",
-      "mode": "Daring",
-      "sesi": "Sesi 4",
       "tanggal": "2026-07-12"
     },
     {
@@ -17980,18 +18035,6 @@
       "tanggal": "2026-07-14"
     },
     {
-      "id": "JR-048",
-      "catatan": "KBM tatap muka berjalan lancar. Seluruh kelompok presentasi tugas dengan baik.",
-      "guru": "Bu Siti (Guru Matematika)",
-      "kehadiran": "Hadir: 32, Sakit: 0, Alfa: 0",
-      "kelas": "11-A",
-      "mapel": "Matematika Aljabar",
-      "materi": "Persamaan dan Pertidaksamaan Aljabar Kuadrat",
-      "mode": "Daring",
-      "sesi": "Sesi 3",
-      "tanggal": "2026-07-14"
-    },
-    {
       "id": "JR-049",
       "catatan": "Simulasi dan praktik mandiri berhasil diselesaikan oleh seluruh peserta didik.",
       "guru": "Pak Budi (Wakasek)",
@@ -18014,30 +18057,6 @@
       "mode": "Tatap Muka",
       "sesi": "Sesi 5",
       "tanggal": "2026-07-14"
-    },
-    {
-      "id": "JR-051",
-      "catatan": "Siswa yang sakit diberikan bimbingan susulan dan materi suplemen digital.",
-      "guru": "Pak Joko (Wali Kelas 10A)",
-      "kehadiran": "Hadir: 30, Sakit: 0, Alfa: 0",
-      "kelas": "11-B",
-      "mapel": "Fisika Mekanika",
-      "materi": "Hukum Newton tentang Gerak dan Gravitasi Bumi",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 1",
-      "tanggal": "2026-07-15"
-    },
-    {
-      "id": "JR-052",
-      "catatan": "Siswa menunjukkan peningkatan pemahaman materi secara signifikan.",
-      "guru": "Ibu Rahma (Guru Wali)",
-      "kehadiran": "Hadir: 31, Sakit: 1, Alfa: 0",
-      "kelas": "12-B",
-      "mapel": "Biologi Molekuler",
-      "materi": "Struktur Sel dan Pembelahan Sel Biologi",
-      "mode": "Daring",
-      "sesi": "Sesi 2",
-      "tanggal": "2026-07-15"
     },
     {
       "id": "JR-053",
@@ -18098,42 +18117,6 @@
       "mode": "Tatap Muka",
       "sesi": "Sesi 3",
       "tanggal": "2026-07-16"
-    },
-    {
-      "id": "JR-058",
-      "catatan": "Siswa menunjukkan peningkatan pemahaman materi secara signifikan.",
-      "guru": "Pak Joko (Wali Kelas 10A)",
-      "kehadiran": "Hadir: 30, Sakit: 1, Alfa: 0",
-      "kelas": "10-B",
-      "mapel": "Fisika Mekanika",
-      "materi": "Hukum Newton tentang Gerak dan Gravitasi Bumi",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 4",
-      "tanggal": "2026-07-16"
-    },
-    {
-      "id": "JR-059",
-      "catatan": "Seluruh rangkaian pembelajaran tuntas sesuai dengan target alokasi jam.",
-      "guru": "Ibu Rahma (Guru Wali)",
-      "kehadiran": "Hadir: 31, Sakit: 0, Alfa: 0",
-      "kelas": "11-B",
-      "mapel": "Biologi Molekuler",
-      "materi": "Struktur Sel dan Pembelahan Sel Biologi",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 5",
-      "tanggal": "2026-07-16"
-    },
-    {
-      "id": "JR-060",
-      "catatan": "Simulasi dan praktik mandiri berhasil diselesaikan oleh seluruh peserta didik.",
-      "guru": "Bu Siti (Guru Matematika)",
-      "kehadiran": "Hadir: 30, Sakit: 0, Alfa: 0",
-      "kelas": "10-A",
-      "mapel": "Matematika Aljabar",
-      "materi": "Persamaan dan Pertidaksamaan Aljabar Kuadrat",
-      "mode": "Daring",
-      "sesi": "Sesi 1",
-      "tanggal": "2026-07-19"
     },
     {
       "id": "JR-061",
@@ -18208,18 +18191,6 @@
       "tanggal": "2026-07-20"
     },
     {
-      "id": "JR-067",
-      "catatan": "Diskusi kelas aktif, tanya jawab interaktif antar siswa berjalan sangat hidup.",
-      "guru": "Bu Siti (Guru Matematika)",
-      "kehadiran": "Hadir: 30, Sakit: 1, Alfa: 0",
-      "kelas": "12-A",
-      "mapel": "Matematika Aljabar",
-      "materi": "Persamaan dan Pertidaksamaan Aljabar Kuadrat",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 4",
-      "tanggal": "2026-07-20"
-    },
-    {
       "id": "JR-068",
       "catatan": "Pembelajaran berlangsung dengan sangat tertib. Siswa aktif berdiskusi kelompok.",
       "guru": "Pak Budi (Wakasek)",
@@ -18244,30 +18215,6 @@
       "tanggal": "2026-07-21"
     },
     {
-      "id": "JR-070",
-      "catatan": "Seluruh rangkaian pembelajaran tuntas sesuai dengan target alokasi jam.",
-      "guru": "Pak Joko (Wali Kelas 10A)",
-      "kehadiran": "Hadir: 31, Sakit: 1, Alfa: 0",
-      "kelas": "12-B",
-      "mapel": "Fisika Mekanika",
-      "materi": "Hukum Newton tentang Gerak dan Gravitasi Bumi",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 2",
-      "tanggal": "2026-07-21"
-    },
-    {
-      "id": "JR-071",
-      "catatan": "Siswa memahami materi dengan antusias dan mengerjakan soal latihan tepat waktu.",
-      "guru": "Ibu Rahma (Guru Wali)",
-      "kehadiran": "Hadir: 32, Sakit: 0, Alfa: 0",
-      "kelas": "10-B",
-      "mapel": "Biologi Molekuler",
-      "materi": "Struktur Sel dan Pembelahan Sel Biologi",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 3",
-      "tanggal": "2026-07-21"
-    },
-    {
       "id": "JR-072",
       "catatan": "Siswa yang sakit diberikan bimbingan susulan dan materi suplemen digital.",
       "guru": "Ibu Nurul (Guru Inggris)",
@@ -18278,18 +18225,6 @@
       "mode": "Daring",
       "sesi": "Sesi 4",
       "tanggal": "2026-07-21"
-    },
-    {
-      "id": "JR-073",
-      "catatan": "Siswa memahami materi dengan antusias dan mengerjakan soal latihan tepat waktu.",
-      "guru": "Ibu Rahma (Guru Wali)",
-      "kehadiran": "Hadir: 30, Sakit: 0, Alfa: 0",
-      "kelas": "10-B",
-      "mapel": "Biologi Molekuler",
-      "materi": "Struktur Sel dan Pembelahan Sel Biologi",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 1",
-      "tanggal": "2026-07-22"
     },
     {
       "id": "JR-074",
@@ -18328,18 +18263,6 @@
       "tanggal": "2026-07-22"
     },
     {
-      "id": "JR-077",
-      "catatan": "Siswa memahami materi dengan antusias dan mengerjakan soal latihan tepat waktu.",
-      "guru": "Pak Joko (Wali Kelas 10A)",
-      "kehadiran": "Hadir: 31, Sakit: 0, Alfa: 0",
-      "kelas": "11-B",
-      "mapel": "Fisika Mekanika",
-      "materi": "Hukum Newton tentang Gerak dan Gravitasi Bumi",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 5",
-      "tanggal": "2026-07-22"
-    },
-    {
       "id": "JR-078",
       "catatan": "Diskusi kelas aktif, tanya jawab interaktif antar siswa berjalan sangat hidup.",
       "guru": "Pak Dedi (Guru Sejarah)",
@@ -18349,18 +18272,6 @@
       "materi": "Sejarah Perjuangan Kemerdekaan Indonesia 1945",
       "mode": "Tatap Muka",
       "sesi": "Sesi 1",
-      "tanggal": "2026-07-23"
-    },
-    {
-      "id": "JR-079",
-      "catatan": "Pembelajaran berlangsung dengan sangat tertib. Siswa aktif berdiskusi kelompok.",
-      "guru": "Bu Siti (Guru Matematika)",
-      "kehadiran": "Hadir: 31, Sakit: 1, Alfa: 0",
-      "kelas": "11-A",
-      "mapel": "Matematika Aljabar",
-      "materi": "Persamaan dan Pertidaksamaan Aljabar Kuadrat",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 2",
       "tanggal": "2026-07-23"
     },
     {
@@ -18436,18 +18347,6 @@
       "tanggal": "2026-07-26"
     },
     {
-      "id": "JR-086",
-      "catatan": "KBM tatap muka berjalan lancar. Seluruh kelompok presentasi tugas dengan baik.",
-      "guru": "Bu Siti (Guru Matematika)",
-      "kehadiran": "Hadir: 31, Sakit: 0, Alfa: 0",
-      "kelas": "10-A",
-      "mapel": "Matematika Aljabar",
-      "materi": "Persamaan dan Pertidaksamaan Aljabar Kuadrat",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 5",
-      "tanggal": "2026-07-26"
-    },
-    {
       "id": "JR-087",
       "catatan": "Seluruh rangkaian pembelajaran tuntas sesuai dengan target alokasi jam.",
       "guru": "Ibu Tri (Guru PPKn)",
@@ -18470,54 +18369,6 @@
       "mode": "Daring",
       "sesi": "Sesi 2",
       "tanggal": "2026-07-27"
-    },
-    {
-      "id": "JR-089",
-      "catatan": "Siswa yang sakit diberikan bimbingan susulan dan materi suplemen digital.",
-      "guru": "Pak Joko (Wali Kelas 10A)",
-      "kehadiran": "Hadir: 32, Sakit: 0, Alfa: 0",
-      "kelas": "10-B",
-      "mapel": "Fisika Mekanika",
-      "materi": "Hukum Newton tentang Gerak dan Gravitasi Bumi",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 3",
-      "tanggal": "2026-07-27"
-    },
-    {
-      "id": "JR-090",
-      "catatan": "Siswa menunjukkan peningkatan pemahaman materi secara signifikan.",
-      "guru": "Ibu Rahma (Guru Wali)",
-      "kehadiran": "Hadir: 30, Sakit: 1, Alfa: 0",
-      "kelas": "11-B",
-      "mapel": "Biologi Molekuler",
-      "materi": "Struktur Sel dan Pembelahan Sel Biologi",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 4",
-      "tanggal": "2026-07-27"
-    },
-    {
-      "id": "JR-091",
-      "catatan": "Siswa yang sakit diberikan bimbingan susulan dan materi suplemen digital.",
-      "guru": "Pak Joko (Wali Kelas 10A)",
-      "kehadiran": "Hadir: 30, Sakit: 0, Alfa: 0",
-      "kelas": "10-B",
-      "mapel": "Fisika Mekanika",
-      "materi": "Hukum Newton tentang Gerak dan Gravitasi Bumi",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 1",
-      "tanggal": "2026-07-28"
-    },
-    {
-      "id": "JR-092",
-      "catatan": "Siswa menunjukkan peningkatan pemahaman materi secara signifikan.",
-      "guru": "Ibu Rahma (Guru Wali)",
-      "kehadiran": "Hadir: 31, Sakit: 1, Alfa: 0",
-      "kelas": "11-B",
-      "mapel": "Biologi Molekuler",
-      "materi": "Struktur Sel dan Pembelahan Sel Biologi",
-      "mode": "Daring",
-      "sesi": "Sesi 2",
-      "tanggal": "2026-07-28"
     },
     {
       "id": "JR-093",
@@ -18580,18 +18431,6 @@
       "tanggal": "2026-07-29"
     },
     {
-      "id": "JR-098",
-      "catatan": "Simulasi dan praktik mandiri berhasil diselesaikan oleh seluruh peserta didik.",
-      "guru": "Bu Siti (Guru Matematika)",
-      "kehadiran": "Hadir: 32, Sakit: 0, Alfa: 0",
-      "kelas": "12-A",
-      "mapel": "Matematika Aljabar",
-      "materi": "Persamaan dan Pertidaksamaan Aljabar Kuadrat",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 3",
-      "tanggal": "2026-07-29"
-    },
-    {
       "id": "JR-099",
       "catatan": "Diskusi kelas aktif, tanya jawab interaktif antar siswa berjalan sangat hidup.",
       "guru": "Pak Budi (Wakasek)",
@@ -18602,30 +18441,6 @@
       "mode": "Tatap Muka",
       "sesi": "Sesi 4",
       "tanggal": "2026-07-29"
-    },
-    {
-      "id": "JR-1",
-      "catatan": "Siswa sangat antusias memahami visualisasi grafik parabola.",
-      "guru": "Bu Siti (Guru Matematika)",
-      "kehadiran": "Hadir: 31, Izin: 1, Alfa: 0",
-      "kelas": "10-A",
-      "mapel": "Matematika Aljabar",
-      "materi": "Persamaan Aljabar Kuadrat",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 1",
-      "tanggal": "2026-07-29"
-    },
-    {
-      "id": "JR-100",
-      "catatan": "Simulasi dan praktik mandiri berhasil diselesaikan oleh seluruh peserta didik.",
-      "guru": "Bu Siti (Guru Matematika)",
-      "kehadiran": "Hadir: 30, Sakit: 0, Alfa: 0",
-      "kelas": "12-A",
-      "mapel": "Matematika Aljabar",
-      "materi": "Persamaan dan Pertidaksamaan Aljabar Kuadrat",
-      "mode": "Daring",
-      "sesi": "Sesi 1",
-      "tanggal": "2026-07-30"
     },
     {
       "id": "JR-101",
@@ -18712,18 +18527,6 @@
       "tanggal": "2026-08-02"
     },
     {
-      "id": "JR-108",
-      "catatan": "Seluruh rangkaian pembelajaran tuntas sesuai dengan target alokasi jam.",
-      "guru": "Pak Joko (Wali Kelas 10A)",
-      "kehadiran": "Hadir: 30, Sakit: 1, Alfa: 0",
-      "kelas": "11-B",
-      "mapel": "Fisika Mekanika",
-      "materi": "Hukum Newton tentang Gerak dan Gravitasi Bumi",
-      "mode": "Daring",
-      "sesi": "Sesi 4",
-      "tanggal": "2026-08-02"
-    },
-    {
       "id": "JR-109",
       "catatan": "Siswa menunjukkan peningkatan pemahaman materi secara signifikan.",
       "guru": "Pak Agung (Guru PJOK)",
@@ -18733,30 +18536,6 @@
       "materi": "Teknik Dasar Permainan Bola Voli & Kebugaran Jasmani",
       "mode": "Tatap Muka",
       "sesi": "Sesi 1",
-      "tanggal": "2026-08-03"
-    },
-    {
-      "id": "JR-110",
-      "catatan": "Seluruh rangkaian pembelajaran tuntas sesuai dengan target alokasi jam.",
-      "guru": "Pak Joko (Wali Kelas 10A)",
-      "kehadiran": "Hadir: 31, Sakit: 1, Alfa: 0",
-      "kelas": "11-B",
-      "mapel": "Fisika Mekanika",
-      "materi": "Hukum Newton tentang Gerak dan Gravitasi Bumi",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 2",
-      "tanggal": "2026-08-03"
-    },
-    {
-      "id": "JR-111",
-      "catatan": "Siswa memahami materi dengan antusias dan mengerjakan soal latihan tepat waktu.",
-      "guru": "Ibu Rahma (Guru Wali)",
-      "kehadiran": "Hadir: 32, Sakit: 0, Alfa: 0",
-      "kelas": "12-B",
-      "mapel": "Biologi Molekuler",
-      "materi": "Struktur Sel dan Pembelahan Sel Biologi",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 3",
       "tanggal": "2026-08-03"
     },
     {
@@ -18820,18 +18599,6 @@
       "tanggal": "2026-08-04"
     },
     {
-      "id": "JR-117",
-      "catatan": "Pembelajaran berlangsung dengan sangat tertib. Siswa aktif berdiskusi kelompok.",
-      "guru": "Bu Siti (Guru Matematika)",
-      "kehadiran": "Hadir: 30, Sakit: 1, Alfa: 0",
-      "kelas": "10-A",
-      "mapel": "Matematika Aljabar",
-      "materi": "Persamaan dan Pertidaksamaan Aljabar Kuadrat",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 4",
-      "tanggal": "2026-08-04"
-    },
-    {
       "id": "JR-118",
       "catatan": "Diskusi kelas aktif, tanya jawab interaktif antar siswa berjalan sangat hidup.",
       "guru": "Pak Dedi (Guru Sejarah)",
@@ -18841,18 +18608,6 @@
       "materi": "Sejarah Perjuangan Kemerdekaan Indonesia 1945",
       "mode": "Tatap Muka",
       "sesi": "Sesi 1",
-      "tanggal": "2026-08-05"
-    },
-    {
-      "id": "JR-119",
-      "catatan": "Pembelajaran berlangsung dengan sangat tertib. Siswa aktif berdiskusi kelompok.",
-      "guru": "Bu Siti (Guru Matematika)",
-      "kehadiran": "Hadir: 31, Sakit: 1, Alfa: 0",
-      "kelas": "10-A",
-      "mapel": "Matematika Aljabar",
-      "materi": "Persamaan dan Pertidaksamaan Aljabar Kuadrat",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 2",
       "tanggal": "2026-08-05"
     },
     {
@@ -18890,18 +18645,6 @@
       "mode": "Tatap Muka",
       "sesi": "Sesi 5",
       "tanggal": "2026-08-05"
-    },
-    {
-      "id": "JR-123",
-      "catatan": "Siswa yang sakit diberikan bimbingan susulan dan materi suplemen digital.",
-      "guru": "Ibu Rahma (Guru Wali)",
-      "kehadiran": "Hadir: 30, Sakit: 0, Alfa: 0",
-      "kelas": "11-B",
-      "mapel": "Biologi Molekuler",
-      "materi": "Struktur Sel dan Pembelahan Sel Biologi",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 1",
-      "tanggal": "2026-08-06"
     },
     {
       "id": "JR-124",
@@ -18961,30 +18704,6 @@
       "materi": "Teknik Dasar Permainan Bola Voli & Kebugaran Jasmani",
       "mode": "Daring",
       "sesi": "Sesi 2",
-      "tanggal": "2026-08-09"
-    },
-    {
-      "id": "JR-129",
-      "catatan": "Siswa yang sakit diberikan bimbingan susulan dan materi suplemen digital.",
-      "guru": "Pak Joko (Wali Kelas 10A)",
-      "kehadiran": "Hadir: 32, Sakit: 0, Alfa: 0",
-      "kelas": "12-B",
-      "mapel": "Fisika Mekanika",
-      "materi": "Hukum Newton tentang Gerak dan Gravitasi Bumi",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 3",
-      "tanggal": "2026-08-09"
-    },
-    {
-      "id": "JR-130",
-      "catatan": "Siswa menunjukkan peningkatan pemahaman materi secara signifikan.",
-      "guru": "Ibu Rahma (Guru Wali)",
-      "kehadiran": "Hadir: 30, Sakit: 1, Alfa: 0",
-      "kelas": "10-B",
-      "mapel": "Biologi Molekuler",
-      "materi": "Struktur Sel dan Pembelahan Sel Biologi",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 4",
       "tanggal": "2026-08-09"
     },
     {
@@ -19072,18 +18791,6 @@
       "tanggal": "2026-08-11"
     },
     {
-      "id": "JR-138",
-      "catatan": "Simulasi dan praktik mandiri berhasil diselesaikan oleh seluruh peserta didik.",
-      "guru": "Bu Siti (Guru Matematika)",
-      "kehadiran": "Hadir: 32, Sakit: 0, Alfa: 0",
-      "kelas": "11-A",
-      "mapel": "Matematika Aljabar",
-      "materi": "Persamaan dan Pertidaksamaan Aljabar Kuadrat",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 3",
-      "tanggal": "2026-08-11"
-    },
-    {
       "id": "JR-139",
       "catatan": "Diskusi kelas aktif, tanya jawab interaktif antar siswa berjalan sangat hidup.",
       "guru": "Pak Budi (Wakasek)",
@@ -19106,30 +18813,6 @@
       "mode": "Daring",
       "sesi": "Sesi 5",
       "tanggal": "2026-08-11"
-    },
-    {
-      "id": "JR-141",
-      "catatan": "Siswa menunjukkan peningkatan pemahaman materi secara signifikan.",
-      "guru": "Pak Joko (Wali Kelas 10A)",
-      "kehadiran": "Hadir: 30, Sakit: 0, Alfa: 0",
-      "kelas": "11-B",
-      "mapel": "Fisika Mekanika",
-      "materi": "Hukum Newton tentang Gerak dan Gravitasi Bumi",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 1",
-      "tanggal": "2026-08-12"
-    },
-    {
-      "id": "JR-142",
-      "catatan": "Seluruh rangkaian pembelajaran tuntas sesuai dengan target alokasi jam.",
-      "guru": "Ibu Rahma (Guru Wali)",
-      "kehadiran": "Hadir: 31, Sakit: 1, Alfa: 0",
-      "kelas": "12-B",
-      "mapel": "Biologi Molekuler",
-      "materi": "Struktur Sel dan Pembelahan Sel Biologi",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 2",
-      "tanggal": "2026-08-12"
     },
     {
       "id": "JR-143",
@@ -19190,42 +18873,6 @@
       "mode": "Tatap Muka",
       "sesi": "Sesi 3",
       "tanggal": "2026-08-13"
-    },
-    {
-      "id": "JR-148",
-      "catatan": "Seluruh rangkaian pembelajaran tuntas sesuai dengan target alokasi jam.",
-      "guru": "Pak Joko (Wali Kelas 10A)",
-      "kehadiran": "Hadir: 30, Sakit: 1, Alfa: 0",
-      "kelas": "10-B",
-      "mapel": "Fisika Mekanika",
-      "materi": "Hukum Newton tentang Gerak dan Gravitasi Bumi",
-      "mode": "Daring",
-      "sesi": "Sesi 4",
-      "tanggal": "2026-08-13"
-    },
-    {
-      "id": "JR-149",
-      "catatan": "Siswa memahami materi dengan antusias dan mengerjakan soal latihan tepat waktu.",
-      "guru": "Ibu Rahma (Guru Wali)",
-      "kehadiran": "Hadir: 31, Sakit: 0, Alfa: 0",
-      "kelas": "11-B",
-      "mapel": "Biologi Molekuler",
-      "materi": "Struktur Sel dan Pembelahan Sel Biologi",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 5",
-      "tanggal": "2026-08-13"
-    },
-    {
-      "id": "JR-150",
-      "catatan": "Diskusi kelas aktif, tanya jawab interaktif antar siswa berjalan sangat hidup.",
-      "guru": "Bu Siti (Guru Matematika)",
-      "kehadiran": "Hadir: 30, Sakit: 0, Alfa: 0",
-      "kelas": "10-A",
-      "mapel": "Matematika Aljabar",
-      "materi": "Persamaan dan Pertidaksamaan Aljabar Kuadrat",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 1",
-      "tanggal": "2026-08-16"
     },
     {
       "id": "JR-151",
@@ -19300,18 +18947,6 @@
       "tanggal": "2026-08-17"
     },
     {
-      "id": "JR-157",
-      "catatan": "Pembelajaran berlangsung dengan sangat tertib. Siswa aktif berdiskusi kelompok.",
-      "guru": "Bu Siti (Guru Matematika)",
-      "kehadiran": "Hadir: 30, Sakit: 1, Alfa: 0",
-      "kelas": "12-A",
-      "mapel": "Matematika Aljabar",
-      "materi": "Persamaan dan Pertidaksamaan Aljabar Kuadrat",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 4",
-      "tanggal": "2026-08-17"
-    },
-    {
       "id": "JR-158",
       "catatan": "KBM tatap muka berjalan lancar. Seluruh kelompok presentasi tugas dengan baik.",
       "guru": "Pak Budi (Wakasek)",
@@ -19336,30 +18971,6 @@
       "tanggal": "2026-08-18"
     },
     {
-      "id": "JR-160",
-      "catatan": "Siswa memahami materi dengan antusias dan mengerjakan soal latihan tepat waktu.",
-      "guru": "Pak Joko (Wali Kelas 10A)",
-      "kehadiran": "Hadir: 31, Sakit: 1, Alfa: 0",
-      "kelas": "12-B",
-      "mapel": "Fisika Mekanika",
-      "materi": "Hukum Newton tentang Gerak dan Gravitasi Bumi",
-      "mode": "Daring",
-      "sesi": "Sesi 2",
-      "tanggal": "2026-08-18"
-    },
-    {
-      "id": "JR-161",
-      "catatan": "Siswa yang sakit diberikan bimbingan susulan dan materi suplemen digital.",
-      "guru": "Ibu Rahma (Guru Wali)",
-      "kehadiran": "Hadir: 32, Sakit: 0, Alfa: 0",
-      "kelas": "10-B",
-      "mapel": "Biologi Molekuler",
-      "materi": "Struktur Sel dan Pembelahan Sel Biologi",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 3",
-      "tanggal": "2026-08-18"
-    },
-    {
       "id": "JR-162",
       "catatan": "Siswa menunjukkan peningkatan pemahaman materi secara signifikan.",
       "guru": "Ibu Nurul (Guru Inggris)",
@@ -19370,18 +18981,6 @@
       "mode": "Tatap Muka",
       "sesi": "Sesi 4",
       "tanggal": "2026-08-18"
-    },
-    {
-      "id": "JR-163",
-      "catatan": "Siswa yang sakit diberikan bimbingan susulan dan materi suplemen digital.",
-      "guru": "Ibu Rahma (Guru Wali)",
-      "kehadiran": "Hadir: 30, Sakit: 0, Alfa: 0",
-      "kelas": "10-B",
-      "mapel": "Biologi Molekuler",
-      "materi": "Struktur Sel dan Pembelahan Sel Biologi",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 1",
-      "tanggal": "2026-08-19"
     },
     {
       "id": "JR-164",
@@ -19420,18 +19019,6 @@
       "tanggal": "2026-08-19"
     },
     {
-      "id": "JR-167",
-      "catatan": "Siswa yang sakit diberikan bimbingan susulan dan materi suplemen digital.",
-      "guru": "Pak Joko (Wali Kelas 10A)",
-      "kehadiran": "Hadir: 31, Sakit: 0, Alfa: 0",
-      "kelas": "11-B",
-      "mapel": "Fisika Mekanika",
-      "materi": "Hukum Newton tentang Gerak dan Gravitasi Bumi",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 5",
-      "tanggal": "2026-08-19"
-    },
-    {
       "id": "JR-168",
       "catatan": "Pembelajaran berlangsung dengan sangat tertib. Siswa aktif berdiskusi kelompok.",
       "guru": "Pak Dedi (Guru Sejarah)",
@@ -19441,18 +19028,6 @@
       "materi": "Sejarah Perjuangan Kemerdekaan Indonesia 1945",
       "mode": "Daring",
       "sesi": "Sesi 1",
-      "tanggal": "2026-08-20"
-    },
-    {
-      "id": "JR-169",
-      "catatan": "KBM tatap muka berjalan lancar. Seluruh kelompok presentasi tugas dengan baik.",
-      "guru": "Bu Siti (Guru Matematika)",
-      "kehadiran": "Hadir: 31, Sakit: 1, Alfa: 0",
-      "kelas": "11-A",
-      "mapel": "Matematika Aljabar",
-      "materi": "Persamaan dan Pertidaksamaan Aljabar Kuadrat",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 2",
       "tanggal": "2026-08-20"
     },
     {
@@ -19528,18 +19103,6 @@
       "tanggal": "2026-08-23"
     },
     {
-      "id": "JR-176",
-      "catatan": "Simulasi dan praktik mandiri berhasil diselesaikan oleh seluruh peserta didik.",
-      "guru": "Bu Siti (Guru Matematika)",
-      "kehadiran": "Hadir: 31, Sakit: 0, Alfa: 0",
-      "kelas": "10-A",
-      "mapel": "Matematika Aljabar",
-      "materi": "Persamaan dan Pertidaksamaan Aljabar Kuadrat",
-      "mode": "Daring",
-      "sesi": "Sesi 5",
-      "tanggal": "2026-08-23"
-    },
-    {
       "id": "JR-177",
       "catatan": "Siswa memahami materi dengan antusias dan mengerjakan soal latihan tepat waktu.",
       "guru": "Ibu Tri (Guru PPKn)",
@@ -19562,54 +19125,6 @@
       "mode": "Tatap Muka",
       "sesi": "Sesi 2",
       "tanggal": "2026-08-24"
-    },
-    {
-      "id": "JR-179",
-      "catatan": "Siswa menunjukkan peningkatan pemahaman materi secara signifikan.",
-      "guru": "Pak Joko (Wali Kelas 10A)",
-      "kehadiran": "Hadir: 32, Sakit: 0, Alfa: 0",
-      "kelas": "10-B",
-      "mapel": "Fisika Mekanika",
-      "materi": "Hukum Newton tentang Gerak dan Gravitasi Bumi",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 3",
-      "tanggal": "2026-08-24"
-    },
-    {
-      "id": "JR-180",
-      "catatan": "Seluruh rangkaian pembelajaran tuntas sesuai dengan target alokasi jam.",
-      "guru": "Ibu Rahma (Guru Wali)",
-      "kehadiran": "Hadir: 30, Sakit: 1, Alfa: 0",
-      "kelas": "11-B",
-      "mapel": "Biologi Molekuler",
-      "materi": "Struktur Sel dan Pembelahan Sel Biologi",
-      "mode": "Daring",
-      "sesi": "Sesi 4",
-      "tanggal": "2026-08-24"
-    },
-    {
-      "id": "JR-181",
-      "catatan": "Siswa menunjukkan peningkatan pemahaman materi secara signifikan.",
-      "guru": "Pak Joko (Wali Kelas 10A)",
-      "kehadiran": "Hadir: 30, Sakit: 0, Alfa: 0",
-      "kelas": "10-B",
-      "mapel": "Fisika Mekanika",
-      "materi": "Hukum Newton tentang Gerak dan Gravitasi Bumi",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 1",
-      "tanggal": "2026-08-25"
-    },
-    {
-      "id": "JR-182",
-      "catatan": "Seluruh rangkaian pembelajaran tuntas sesuai dengan target alokasi jam.",
-      "guru": "Ibu Rahma (Guru Wali)",
-      "kehadiran": "Hadir: 31, Sakit: 1, Alfa: 0",
-      "kelas": "11-B",
-      "mapel": "Biologi Molekuler",
-      "materi": "Struktur Sel dan Pembelahan Sel Biologi",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 2",
-      "tanggal": "2026-08-25"
     },
     {
       "id": "JR-183",
@@ -19672,18 +19187,6 @@
       "tanggal": "2026-08-26"
     },
     {
-      "id": "JR-188",
-      "catatan": "Diskusi kelas aktif, tanya jawab interaktif antar siswa berjalan sangat hidup.",
-      "guru": "Bu Siti (Guru Matematika)",
-      "kehadiran": "Hadir: 32, Sakit: 0, Alfa: 0",
-      "kelas": "12-A",
-      "mapel": "Matematika Aljabar",
-      "materi": "Persamaan dan Pertidaksamaan Aljabar Kuadrat",
-      "mode": "Daring",
-      "sesi": "Sesi 3",
-      "tanggal": "2026-08-26"
-    },
-    {
       "id": "JR-189",
       "catatan": "Pembelajaran berlangsung dengan sangat tertib. Siswa aktif berdiskusi kelompok.",
       "guru": "Pak Budi (Wakasek)",
@@ -19694,18 +19197,6 @@
       "mode": "Tatap Muka",
       "sesi": "Sesi 4",
       "tanggal": "2026-08-26"
-    },
-    {
-      "id": "JR-190",
-      "catatan": "Diskusi kelas aktif, tanya jawab interaktif antar siswa berjalan sangat hidup.",
-      "guru": "Bu Siti (Guru Matematika)",
-      "kehadiran": "Hadir: 30, Sakit: 0, Alfa: 0",
-      "kelas": "12-A",
-      "mapel": "Matematika Aljabar",
-      "materi": "Persamaan dan Pertidaksamaan Aljabar Kuadrat",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 1",
-      "tanggal": "2026-08-27"
     },
     {
       "id": "JR-191",
@@ -19792,18 +19283,6 @@
       "tanggal": "2026-08-30"
     },
     {
-      "id": "JR-198",
-      "catatan": "Siswa memahami materi dengan antusias dan mengerjakan soal latihan tepat waktu.",
-      "guru": "Pak Joko (Wali Kelas 10A)",
-      "kehadiran": "Hadir: 30, Sakit: 1, Alfa: 0",
-      "kelas": "11-B",
-      "mapel": "Fisika Mekanika",
-      "materi": "Hukum Newton tentang Gerak dan Gravitasi Bumi",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 4",
-      "tanggal": "2026-08-30"
-    },
-    {
       "id": "JR-199",
       "catatan": "Seluruh rangkaian pembelajaran tuntas sesuai dengan target alokasi jam.",
       "guru": "Pak Agung (Guru PJOK)",
@@ -19813,42 +19292,6 @@
       "materi": "Teknik Dasar Permainan Bola Voli & Kebugaran Jasmani",
       "mode": "Tatap Muka",
       "sesi": "Sesi 1",
-      "tanggal": "2026-08-31"
-    },
-    {
-      "id": "JR-2",
-      "catatan": "Beberapa siswa perlu bimbingan khusus pengerjaan turunan pecahan.",
-      "guru": "Bu Siti (Guru Matematika)",
-      "kehadiran": "Hadir: 30, Sakit: 2, Alfa: 0",
-      "kelas": "11-B",
-      "mapel": "Matematika Peminatan",
-      "materi": "Turunan dan Integral Sederhana",
-      "mode": "Daring",
-      "sesi": "Sesi 2",
-      "tanggal": "2026-07-29"
-    },
-    {
-      "id": "JR-200",
-      "catatan": "Siswa memahami materi dengan antusias dan mengerjakan soal latihan tepat waktu.",
-      "guru": "Pak Joko (Wali Kelas 10A)",
-      "kehadiran": "Hadir: 31, Sakit: 1, Alfa: 0",
-      "kelas": "11-B",
-      "mapel": "Fisika Mekanika",
-      "materi": "Hukum Newton tentang Gerak dan Gravitasi Bumi",
-      "mode": "Daring",
-      "sesi": "Sesi 2",
-      "tanggal": "2026-08-31"
-    },
-    {
-      "id": "JR-201",
-      "catatan": "Siswa yang sakit diberikan bimbingan susulan dan materi suplemen digital.",
-      "guru": "Ibu Rahma (Guru Wali)",
-      "kehadiran": "Hadir: 32, Sakit: 0, Alfa: 0",
-      "kelas": "12-B",
-      "mapel": "Biologi Molekuler",
-      "materi": "Struktur Sel dan Pembelahan Sel Biologi",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 3",
       "tanggal": "2026-08-31"
     },
     {
@@ -19912,18 +19355,6 @@
       "tanggal": "2026-09-01"
     },
     {
-      "id": "JR-207",
-      "catatan": "KBM tatap muka berjalan lancar. Seluruh kelompok presentasi tugas dengan baik.",
-      "guru": "Bu Siti (Guru Matematika)",
-      "kehadiran": "Hadir: 30, Sakit: 1, Alfa: 0",
-      "kelas": "10-A",
-      "mapel": "Matematika Aljabar",
-      "materi": "Persamaan dan Pertidaksamaan Aljabar Kuadrat",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 4",
-      "tanggal": "2026-09-01"
-    },
-    {
       "id": "JR-208",
       "catatan": "Pembelajaran berlangsung dengan sangat tertib. Siswa aktif berdiskusi kelompok.",
       "guru": "Pak Dedi (Guru Sejarah)",
@@ -19933,18 +19364,6 @@
       "materi": "Sejarah Perjuangan Kemerdekaan Indonesia 1945",
       "mode": "Daring",
       "sesi": "Sesi 1",
-      "tanggal": "2026-09-02"
-    },
-    {
-      "id": "JR-209",
-      "catatan": "KBM tatap muka berjalan lancar. Seluruh kelompok presentasi tugas dengan baik.",
-      "guru": "Bu Siti (Guru Matematika)",
-      "kehadiran": "Hadir: 31, Sakit: 1, Alfa: 0",
-      "kelas": "10-A",
-      "mapel": "Matematika Aljabar",
-      "materi": "Persamaan dan Pertidaksamaan Aljabar Kuadrat",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 2",
       "tanggal": "2026-09-02"
     },
     {
@@ -19982,18 +19401,6 @@
       "mode": "Daring",
       "sesi": "Sesi 5",
       "tanggal": "2026-09-02"
-    },
-    {
-      "id": "JR-3",
-      "catatan": "KBM terlaksana penuh, eksperimen gaya pegas berhasil disimulasikan.",
-      "guru": "Pak Joko (Wali Kelas 10A)",
-      "kehadiran": "Hadir: 32, Alfa: 0",
-      "kelas": "10-A",
-      "mapel": "Fisika Mekanika",
-      "materi": "Pengenalan Fisika Kuantum & Hukum Newton",
-      "mode": "Tatap Muka",
-      "sesi": "Sesi 3",
-      "tanggal": "2026-07-29"
     }
   ],
   "jadwals": [
@@ -20652,30 +20059,6 @@
       "jamKe": "Jam 9, Jam 10",
       "kelas": "XII.1",
       "mapel": "Informatika"
-    },
-    {
-      "id": "SCH-001",
-      "guru": "Bu Siti (Guru Matematika)",
-      "hari": "Senin",
-      "jamKe": "Sesi 1",
-      "kelas": "10-A",
-      "mapel": "Matematika Aljabar"
-    },
-    {
-      "id": "SCH-002",
-      "guru": "Bu Siti (Guru Matematika)",
-      "hari": "Senin",
-      "jamKe": "Sesi 2",
-      "kelas": "10-A",
-      "mapel": "Matematika Aljabar"
-    },
-    {
-      "id": "SCH-003",
-      "guru": "Pak Joko (Wali Kelas 10A)",
-      "hari": "Selasa",
-      "jamKe": "Sesi 3",
-      "kelas": "10-A",
-      "mapel": "Fisika Mekanika"
     }
   ],
   "gurumasters": [
@@ -20720,29 +20103,2930 @@
       "jumlahJam": 5,
       "kelas": "XI-MAPIL FISIKA",
       "mapel": "Fisika"
-    },
-    {
-      "id": "GM-1",
-      "guru": "Bu Siti (Guru Matematika)",
-      "jumlahJam": 4,
-      "kelas": "10-A",
-      "mapel": "Matematika Aljabar"
-    },
-    {
-      "id": "GM-2",
-      "guru": "Pak Joko (Wali Kelas 10A)",
-      "jumlahJam": 3,
-      "kelas": "10-A",
-      "mapel": "Fisika Mekanika"
-    },
-    {
-      "id": "GM-3",
-      "guru": "Bu Siti (Guru Matematika)",
-      "jumlahJam": 4,
-      "kelas": "11-B",
-      "mapel": "Matematika Peminatan"
     }
   ],
+  "users": [
+    {
+      "id": "-OyHpSjVcefv6g_JhcmX",
+      "email": "197902022004111001",
+      "mapel": "",
+      "nama": "Agusnadi S.Pd.,M.Pd.",
+      "nip": "",
+      "password": "Smapatjaya_21405",
+      "role": "Kepala Sekolah",
+      "waliKelasClass": ""
+    },
+    {
+      "id": "196608161993032010",
+      "email": "196608161993032010",
+      "mapel": "Bahasa Inggris",
+      "nama": "Andi Rita Ernawati",
+      "password": "Smapatjaya_21405",
+      "role": "Guru, Guru Wali",
+      "waliKelasClass": ""
+    },
+    {
+      "id": "196608271988122003",
+      "email": "196608271988122003",
+      "mapel": "Kimia",
+      "nama": "Nurhasida",
+      "password": "Smapatjaya_21405",
+      "role": "Guru, Guru Wali",
+      "waliKelasClass": ""
+    },
+    {
+      "id": "196804112005021002",
+      "email": "196804112005021002",
+      "mapel": "BK",
+      "nama": "Faisal",
+      "password": "Smapatjaya_21405",
+      "role": "Guru, Guru Wali",
+      "waliKelasClass": ""
+    },
+    {
+      "id": "196805311992031003",
+      "email": "196805311992031003",
+      "mapel": "Matematika",
+      "nama": "Sukirman Dalle",
+      "password": "Smapatjaya_21405",
+      "role": "Guru, Guru Wali",
+      "waliKelasClass": ""
+    },
+    {
+      "id": "196812281992032011",
+      "email": "196812281992032011",
+      "mapel": "Bahasa Indonesia",
+      "nama": "Nurlaelah Husain",
+      "password": "Smapatjaya_21405",
+      "role": "Guru, Guru Wali",
+      "waliKelasClass": ""
+    },
+    {
+      "id": "196909092000122003",
+      "email": "196909092000122003",
+      "mapel": "PJOK",
+      "nama": "Suarti",
+      "password": "Smapatjaya_21405",
+      "role": "Guru, Guru Wali",
+      "waliKelasClass": ""
+    },
+    {
+      "id": "197212311997031033",
+      "email": "197212311997031033",
+      "mapel": "Ekonomi",
+      "nama": "Muhammad Aris",
+      "password": "Smapatjaya_21405",
+      "role": "Guru, Guru Wali",
+      "waliKelasClass": ""
+    },
+    {
+      "id": "197302211998022001",
+      "email": "197302211998022001",
+      "mapel": "Sejarah, PKN",
+      "nama": "Sitti Rahman",
+      "password": "Smapatjaya_21405",
+      "role": "Guru, Guru Wali",
+      "waliKelasClass": ""
+    },
+    {
+      "id": "197811102011012008",
+      "email": "197811102011012008",
+      "mapel": "Informatika",
+      "nama": "Musdalifah",
+      "password": "Smapatjaya_21405",
+      "role": "Guru, Guru Wali",
+      "waliKelasClass": ""
+    },
+    {
+      "id": "198012092010011014",
+      "email": "198012092010011014",
+      "mapel": "Informatika",
+      "nama": "Dedy Zainuddin",
+      "password": "Smapatjaya_21405",
+      "role": "Guru, Guru Wali",
+      "waliKelasClass": ""
+    },
+    {
+      "id": "198104242005022011",
+      "email": "198104242005022011",
+      "mapel": "Bahasa Inggris",
+      "nama": "Sri Rahayu",
+      "password": "Smapatjaya_21405",
+      "role": "Wakasek, Guru, Guru Wali",
+      "waliKelasClass": ""
+    },
+    {
+      "id": "198203062009022007",
+      "email": "198203062009022007",
+      "mapel": "Sosiologi",
+      "nama": "Indah Faridah",
+      "password": "Smapatjaya_21405",
+      "role": "Guru, Guru Wali",
+      "waliKelasClass": ""
+    },
+    {
+      "id": "198903252022212018",
+      "email": "198903252022212018",
+      "mapel": "Geografi",
+      "nama": "Sulfiah",
+      "password": "Smapatjaya_21405",
+      "role": "Guru, Guru Wali",
+      "waliKelasClass": ""
+    },
+    {
+      "id": "199006022023211020",
+      "email": "199006022023211020",
+      "mapel": "Agama, PKN",
+      "nama": "Ruhul Yusuf",
+      "password": "Smapatjaya_21405",
+      "role": "Guru, Guru Wali, Wali Kelas",
+      "waliKelasClass": "XII.1"
+    },
+    {
+      "id": "199006022023212030",
+      "email": "199006022023212030",
+      "mapel": "Prakarya",
+      "nama": "SULFIANI",
+      "password": "Smapatjaya_21405",
+      "role": "Guru, Guru Wali",
+      "waliKelasClass": ""
+    },
+    {
+      "id": "199308252023212041",
+      "email": "199308252023212041",
+      "mapel": "Seni Budaya",
+      "nama": "Dahlia",
+      "password": "Smapatjaya_21405",
+      "role": "Guru, Guru Wali, Wali Kelas",
+      "waliKelasClass": "XII.2"
+    },
+    {
+      "id": "199504062023211013",
+      "email": "199504062023211013",
+      "mapel": "Fisika",
+      "nama": "SYARIF HIDAYATULLAH",
+      "password": "Smapatjaya_21405",
+      "role": "Guru, Guru Wali, Wali Kelas",
+      "waliKelasClass": "XI.2"
+    },
+    {
+      "id": "199507142025212115",
+      "email": "199507142025212115",
+      "mapel": "Biologi",
+      "nama": "Rusnita Ruslang",
+      "nip": "",
+      "password": "Smapatjaya_21405",
+      "role": "Guru, Wali Kelas, Guru Wali",
+      "waliKelasClass": "X.2"
+    },
+    {
+      "id": "199608082024212033",
+      "email": "199608082024212033",
+      "mapel": "Mulok Bahasa Daerah",
+      "nama": "UFRIANI",
+      "password": "Smapatjaya_21405",
+      "role": "Guru, Guru Wali, Wali Kelas",
+      "waliKelasClass": "XI.1"
+    },
+    {
+      "id": "199612282025212099",
+      "email": "199612282025212099",
+      "mapel": "Kimia",
+      "nama": "Andi Nurfadilah",
+      "nip": "",
+      "password": "Smapatjaya_21405",
+      "role": "Guru, Wali Kelas, Guru Wali",
+      "waliKelasClass": "X.1"
+    },
+    {
+      "id": "USR001",
+      "email": "wakasek@sekolah.com",
+      "nama": "Pak Budi (Wakasek)",
+      "password": "wakasek123",
+      "role": "Wakasek"
+    },
+    {
+      "id": "USR005",
+      "email": "kepala@sekolah.com",
+      "nama": "Drs. Agusnadi, M.Pd. (Kepala Sekolah)",
+      "password": "kepala123",
+      "role": "Kepala Sekolah"
+    },
+    {
+      "id": "u_admin",
+      "email": "sman4soppeng@gmail.com",
+      "nama": "Admin SMAN 4 Soppeng",
+      "password": "Smapatjaya_21405",
+      "role": "Admin"
+    }
+  ],
+  "students": [
+    {
+      "id": "7587",
+      "kelas": "XII.1",
+      "namaSiswa": "ALVIA RESKY ANUGRAH",
+      "nis": "7587",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7588",
+      "kelas": "XII.1",
+      "namaSiswa": "ARYANANDA IBRAHIM",
+      "nis": "7588",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7589",
+      "kelas": "XII.1",
+      "namaSiswa": "HAFSHAH SYARIF",
+      "nis": "7589",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7590",
+      "kelas": "XII.1",
+      "namaSiswa": "MUSDALIFAH",
+      "nis": "7590",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7591",
+      "kelas": "XII.1",
+      "namaSiswa": "NUR FITRIANI. A",
+      "nis": "7591",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7592",
+      "kelas": "XII.1",
+      "namaSiswa": "NURFDHILAH",
+      "nis": "7592",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7593",
+      "kelas": "XII.1",
+      "namaSiswa": "QHONZA AURA ZAHRA",
+      "nis": "7593",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7594",
+      "kelas": "XII.1",
+      "namaSiswa": "RINA PARADHITA AZAHRA",
+      "nis": "7594",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7595",
+      "kelas": "XII.1",
+      "namaSiswa": "RISMA",
+      "nis": "7595",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7596",
+      "kelas": "XII.1",
+      "namaSiswa": "SITI NUR AN'NISAA APRILIA SYAM",
+      "nis": "7596",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7597",
+      "kelas": "XII.1",
+      "namaSiswa": "SUCI DWI ARYANTI",
+      "nis": "7597",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7598",
+      "kelas": "XII.1",
+      "namaSiswa": "SYAHRATURRAMADHANI",
+      "nis": "7598",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7600",
+      "kelas": "XI.1",
+      "namaSiswa": "ANDI MUH. VIRGA",
+      "nis": "7600",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "7601",
+      "kelas": "XII.1",
+      "namaSiswa": "A. MUHAMMAD FAHMI",
+      "nis": "7601",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7602",
+      "kelas": "XII.1",
+      "namaSiswa": "ABD. DJALIL",
+      "nis": "7602",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7603",
+      "kelas": "XII.1",
+      "namaSiswa": "AEDIL",
+      "nis": "7603",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7604",
+      "kelas": "XII.1",
+      "namaSiswa": "AGUNG ATNADIJAYA AH.",
+      "nis": "7604",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7605",
+      "kelas": "XII.1",
+      "namaSiswa": "AHMAD RISKI PALOMPAI",
+      "nis": "7605",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7606",
+      "kelas": "XII.1",
+      "namaSiswa": "AINUR ROFIQ",
+      "nis": "7606",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7607",
+      "kelas": "XII.1",
+      "namaSiswa": "AKBAR ALMUJADI",
+      "nis": "7607",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7608",
+      "kelas": "XII.1",
+      "namaSiswa": "ALIF FATURRAHMAN",
+      "nis": "7608",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7609",
+      "kelas": "XII.1",
+      "namaSiswa": "ANDIKA AGUSNAWAN",
+      "nis": "7609",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7611",
+      "kelas": "XII.1",
+      "namaSiswa": "EKA RAMDANI",
+      "nis": "7611",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7612",
+      "kelas": "XII.1",
+      "namaSiswa": "MUH. ARIL",
+      "nis": "7612",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7613",
+      "kelas": "XII.1",
+      "namaSiswa": "MUHAMMAD RIZALDI",
+      "nis": "7613",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7615",
+      "kelas": "XII.1",
+      "namaSiswa": "MUHAMMAD ADHA",
+      "nis": "7615",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7617",
+      "kelas": "XII.1",
+      "namaSiswa": "SENDIRAMADANA",
+      "nis": "7617",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7618",
+      "kelas": "XII.1",
+      "namaSiswa": "TIMOER PRAYOGI",
+      "nis": "7618",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7619",
+      "kelas": "XII.2",
+      "namaSiswa": "AISAH",
+      "nis": "7619",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7621",
+      "kelas": "XII.2",
+      "namaSiswa": "AYLA SHAKILA",
+      "nis": "7621",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7622",
+      "kelas": "XII.2",
+      "namaSiswa": "ERNA YANTI",
+      "nis": "7622",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7623",
+      "kelas": "XII.2",
+      "namaSiswa": "ERNI YANTI",
+      "nis": "7623",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7624",
+      "kelas": "XII.2",
+      "namaSiswa": "HASRIANA EKA PUTRI",
+      "nis": "7624",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7626",
+      "kelas": "XII.2",
+      "namaSiswa": "NUR AGUSTIARA",
+      "nis": "7626",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7627",
+      "kelas": "XII.2",
+      "namaSiswa": "NURHIDAYANA",
+      "nis": "7627",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7628",
+      "kelas": "XII.2",
+      "namaSiswa": "NURUL SAL SABILA",
+      "nis": "7628",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7629",
+      "kelas": "XII.2",
+      "namaSiswa": "SINTA AMELIA",
+      "nis": "7629",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7630",
+      "kelas": "XII.2",
+      "namaSiswa": "SYAHRATUL MAELANI",
+      "nis": "7630",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7631",
+      "kelas": "XII.2",
+      "namaSiswa": "ZALSA AULIA",
+      "nis": "7631",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7632",
+      "kelas": "XII.2",
+      "namaSiswa": "A. FATUR RAHMAN",
+      "nis": "7632",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7634",
+      "kelas": "XII.2",
+      "namaSiswa": "DANIELO SANTOS",
+      "nis": "7634",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7636",
+      "kelas": "XII.2",
+      "namaSiswa": "ERIK",
+      "nis": "7636",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7637",
+      "kelas": "XII.2",
+      "namaSiswa": "GIFAREL AHNAF",
+      "nis": "7637",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7638",
+      "kelas": "XII.2",
+      "namaSiswa": "M. IKHSAN",
+      "nis": "7638",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7640",
+      "kelas": "XII.1",
+      "namaSiswa": "MUHAMAD ALIF ADIGUNA",
+      "nis": "7640",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7641",
+      "kelas": "XII.2",
+      "namaSiswa": "MUH. ARIS AKBAR",
+      "nis": "7641",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7642",
+      "kelas": "XII.2",
+      "namaSiswa": "MUH.FIKRAH DARMANSYAH",
+      "nis": "7642",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7643",
+      "kelas": "XII.2",
+      "namaSiswa": "NUR KIFLI JUNAID",
+      "nis": "7643",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7645",
+      "kelas": "XII.2",
+      "namaSiswa": "RAMAH",
+      "nis": "7645",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7646",
+      "kelas": "XII.2",
+      "namaSiswa": "REFALDIANSA",
+      "nis": "7646",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7648",
+      "kelas": "XII.2",
+      "namaSiswa": "RIDWAN",
+      "nis": "7648",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7649",
+      "kelas": "XII.2",
+      "namaSiswa": "SYAHRIL",
+      "nis": "7649",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7650",
+      "kelas": "XII.2",
+      "namaSiswa": "SYAMSUL BAHRUL",
+      "nis": "7650",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7655",
+      "kelas": "XII.2",
+      "namaSiswa": "A. BATARA TENRI UNGA",
+      "nis": "7655",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7659",
+      "kelas": "XII.1",
+      "namaSiswa": "ALIF KURNIAWAN",
+      "nis": "7659",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7663",
+      "kelas": "XI.2",
+      "namaSiswa": "ADIT ANUGRAH PRATAMA",
+      "nis": "7663",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "7664",
+      "kelas": "XI.1",
+      "namaSiswa": "AHMAD FAIZ PRATAMA",
+      "nis": "7664",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "7665",
+      "kelas": "XI.1",
+      "namaSiswa": "FATIMATUL ZZAHRA",
+      "nis": "7665",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "7666",
+      "kelas": "XI.1",
+      "namaSiswa": "HARDIANSA LOWA",
+      "nis": "7666",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "7667",
+      "kelas": "XI.1",
+      "namaSiswa": "JIHAN",
+      "nis": "7667",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "7668",
+      "kelas": "XI.1",
+      "namaSiswa": "MUH. ADZAN ASSIDDIQ",
+      "nis": "7668",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "7669",
+      "kelas": "XI.1",
+      "namaSiswa": "MUHAMMAD AKBAR",
+      "nis": "7669",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "7670",
+      "kelas": "XI.1",
+      "namaSiswa": "MUH. KHAIDIL RAMADAN",
+      "nis": "7670",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "7671",
+      "kelas": "XI.1",
+      "namaSiswa": "PUTRA. S",
+      "nis": "7671",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "7672",
+      "kelas": "XI.1",
+      "namaSiswa": "RAYA MAILANI",
+      "nis": "7672",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "7673",
+      "kelas": "XI.1",
+      "namaSiswa": "SAMSUDDIN",
+      "nis": "7673",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "7674",
+      "kelas": "XI.1",
+      "namaSiswa": "SHERIL MUTIARA PUTRI",
+      "nis": "7674",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "7675",
+      "kelas": "XI.1",
+      "namaSiswa": "UMMU SAIDAH",
+      "nis": "7675",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "7676",
+      "kelas": "XI.1",
+      "namaSiswa": "VIA PUTRI CHANIA",
+      "nis": "7676",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "7677",
+      "kelas": "XI.1",
+      "namaSiswa": "WAODE A.AMRIANI",
+      "nis": "7677",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "7678",
+      "kelas": "XI.1",
+      "namaSiswa": "ZASKIA PUTRI AULIA",
+      "nis": "7678",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "7679",
+      "kelas": "XI.2",
+      "namaSiswa": "AHMAD SYUKUR",
+      "nis": "7679",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "7680",
+      "kelas": "XI.2",
+      "namaSiswa": "AMALIA SALNA BILA",
+      "nis": "7680",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "7682",
+      "kelas": "XI.2",
+      "namaSiswa": "FIRNANDA",
+      "nis": "7682",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "7683",
+      "kelas": "XI.2",
+      "namaSiswa": "JULIA",
+      "nis": "7683",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "7684",
+      "kelas": "XI.2",
+      "namaSiswa": "KHANZA ARTALITA",
+      "nis": "7684",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "7685",
+      "kelas": "XI.2",
+      "namaSiswa": "MARDINA",
+      "nis": "7685",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "7686",
+      "kelas": "XI.2",
+      "namaSiswa": "MIRANDA",
+      "nis": "7686",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "7687",
+      "kelas": "XI.2",
+      "namaSiswa": "MUH. NISAR",
+      "nis": "7687",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "7688",
+      "kelas": "XI.2",
+      "namaSiswa": "MUH. FAREL",
+      "nis": "7688",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "7689",
+      "kelas": "XI.2",
+      "namaSiswa": "MUHAMMAD RAYHAN",
+      "nis": "7689",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "7690",
+      "kelas": "XI.2",
+      "namaSiswa": "NUR HIDAYATULLAH",
+      "nis": "7690",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "7691",
+      "kelas": "XI.2",
+      "namaSiswa": "SULFIAH",
+      "nis": "7691",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "7692",
+      "kelas": "XI.2",
+      "namaSiswa": "VADHEL SAPUTRA",
+      "nis": "7692",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "7693",
+      "kelas": "XI.2",
+      "namaSiswa": "VIO PUTRI CHANIA",
+      "nis": "7693",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "7694",
+      "kelas": "XI.2",
+      "namaSiswa": "VIVI ALFIANI",
+      "nis": "7694",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "7697",
+      "kelas": "XI.1",
+      "namaSiswa": "ASIA NURHIKMA",
+      "nis": "7697",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "7698",
+      "kelas": "XII.1",
+      "namaSiswa": "DWI FEBRIAN TAULA'BI",
+      "nis": "7698",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7699",
+      "kelas": "XII.1",
+      "namaSiswa": "A. KEISYA HUZAEFAH",
+      "nis": "7699",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7700",
+      "kelas": "XII.2",
+      "namaSiswa": "MUH. AQZAN SUBHI",
+      "nis": "7700",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7701",
+      "kelas": "X.1",
+      "namaSiswa": "ADIFA KHAIRUNNIZA'A",
+      "nis": "7701",
+      "tingkatan": "X"
+    },
+    {
+      "id": "7702",
+      "kelas": "X.1",
+      "namaSiswa": "AHMAD NAUFAL",
+      "nis": "7702",
+      "tingkatan": "X"
+    },
+    {
+      "id": "7703",
+      "kelas": "X.1",
+      "namaSiswa": "ALVIN ABHISTA ANGGARA",
+      "nis": "7703",
+      "tingkatan": "X"
+    },
+    {
+      "id": "7704",
+      "kelas": "X.1",
+      "namaSiswa": "AMIRUDDIN",
+      "nis": "7704",
+      "tingkatan": "X"
+    },
+    {
+      "id": "7705",
+      "kelas": "X.1",
+      "namaSiswa": "ARFIANDI KUSUMA RAMDANA",
+      "nis": "7705",
+      "tingkatan": "X"
+    },
+    {
+      "id": "7706",
+      "kelas": "X.1",
+      "namaSiswa": "DZAKY RAISSA ABQARY",
+      "nis": "7706",
+      "tingkatan": "X"
+    },
+    {
+      "id": "7707",
+      "kelas": "X.1",
+      "namaSiswa": "EGIL SAPUTRA",
+      "nis": "7707",
+      "tingkatan": "X"
+    },
+    {
+      "id": "7708",
+      "kelas": "X.1",
+      "namaSiswa": "ISRAFIL",
+      "nis": "7708",
+      "tingkatan": "X"
+    },
+    {
+      "id": "7709",
+      "kelas": "X.1",
+      "namaSiswa": "MOHD SHASWAN",
+      "nis": "7709",
+      "tingkatan": "X"
+    },
+    {
+      "id": "7710",
+      "kelas": "X.1",
+      "namaSiswa": "MUH HIDAYAT",
+      "nis": "7710",
+      "tingkatan": "X"
+    },
+    {
+      "id": "7711",
+      "kelas": "X.1",
+      "namaSiswa": "MUH RIDHO",
+      "nis": "7711",
+      "tingkatan": "X"
+    },
+    {
+      "id": "7712",
+      "kelas": "X.1",
+      "namaSiswa": "NINIS",
+      "nis": "7712",
+      "tingkatan": "X"
+    },
+    {
+      "id": "7713",
+      "kelas": "X.1",
+      "namaSiswa": "NUR ATIYAH",
+      "nis": "7713",
+      "tingkatan": "X"
+    },
+    {
+      "id": "7714",
+      "kelas": "X.1",
+      "namaSiswa": "NUR AZIZAH PUTRI",
+      "nis": "7714",
+      "tingkatan": "X"
+    },
+    {
+      "id": "7715",
+      "kelas": "X.1",
+      "namaSiswa": "NURUL HIDAYAH",
+      "nis": "7715",
+      "tingkatan": "X"
+    },
+    {
+      "id": "7716",
+      "kelas": "X.1",
+      "namaSiswa": "RENALDIANSAH",
+      "nis": "7716",
+      "tingkatan": "X"
+    },
+    {
+      "id": "7717",
+      "kelas": "X.1",
+      "namaSiswa": "RENANDA QALBI",
+      "nis": "7717",
+      "tingkatan": "X"
+    },
+    {
+      "id": "7718",
+      "kelas": "X.1",
+      "namaSiswa": "SHOFIYYA ALIYYANA PUTRI",
+      "nis": "7718",
+      "tingkatan": "X"
+    },
+    {
+      "id": "7719",
+      "kelas": "X.1",
+      "namaSiswa": "SULKIFLI",
+      "nis": "7719",
+      "tingkatan": "X"
+    },
+    {
+      "id": "7720",
+      "kelas": "X.2",
+      "namaSiswa": "AHMAD ALGHIFARI",
+      "nis": "7720",
+      "tingkatan": "X"
+    },
+    {
+      "id": "7721",
+      "kelas": "X.2",
+      "namaSiswa": "AHMAD MUFTI",
+      "nis": "7721",
+      "tingkatan": "X"
+    },
+    {
+      "id": "7722",
+      "kelas": "X.2",
+      "namaSiswa": "AHSAN RANDI SAPUTRA",
+      "nis": "7722",
+      "tingkatan": "X"
+    },
+    {
+      "id": "7723",
+      "kelas": "X.2",
+      "namaSiswa": "ARFA ALQHAERA",
+      "nis": "7723",
+      "tingkatan": "X"
+    },
+    {
+      "id": "7724",
+      "kelas": "X.2",
+      "namaSiswa": "ASTI MEILANI PUTRI",
+      "nis": "7724",
+      "tingkatan": "X"
+    },
+    {
+      "id": "7725",
+      "kelas": "X.2",
+      "namaSiswa": "GHALI ZHAFRAN BATARA",
+      "nis": "7725",
+      "tingkatan": "X"
+    },
+    {
+      "id": "7726",
+      "kelas": "X.2",
+      "namaSiswa": "HASANUDDIN",
+      "nis": "7726",
+      "tingkatan": "X"
+    },
+    {
+      "id": "7727",
+      "kelas": "X.2",
+      "namaSiswa": "KHAERFINANDA",
+      "nis": "7727",
+      "tingkatan": "X"
+    },
+    {
+      "id": "7728",
+      "kelas": "X.2",
+      "namaSiswa": "KHAIRUM MUFAHDAL",
+      "nis": "7728",
+      "tingkatan": "X"
+    },
+    {
+      "id": "7729",
+      "kelas": "X.2",
+      "namaSiswa": "M. JUSWADI",
+      "nis": "7729",
+      "tingkatan": "X"
+    },
+    {
+      "id": "7730",
+      "kelas": "X.2",
+      "namaSiswa": "MUH. FITRAH",
+      "nis": "7730",
+      "tingkatan": "X"
+    },
+    {
+      "id": "7731",
+      "kelas": "X.2",
+      "namaSiswa": "MUH. IDRIS",
+      "nis": "7731",
+      "tingkatan": "X"
+    },
+    {
+      "id": "7732",
+      "kelas": "X.2",
+      "namaSiswa": "MUH.THARIQ KEMAL AL KATIRI H",
+      "nis": "7732",
+      "tingkatan": "X"
+    },
+    {
+      "id": "7733",
+      "kelas": "X.2",
+      "namaSiswa": "MUTHIARA BUSTAN",
+      "nis": "7733",
+      "tingkatan": "X"
+    },
+    {
+      "id": "7734",
+      "kelas": "X.2",
+      "namaSiswa": "MUHAMMAD FAQIH SYAFA'AT",
+      "nis": "7734",
+      "tingkatan": "X"
+    },
+    {
+      "id": "7735",
+      "kelas": "X.2",
+      "namaSiswa": "MUHAMMAD RIFAL",
+      "nis": "7735",
+      "tingkatan": "X"
+    },
+    {
+      "id": "7736",
+      "kelas": "X.2",
+      "namaSiswa": "NUR AZKIYAH MASANGKA",
+      "nis": "7736",
+      "tingkatan": "X"
+    },
+    {
+      "id": "7737",
+      "kelas": "X.2",
+      "namaSiswa": "NURBAYA",
+      "nis": "7737",
+      "tingkatan": "X"
+    },
+    {
+      "id": "7738",
+      "kelas": "X.2",
+      "namaSiswa": "NURUL SASKIYA PRADITA",
+      "nis": "7738",
+      "tingkatan": "X"
+    },
+    {
+      "id": "7739",
+      "kelas": "XII.2",
+      "namaSiswa": "NURAINI",
+      "nis": "7739",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7740",
+      "kelas": "XII.2",
+      "namaSiswa": "MUH. GHAIZAN ALGIFARI",
+      "nis": "7740",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "7741",
+      "kelas": "XII.1",
+      "namaSiswa": "AHMAD ASHAR",
+      "nis": "7741",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-Oyhy6Vjlo8g8HRbyuVf",
+      "kelas": "XI.1",
+      "namaSiswa": "ABRAR",
+      "nis": "7663",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "-P0PmV0zuTLhQp63u3OM",
+      "kelas": "XII.2",
+      "namaSiswa": "A. AURA ASIFAH",
+      "nis": "7777",
+      "tingkatan": "XII"
+    }
+  ],
+  "siswagw": [
+    {
+      "id": "-P-Rucc4kEODqlRvVt6P",
+      "guruWali": "Rusnita Ruslang",
+      "kelas": "X.1",
+      "namaSiswa": "NUR ATIYAH",
+      "nis": "7713"
+    },
+    {
+      "id": "-P-Rug4RONAm770roe3y",
+      "guruWali": "Rusnita Ruslang",
+      "kelas": "X.1",
+      "namaSiswa": "MUH HIDAYAT",
+      "nis": "7710"
+    },
+    {
+      "id": "-P-Rus5DgSDYg--FpaLG",
+      "guruWali": "Rusnita Ruslang",
+      "kelas": "X.2",
+      "namaSiswa": "ASTI MEILANI PUTRI",
+      "nis": "7724"
+    },
+    {
+      "id": "-P-RuxCv5Pp8ShgK8bMz",
+      "guruWali": "Rusnita Ruslang",
+      "kelas": "XI.1",
+      "namaSiswa": "ABRAR",
+      "nis": "7663"
+    },
+    {
+      "id": "-P-RvFQSubb_Pc4l_1RY",
+      "guruWali": "Rusnita Ruslang",
+      "kelas": "XI.2",
+      "namaSiswa": "VIO PUTRI CHANIA",
+      "nis": "7693"
+    },
+    {
+      "id": "-P-Rvgv5TdcN6XHsdltC",
+      "guruWali": "Rusnita Ruslang",
+      "kelas": "XII.2",
+      "namaSiswa": "SYAHRIL",
+      "nis": "7649"
+    },
+    {
+      "id": "-P-RvmnGEmz7TJcFJOgq",
+      "guruWali": "Rusnita Ruslang",
+      "kelas": "XII.2",
+      "namaSiswa": "NUR KIFLI JUNAID",
+      "nis": "7643"
+    },
+    {
+      "id": "-P-SIzXgALB_pi0TyXRI",
+      "guruWali": "SYARIF HIDAYATULLAH",
+      "kelas": "XI.2",
+      "namaSiswa": "VADHEL SAPUTRA",
+      "nis": "7692"
+    },
+    {
+      "id": "-P-SJ1OO9ZhZS4PqTb6t",
+      "guruWali": "SYARIF HIDAYATULLAH",
+      "kelas": "XI.2",
+      "namaSiswa": "NUR HIDAYATULLAH",
+      "nis": "7690"
+    },
+    {
+      "id": "-P-WmZMctb1bVZ7YgSj9",
+      "guruWali": "UFRIANI",
+      "kelas": "X.1",
+      "namaSiswa": "SULKIFLI",
+      "nis": "7719"
+    },
+    {
+      "id": "-P-Wn8zjEFFGJUMUt4YV",
+      "guruWali": "UFRIANI",
+      "kelas": "XI.1",
+      "namaSiswa": "AHMAD FAIZ PRATAMA",
+      "nis": "7664"
+    },
+    {
+      "id": "-P-WnD0EQh3m4V-GkbHC",
+      "guruWali": "UFRIANI",
+      "kelas": "XI.1",
+      "namaSiswa": "MUH. ADZAN ASSIDDIQ",
+      "nis": "7668"
+    },
+    {
+      "id": "-P-XuPu6cnbd8hviuYZe",
+      "guruWali": "UFRIANI",
+      "kelas": "XI.1",
+      "namaSiswa": "ASIA NURHIKMA",
+      "nis": "7697"
+    },
+    {
+      "id": "-P-XuSoU88rlyTfCEZ4n",
+      "guruWali": "UFRIANI",
+      "kelas": "XII.2",
+      "namaSiswa": "ERNA YANTI",
+      "nis": "7622"
+    },
+    {
+      "id": "-P-XuUxu0dAxc1su6YFX",
+      "guruWali": "UFRIANI",
+      "kelas": "XII.2",
+      "namaSiswa": "ERNI YANTI",
+      "nis": "7623"
+    },
+    {
+      "id": "-P-XuYxPmuYL8Elm3yyr",
+      "guruWali": "UFRIANI",
+      "kelas": "XI.2",
+      "namaSiswa": "MUH. FAREL",
+      "nis": "7688"
+    },
+    {
+      "id": "-P-iJLpgVD3gSFQHAqXV",
+      "guruWali": "Dedy Zainuddin",
+      "kelas": "XI.2",
+      "namaSiswa": "FIRNANDA",
+      "nis": "7682"
+    },
+    {
+      "id": "-P-iJOrI_sJNEP2gcAej",
+      "guruWali": "Dedy Zainuddin",
+      "kelas": "XI.2",
+      "namaSiswa": "AMALIA SALNA BILA",
+      "nis": "7680"
+    },
+    {
+      "id": "-P0CZAogZFf-KnGrfvp0",
+      "guruWali": "Indah Faridah",
+      "kelas": "X.1",
+      "namaSiswa": "ARFIANDI KUSUMA RAMDANA",
+      "nis": "7705"
+    },
+    {
+      "id": "-P0CZDprXEc5BNmSvOKl",
+      "guruWali": "Indah Faridah",
+      "kelas": "X.1",
+      "namaSiswa": "NUR AZIZAH PUTRI",
+      "nis": "7714"
+    },
+    {
+      "id": "-P0CZ_wohbbfHiM4MX8G",
+      "guruWali": "Indah Faridah",
+      "kelas": "X.1",
+      "namaSiswa": "RENANDA QALBI",
+      "nis": "7717"
+    },
+    {
+      "id": "-P0CZtD8fYIJ2Cr3lLz-",
+      "guruWali": "Indah Faridah",
+      "kelas": "XI.1",
+      "namaSiswa": "SHERIL MUTIARA PUTRI",
+      "nis": "7674"
+    },
+    {
+      "id": "-P0CapnbdGGg4bOpewOr",
+      "guruWali": "Indah Faridah",
+      "kelas": "XI.1",
+      "namaSiswa": "VIA PUTRI CHANIA",
+      "nis": "7676"
+    },
+    {
+      "id": "-P0Cb0YlCmpsSJV2D4PF",
+      "guruWali": "Indah Faridah",
+      "kelas": "XII.1",
+      "namaSiswa": "QHONZA AURA ZAHRA",
+      "nis": "7593"
+    },
+    {
+      "id": "-P0CcSobWvhHWadDZZZo",
+      "guruWali": "Indah Faridah",
+      "kelas": "X.2",
+      "namaSiswa": "KHAERFINANDA",
+      "nis": "7727"
+    },
+    {
+      "id": "-P0CcZuikkrkfUEtofQI",
+      "guruWali": "Indah Faridah",
+      "kelas": "X.2",
+      "namaSiswa": "KHAERFINANDA",
+      "nis": "7727"
+    },
+    {
+      "id": "-P0FiGLqNN2jCnOtmK8_",
+      "guruWali": "Dedy Zainuddin",
+      "kelas": "X.2",
+      "namaSiswa": "MUH. IDRIS",
+      "nis": "7731"
+    },
+    {
+      "id": "-P0FiNed81CoDtIGRUZ1",
+      "guruWali": "Dedy Zainuddin",
+      "kelas": "XII.2",
+      "namaSiswa": "MUH.FIKRAH DARMANSYAH",
+      "nis": "7642"
+    },
+    {
+      "id": "-P0FiQhO26xOhCG5SA2F",
+      "guruWali": "Dedy Zainuddin",
+      "kelas": "XII.1",
+      "namaSiswa": "MUHAMMAD RIZALDI",
+      "nis": "7613"
+    },
+    {
+      "id": "-P0FiT4BOEic-I6-GH_8",
+      "guruWali": "Dedy Zainuddin",
+      "kelas": "XI.1",
+      "namaSiswa": "RAYA MAILANI",
+      "nis": "7672"
+    }
+  ],
+  "rekapabsen": [
+    {
+      "id": "-P-NGHUl3hiIL2k7KL17",
+      "alpa": 2,
+      "bulan": "Agustus",
+      "hadir": 3,
+      "izin": 2,
+      "kelas": "XI.2",
+      "namaSiswa": "ADIT ANUGRAH PRATAMA",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "SYARIF HIDAYATULLAH"
+    },
+    {
+      "id": "-P-NGHUndZp07VwcFEDj",
+      "alpa": 6,
+      "bulan": "Agustus",
+      "hadir": 1,
+      "izin": 0,
+      "kelas": "XI.2",
+      "namaSiswa": "AHMAD SYUKUR",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "SYARIF HIDAYATULLAH"
+    },
+    {
+      "id": "-P-NGHUndZp07VwcFEDk",
+      "alpa": 0,
+      "bulan": "Agustus",
+      "hadir": 4,
+      "izin": 3,
+      "kelas": "XI.2",
+      "namaSiswa": "AMALIA SALNA BILA",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "SYARIF HIDAYATULLAH"
+    },
+    {
+      "id": "-P-NGHUndZp07VwcFEDl",
+      "alpa": 0,
+      "bulan": "Agustus",
+      "hadir": 4,
+      "izin": 3,
+      "kelas": "XI.2",
+      "namaSiswa": "FIRNANDA",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "SYARIF HIDAYATULLAH"
+    },
+    {
+      "id": "-P-NGHUndZp07VwcFEDm",
+      "alpa": 0,
+      "bulan": "Agustus",
+      "hadir": 6,
+      "izin": 1,
+      "kelas": "XI.2",
+      "namaSiswa": "JULIA",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "SYARIF HIDAYATULLAH"
+    },
+    {
+      "id": "-P-NGHUndZp07VwcFEDn",
+      "alpa": 0,
+      "bulan": "Agustus",
+      "hadir": 7,
+      "izin": 0,
+      "kelas": "XI.2",
+      "namaSiswa": "KHANZA ARTALITA",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "SYARIF HIDAYATULLAH"
+    },
+    {
+      "id": "-P-NGHUouXBwlX43IctA",
+      "alpa": 0,
+      "bulan": "Agustus",
+      "hadir": 6,
+      "izin": 1,
+      "kelas": "XI.2",
+      "namaSiswa": "MARDINA",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "SYARIF HIDAYATULLAH"
+    },
+    {
+      "id": "-P-NGHUouXBwlX43IctB",
+      "alpa": 0,
+      "bulan": "Agustus",
+      "hadir": 4,
+      "izin": 3,
+      "kelas": "XI.2",
+      "namaSiswa": "MIRANDA",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "SYARIF HIDAYATULLAH"
+    },
+    {
+      "id": "-P-NGHUouXBwlX43IctC",
+      "alpa": 4,
+      "bulan": "Agustus",
+      "hadir": 3,
+      "izin": 0,
+      "kelas": "XI.2",
+      "namaSiswa": "MUH. FAREL",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "SYARIF HIDAYATULLAH"
+    },
+    {
+      "id": "-P-NGHUouXBwlX43IctD",
+      "alpa": 4,
+      "bulan": "Agustus",
+      "hadir": 3,
+      "izin": 0,
+      "kelas": "XI.2",
+      "namaSiswa": "MUH. NISAR",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "SYARIF HIDAYATULLAH"
+    },
+    {
+      "id": "-P-NGHUouXBwlX43IctE",
+      "alpa": 1,
+      "bulan": "Agustus",
+      "hadir": 6,
+      "izin": 0,
+      "kelas": "XI.2",
+      "namaSiswa": "MUHAMMAD RAYHAN",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "SYARIF HIDAYATULLAH"
+    },
+    {
+      "id": "-P-NGHUouXBwlX43IctF",
+      "alpa": 1,
+      "bulan": "Agustus",
+      "hadir": 4,
+      "izin": 2,
+      "kelas": "XI.2",
+      "namaSiswa": "NUR HIDAYATULLAH",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "SYARIF HIDAYATULLAH"
+    },
+    {
+      "id": "-P-NGHUouXBwlX43IctG",
+      "alpa": 2,
+      "bulan": "Agustus",
+      "hadir": 4,
+      "izin": 1,
+      "kelas": "XI.2",
+      "namaSiswa": "SULFIAH",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "SYARIF HIDAYATULLAH"
+    },
+    {
+      "id": "-P-NGHUouXBwlX43IctH",
+      "alpa": 3,
+      "bulan": "Agustus",
+      "hadir": 4,
+      "izin": 0,
+      "kelas": "XI.2",
+      "namaSiswa": "VADHEL SAPUTRA",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "SYARIF HIDAYATULLAH"
+    },
+    {
+      "id": "-P-NGHUouXBwlX43IctI",
+      "alpa": 0,
+      "bulan": "Agustus",
+      "hadir": 6,
+      "izin": 1,
+      "kelas": "XI.2",
+      "namaSiswa": "VIO PUTRI CHANIA",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "SYARIF HIDAYATULLAH"
+    },
+    {
+      "id": "-P-NGHUouXBwlX43IctJ",
+      "alpa": 0,
+      "bulan": "Agustus",
+      "hadir": 4,
+      "izin": 3,
+      "kelas": "XI.2",
+      "namaSiswa": "VIVI ALFIANI",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "SYARIF HIDAYATULLAH"
+    },
+    {
+      "id": "-P-YAjQ5q0pLnnsyr-uQ",
+      "alpa": 0,
+      "bulan": "Juli",
+      "hadir": 4,
+      "izin": 0,
+      "kelas": "XI.1",
+      "namaSiswa": "ABRAR",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "UFRIANI"
+    },
+    {
+      "id": "-P-YAjQ6Zq0wNwh1N-nf",
+      "alpa": 1,
+      "bulan": "Juli",
+      "hadir": 3,
+      "izin": 0,
+      "kelas": "XI.1",
+      "namaSiswa": "AHMAD FAIZ PRATAMA",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "UFRIANI"
+    },
+    {
+      "id": "-P-YAjQ6Zq0wNwh1N-ng",
+      "alpa": 2,
+      "bulan": "Juli",
+      "hadir": 2,
+      "izin": 0,
+      "kelas": "XI.1",
+      "namaSiswa": "ANDI MUH. VIRGA",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "UFRIANI"
+    },
+    {
+      "id": "-P-YAjQ6Zq0wNwh1N-nh",
+      "alpa": 0,
+      "bulan": "Juli",
+      "hadir": 4,
+      "izin": 0,
+      "kelas": "XI.1",
+      "namaSiswa": "ASIA NURHIKMA",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "UFRIANI"
+    },
+    {
+      "id": "-P-YAjQ6Zq0wNwh1N-ni",
+      "alpa": 2,
+      "bulan": "Juli",
+      "hadir": 1,
+      "izin": 1,
+      "kelas": "XI.1",
+      "namaSiswa": "FATIMATUL ZZAHRA",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "UFRIANI"
+    },
+    {
+      "id": "-P-YAjQ6Zq0wNwh1N-nj",
+      "alpa": 2,
+      "bulan": "Juli",
+      "hadir": 1,
+      "izin": 1,
+      "kelas": "XI.1",
+      "namaSiswa": "HARDIANSA LOWA",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "UFRIANI"
+    },
+    {
+      "id": "-P-YAjQ6Zq0wNwh1N-nk",
+      "alpa": 3,
+      "bulan": "Juli",
+      "hadir": 1,
+      "izin": 0,
+      "kelas": "XI.1",
+      "namaSiswa": "JIHAN",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "UFRIANI"
+    },
+    {
+      "id": "-P-YAjQ6Zq0wNwh1N-nl",
+      "alpa": 0,
+      "bulan": "Juli",
+      "hadir": 3,
+      "izin": 0,
+      "kelas": "XI.1",
+      "namaSiswa": "MUH. ADZAN ASSIDDIQ",
+      "sakit": 1,
+      "tahun": "2026",
+      "waliKelas": "UFRIANI"
+    },
+    {
+      "id": "-P-YAjQ6Zq0wNwh1N-nm",
+      "alpa": 0,
+      "bulan": "Juli",
+      "hadir": 3,
+      "izin": 1,
+      "kelas": "XI.1",
+      "namaSiswa": "MUH. KHAIDIL RAMADAN",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "UFRIANI"
+    },
+    {
+      "id": "-P-YAjQ7sjfXEN_Ga4FQ",
+      "alpa": 4,
+      "bulan": "Juli",
+      "hadir": 0,
+      "izin": 0,
+      "kelas": "XI.1",
+      "namaSiswa": "MUHAMMAD AKBAR",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "UFRIANI"
+    },
+    {
+      "id": "-P-YAjQ7sjfXEN_Ga4FR",
+      "alpa": 0,
+      "bulan": "Juli",
+      "hadir": 4,
+      "izin": 0,
+      "kelas": "XI.1",
+      "namaSiswa": "PUTRA. S",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "UFRIANI"
+    },
+    {
+      "id": "-P-YAjQ7sjfXEN_Ga4FS",
+      "alpa": 0,
+      "bulan": "Juli",
+      "hadir": 4,
+      "izin": 0,
+      "kelas": "XI.1",
+      "namaSiswa": "RAYA MAILANI",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "UFRIANI"
+    },
+    {
+      "id": "-P-YAjQ7sjfXEN_Ga4FT",
+      "alpa": 3,
+      "bulan": "Juli",
+      "hadir": 1,
+      "izin": 0,
+      "kelas": "XI.1",
+      "namaSiswa": "SAMSUDDIN",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "UFRIANI"
+    },
+    {
+      "id": "-P-YAjQ7sjfXEN_Ga4FU",
+      "alpa": 0,
+      "bulan": "Juli",
+      "hadir": 4,
+      "izin": 0,
+      "kelas": "XI.1",
+      "namaSiswa": "SHERIL MUTIARA PUTRI",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "UFRIANI"
+    },
+    {
+      "id": "-P-YAjQ7sjfXEN_Ga4FV",
+      "alpa": 2,
+      "bulan": "Juli",
+      "hadir": 2,
+      "izin": 0,
+      "kelas": "XI.1",
+      "namaSiswa": "UMMU SAIDAH",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "UFRIANI"
+    },
+    {
+      "id": "-P-YAjQ7sjfXEN_Ga4FW",
+      "alpa": 0,
+      "bulan": "Juli",
+      "hadir": 4,
+      "izin": 0,
+      "kelas": "XI.1",
+      "namaSiswa": "VIA PUTRI CHANIA",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "UFRIANI"
+    },
+    {
+      "id": "-P-YAjQ7sjfXEN_Ga4FX",
+      "alpa": 0,
+      "bulan": "Juli",
+      "hadir": 4,
+      "izin": 0,
+      "kelas": "XI.1",
+      "namaSiswa": "WAODE A.AMRIANI",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "UFRIANI"
+    },
+    {
+      "id": "-P-YAjQ7sjfXEN_Ga4FY",
+      "alpa": 1,
+      "bulan": "Juli",
+      "hadir": 2,
+      "izin": 0,
+      "kelas": "XI.1",
+      "namaSiswa": "ZASKIA PUTRI AULIA",
+      "sakit": 1,
+      "tahun": "2026",
+      "waliKelas": "UFRIANI"
+    },
+    {
+      "id": "-P-YB-2oddchYa83629h",
+      "alpa": 0,
+      "bulan": "Juli",
+      "hadir": 4,
+      "izin": 0,
+      "kelas": "XI.1",
+      "namaSiswa": "ABRAR",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "UFRIANI"
+    },
+    {
+      "id": "-P-YB-2oddchYa83629i",
+      "alpa": 1,
+      "bulan": "Juli",
+      "hadir": 3,
+      "izin": 0,
+      "kelas": "XI.1",
+      "namaSiswa": "AHMAD FAIZ PRATAMA",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "UFRIANI"
+    },
+    {
+      "id": "-P-YB-2oddchYa83629j",
+      "alpa": 2,
+      "bulan": "Juli",
+      "hadir": 2,
+      "izin": 0,
+      "kelas": "XI.1",
+      "namaSiswa": "ANDI MUH. VIRGA",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "UFRIANI"
+    },
+    {
+      "id": "-P-YB-2oddchYa83629k",
+      "alpa": 0,
+      "bulan": "Juli",
+      "hadir": 4,
+      "izin": 0,
+      "kelas": "XI.1",
+      "namaSiswa": "ASIA NURHIKMA",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "UFRIANI"
+    },
+    {
+      "id": "-P-YB-2oddchYa83629l",
+      "alpa": 2,
+      "bulan": "Juli",
+      "hadir": 1,
+      "izin": 1,
+      "kelas": "XI.1",
+      "namaSiswa": "FATIMATUL ZZAHRA",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "UFRIANI"
+    },
+    {
+      "id": "-P-YB-2oddchYa83629m",
+      "alpa": 2,
+      "bulan": "Juli",
+      "hadir": 1,
+      "izin": 1,
+      "kelas": "XI.1",
+      "namaSiswa": "HARDIANSA LOWA",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "UFRIANI"
+    },
+    {
+      "id": "-P-YB-2oddchYa83629n",
+      "alpa": 3,
+      "bulan": "Juli",
+      "hadir": 1,
+      "izin": 0,
+      "kelas": "XI.1",
+      "namaSiswa": "JIHAN",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "UFRIANI"
+    },
+    {
+      "id": "-P-YB-2oddchYa83629o",
+      "alpa": 0,
+      "bulan": "Juli",
+      "hadir": 3,
+      "izin": 0,
+      "kelas": "XI.1",
+      "namaSiswa": "MUH. ADZAN ASSIDDIQ",
+      "sakit": 1,
+      "tahun": "2026",
+      "waliKelas": "UFRIANI"
+    },
+    {
+      "id": "-P-YB-2oddchYa83629p",
+      "alpa": 0,
+      "bulan": "Juli",
+      "hadir": 3,
+      "izin": 1,
+      "kelas": "XI.1",
+      "namaSiswa": "MUH. KHAIDIL RAMADAN",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "UFRIANI"
+    },
+    {
+      "id": "-P-YB-2oddchYa83629q",
+      "alpa": 4,
+      "bulan": "Juli",
+      "hadir": 0,
+      "izin": 0,
+      "kelas": "XI.1",
+      "namaSiswa": "MUHAMMAD AKBAR",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "UFRIANI"
+    },
+    {
+      "id": "-P-YB-2oddchYa83629r",
+      "alpa": 0,
+      "bulan": "Juli",
+      "hadir": 4,
+      "izin": 0,
+      "kelas": "XI.1",
+      "namaSiswa": "PUTRA. S",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "UFRIANI"
+    },
+    {
+      "id": "-P-YB-2oddchYa83629s",
+      "alpa": 0,
+      "bulan": "Juli",
+      "hadir": 4,
+      "izin": 0,
+      "kelas": "XI.1",
+      "namaSiswa": "RAYA MAILANI",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "UFRIANI"
+    },
+    {
+      "id": "-P-YB-2oddchYa83629t",
+      "alpa": 3,
+      "bulan": "Juli",
+      "hadir": 1,
+      "izin": 0,
+      "kelas": "XI.1",
+      "namaSiswa": "SAMSUDDIN",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "UFRIANI"
+    },
+    {
+      "id": "-P-YB-2oddchYa83629u",
+      "alpa": 0,
+      "bulan": "Juli",
+      "hadir": 4,
+      "izin": 0,
+      "kelas": "XI.1",
+      "namaSiswa": "SHERIL MUTIARA PUTRI",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "UFRIANI"
+    },
+    {
+      "id": "-P-YB-2oddchYa83629v",
+      "alpa": 2,
+      "bulan": "Juli",
+      "hadir": 2,
+      "izin": 0,
+      "kelas": "XI.1",
+      "namaSiswa": "UMMU SAIDAH",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "UFRIANI"
+    },
+    {
+      "id": "-P-YB-2oddchYa83629w",
+      "alpa": 0,
+      "bulan": "Juli",
+      "hadir": 4,
+      "izin": 0,
+      "kelas": "XI.1",
+      "namaSiswa": "VIA PUTRI CHANIA",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "UFRIANI"
+    },
+    {
+      "id": "-P-YB-2oddchYa83629x",
+      "alpa": 0,
+      "bulan": "Juli",
+      "hadir": 4,
+      "izin": 0,
+      "kelas": "XI.1",
+      "namaSiswa": "WAODE A.AMRIANI",
+      "sakit": 0,
+      "tahun": "2026",
+      "waliKelas": "UFRIANI"
+    },
+    {
+      "id": "-P-YB-2oddchYa83629y",
+      "alpa": 1,
+      "bulan": "Juli",
+      "hadir": 2,
+      "izin": 0,
+      "kelas": "XI.1",
+      "namaSiswa": "ZASKIA PUTRI AULIA",
+      "sakit": 1,
+      "tahun": "2026",
+      "waliKelas": "UFRIANI"
+    }
+  ],
+  "perangkats": [
+    {
+      "id": "-OyB8yJdBkFnANpAsq3s",
+      "catatan": "bagus",
+      "fileBase64":"",
+      "fileMimeType": "application/x-zip-compressed",
+      "fileName": "Paket_Perangkat_Ajar_Fisika_Kelas_X (1).zip",
+      "jenisDokumen": "Bundel Perangkat Ajar (ZIP/RAR)",
+      "linkDrive": "https://drive.google.com/uc?export=download&id=mock-file-id-1784762880882",
+      "namaGuru": "Syarif Hidayatullah S.Pd.",
+      "status": "Disetujui"
+    },
+    {
+      "id": "-OyWUqi0da9tcXTcsPEB",
+      "catatan": "Tinggal di Implementasi dalam kelas. Terima kasih bu Mus",
+      "fileBase64":"",
+      "fileMimeType": "application/x-zip-compressed",
+      "fileName": "FORMAT RPP DEEP LEARNING KELAS IX.zip",
+      "jenisDokumen": "Bundel Perangkat Ajar (ZIP/RAR)",
+      "linkDrive": "https://drive.google.com/uc?export=download&id=mock-file-id-1785120910065",
+      "namaGuru": "Musdalifah",
+      "status": "Disetujui"
+    },
+    {
+      "id": "-P-S2T8c94kac4Yl2Nwc",
+      "catatan": "kelas XI\nNama File: Paket_Perangkat_Ajar_Fisika_Kelas_XI (Pembelajaran Mendalam) 2026.zip",
+      "fileBase64":"",
+      "fileMimeType": "application/x-zip-compressed",
+      "fileName": "Paket_Perangkat_Ajar_Fisika_Kelas_XI (Pembelajaran Mendalam) 2026.zip",
+      "jenisDokumen": "Bundel Perangkat Ajar (ZIP/RAR)",
+      "linkDrive": "https://drive.google.com/uc?export=download&id=mock-file-id-1787193847920",
+      "namaGuru": "SYARIF HIDAYATULLAH",
+      "status": "Disetujui"
+    },
+    {
+      "id": "-P-S2_-RAF-jCXdBk-x6",
+      "catatan": "Kelas XII\nNama File: Paket_Perangkat_Ajar_Fisika_Kelas_XII (Pembelajaran Mendalam) 2026.zip",
+      "fileBase64":"",
+      "fileMimeType": "application/x-zip-compressed",
+      "fileName": "Paket_Perangkat_Ajar_Fisika_Kelas_XII (Pembelajaran Mendalam) 2026.zip",
+      "jenisDokumen": "Bundel Perangkat Ajar (ZIP/RAR)",
+      "linkDrive": "https://drive.google.com/uc?export=download&id=mock-file-id-1787193876004",
+      "namaGuru": "SYARIF HIDAYATULLAH",
+      "status": "Pending"
+    },
+    {
+      "id": "-P-WeMaytydOn7DJadso",
+      "catatan": "Nama File: MODUL X Ganjil 26-27.zip",
+      "fileBase64":"",
+      "fileMimeType": "application/zip",
+      "fileName": "MODUL X Ganjil 26-27.zip",
+      "jenisDokumen": "Bundel Perangkat Ajar (ZIP/RAR)",
+      "linkDrive": "https://drive.google.com/uc?export=download&id=mock-file-id-1787271150110",
+      "namaGuru": "Ruhul Yusuf",
+      "status": "Pending"
+    },
+    {
+      "id": "-P-X9-DxLLLugtKzFGtJ",
+      "catatan": "Nama File: RPP Deep Learning Informatika Ganjil Kelas X 2026.zip",
+      "fileBase64":"",
+      "fileMimeType": "application/x-zip-compressed",
+      "fileName": "RPP Deep Learning Informatika Ganjil Kelas X 2026.zip",
+      "jenisDokumen": "Bundel Perangkat Ajar (ZIP/RAR)",
+      "linkDrive": "https://drive.google.com/uc?export=download&id=mock-file-id-1787279443388",
+      "namaGuru": "Musdalifah",
+      "status": "Pending"
+    },
+    {
+      "id": "-P-vkpnJ9V7hWrzeELKw",
+      "catatan": "Nama File: Perangkat Ajar BIG kelas XI sms 1.rar",
+      "fileBase64":"",
+      "fileMimeType": "application/x-compressed",
+      "fileName": "Perangkat Ajar BIG kelas XI sms 1.rar",
+      "jenisDokumen": "Bundel Perangkat Ajar (ZIP/RAR)",
+      "linkDrive": "https://drive.google.com/uc?export=download&id=mock-file-id-1787709054313",
+      "namaGuru": "Sri Rahayu S.Pd.,M.Pd.",
+      "status": "Pending"
+    },
+    {
+      "id": "-P-wDm5bMMoUH3XbojZ_",
+      "catatan": "Nama File: Paket_Perangkat_Ajar_Muatan_Lokal_Bahasa_Daerah_Kelas_XI (2).zip",
+      "fileBase64":"",
+      "fileMimeType": "application/x-zip-compressed",
+      "fileName": "Paket_Perangkat_Ajar_Muatan_Lokal_Bahasa_Daerah_Kelas_XI (2).zip",
+      "jenisDokumen": "Bundel Perangkat Ajar (ZIP/RAR)",
+      "linkDrive": "https://drive.google.com/uc?export=download&id=mock-file-id-1787716914404",
+      "namaGuru": "UFRIANI",
+      "status": "Pending"
+    },
+    {
+      "id": "-P-wxyM-AgU-gJ9cvpa1",
+      "catatan": "Nama File: Paket_Perangkat_Ajar_MUATAN_LOKAL_BAHASA_DAERAH_Kelas_XII (2).zip",
+      "fileBase64":"",
+      "fileMimeType": "application/x-zip-compressed",
+      "fileName": "Paket_Perangkat_Ajar_MUATAN_LOKAL_BAHASA_DAERAH_Kelas_XII (2).zip",
+      "jenisDokumen": "Bundel Perangkat Ajar (ZIP/RAR)",
+      "linkDrive": "https://drive.google.com/uc?export=download&id=mock-file-id-1787729274560",
+      "namaGuru": "UFRIANI",
+      "status": "Pending"
+    },
+    {
+      "id": "-P013EZphTcGfmMoXwIt",
+      "catatan": "Nama File: Paket_Perangkat_Ajar_Muatan_Lokal_Bahasa_Daerahh_Kelas_X (2).zip",
+      "fileBase64":"",
+      "fileMimeType": "application/x-zip-compressed",
+      "fileName": "Paket_Perangkat_Ajar_Muatan_Lokal_Bahasa_Daerahh_Kelas_X (2).zip",
+      "jenisDokumen": "Bundel Perangkat Ajar (ZIP/RAR)",
+      "linkDrive": "https://drive.google.com/uc?export=download&id=mock-file-id-1787814804089",
+      "namaGuru": "UFRIANI",
+      "status": "Pending"
+    },
+    {
+      "id": "-P053lH4CAwOP1yXju6z",
+      "catatan": "Nama File: BAB 1 kelas 11 semester 1 2026.zip",
+      "fileBase64":"",
+      "fileMimeType": "application/x-zip-compressed",
+      "fileName": "BAB 1 kelas 11 semester 1 2026.zip",
+      "jenisDokumen": "Bundel Perangkat Ajar (ZIP/RAR)",
+      "linkDrive": "https://drive.google.com/uc?export=download&id=mock-file-id-1787882051185",
+      "namaGuru": "Nurlaelah Husain",
+      "status": "Pending"
+    },
+    {
+      "id": "-P05MLwKBkvMxbg1U1jW",
+      "catatan": "Nama File: X.rar",
+      "fileBase64":"",
+      "fileMimeType": "",
+      "fileName": "X.rar",
+      "jenisDokumen": "Bundel Perangkat Ajar (ZIP/RAR)",
+      "linkDrive": "https://drive.google.com/uc?export=download&id=mock-file-id-1787886923247",
+      "namaGuru": "Andi Nurfadilah",
+      "status": "Pending"
+    },
+    {
+      "id": "-P061gaKI9eG6CGObE-q",
+      "catatan": "Nama File: X.rar",
+      "fileBase64":"",
+      "fileMimeType": "",
+      "fileName": "X.rar",
+      "jenisDokumen": "Bundel Perangkat Ajar (ZIP/RAR)",
+      "linkDrive": "https://drive.google.com/uc?export=download&id=mock-file-id-1787898284747",
+      "namaGuru": "Nurhasida",
+      "status": "Disetujui"
+    },
+    {
+      "id": "-P061sOao9IzCGkTilkY",
+      "catatan": "Nama File: XI.rar",
+      "fileBase64":"",
+      "fileMimeType": "",
+      "fileName": "XI.rar",
+      "jenisDokumen": "Bundel Perangkat Ajar (ZIP/RAR)",
+      "linkDrive": "https://drive.google.com/uc?export=download&id=mock-file-id-1787898333086",
+      "namaGuru": "Nurhasida",
+      "status": "Pending"
+    },
+    {
+      "id": "-P0624Ii6XV7Q_Rj6hDm",
+      "catatan": "Nama File: XII.rar",
+      "fileBase64":"",
+      "fileMimeType": "",
+      "fileName": "XII.rar",
+      "jenisDokumen": "Bundel Perangkat Ajar (ZIP/RAR)",
+      "linkDrive": "https://drive.google.com/uc?export=download&id=mock-file-id-1787898385958",
+      "namaGuru": "Nurhasida",
+      "status": "Pending"
+    },
+    {
+      "id": "-P06I2DGR5KxFLSBfTAS",
+      "catatan": "Nama File: FASE E.rar",
+      "fileBase64":"",
+      "fileMimeType": "application/x-compressed",
+      "fileName": "FASE E.rar",
+      "jenisDokumen": "Bundel Perangkat Ajar (ZIP/RAR)",
+      "linkDrive": "https://drive.google.com/uc?export=download&id=mock-file-id-1787902571566",
+      "namaGuru": "SULFIANI",
+      "status": "Pending"
+    },
+    {
+      "id": "-P0BUOOxnEtj9XVqBmrF",
+      "catatan": "Nama File: Bab 1 kelas x semester 1 2026.zip",
+      "fileBase64":"",
+      "fileMimeType": "application/x-zip-compressed",
+      "fileName": "Bab 1 kelas x semester 1 2026.zip",
+      "jenisDokumen": "Bundel Perangkat Ajar (ZIP/RAR)",
+      "linkDrive": "https://drive.google.com/uc?export=download&id=mock-file-id-1787989695487",
+      "namaGuru": "Nurlaelah Husain",
+      "status": "Pending"
+    },
+    {
+      "id": "-P0BU_xMy3Yf9Dgg8PEJ",
+      "catatan": "Nama File: BAB 1 KELAS XII SEMESTER 1 2026.zip",
+      "fileBase64":"",
+      "fileMimeType": "application/x-zip-compressed",
+      "fileName": "BAB 1 KELAS XII SEMESTER 1 2026.zip",
+      "jenisDokumen": "Bundel Perangkat Ajar (ZIP/RAR)",
+      "linkDrive": "https://drive.google.com/uc?export=download&id=mock-file-id-1787989746905",
+      "namaGuru": "Nurlaelah Husain",
+      "status": "Pending"
+    },
+    {
+      "id": "-P0D8VAqrUXCXX6fJZVp",
+      "catatan": "Nama File: MODUL AJAR KELAS X.rar",
+      "fileBase64":"",
+      "fileMimeType": "application/x-compressed",
+      "fileName": "MODUL AJAR KELAS X.rar",
+      "jenisDokumen": "Bundel Perangkat Ajar (ZIP/RAR)",
+      "linkDrive": "https://drive.google.com/uc?export=download&id=mock-file-id-1788017509202",
+      "namaGuru": "Rusnita Ruslang",
+      "status": "Pending"
+    },
+    {
+      "id": "-P0IC7nhcfv56a-klCEI",
+      "catatan": "Nama File: PERANGKAT AJAR SOSIOLOGI KELAS X.zip",
+      "fileBase64":"",
+      "fileMimeType": "application/x-zip-compressed",
+      "fileName": "PERANGKAT AJAR SOSIOLOGI KELAS X.zip",
+      "jenisDokumen": "Bundel Perangkat Ajar (ZIP/RAR)",
+      "linkDrive": "https://drive.google.com/uc?export=download&id=mock-file-id-1788102348356",
+      "namaGuru": "Indah Faridah",
+      "status": "Pending"
+    },
+    {
+      "id": "-P0L__abyWRFcUDWiw_N",
+      "catatan": "Nama File: SEJ. X-20260831T064436Z-1-001.zip",
+      "fileBase64":"",
+      "fileMimeType": "application/zip",
+      "fileName": "SEJ. X-20260831T064436Z-1-001.zip",
+      "jenisDokumen": "Bundel Perangkat Ajar (ZIP/RAR)",
+      "linkDrive": "https://drive.google.com/uc?export=download&id=mock-file-id-1788159006835",
+      "namaGuru": "Sitti Rahman",
+      "status": "Pending"
+    },
+    {
+      "id": "-P0Lazz4_5rdPQ7I6p8u",
+      "catatan": "Nama File: PERANGKAT PEMBELAJARAN GEOGRAFI KLS XII_SULFIAH.rar",
+      "fileBase64":"",
+      "fileMimeType": "application/x-compressed",
+      "fileName": "PERANGKAT PEMBELAJARAN GEOGRAFI KLS XII_SULFIAH.rar",
+      "jenisDokumen": "Bundel Perangkat Ajar (ZIP/RAR)",
+      "linkDrive": "https://drive.google.com/uc?export=download&id=mock-file-id-1788159459269",
+      "namaGuru": "Sulfiah",
+      "status": "Pending"
+    },
+    {
+      "id": "-P0PifuS6d3w9Wq_S449",
+      "catatan": "Nama File: KELAS X.rar",
+      "fileBase64":"",
+      "fileMimeType": "application/x-compressed",
+      "fileName": "KELAS X.rar",
+      "jenisDokumen": "Bundel Perangkat Ajar (ZIP/RAR)",
+      "linkDrive": "https://drive.google.com/uc?export=download&id=mock-file-id-1788228582892",
+      "namaGuru": "Dahlia",
+      "status": "Pending"
+    },
+    {
+      "id": "-P0PoJFeybavO_i_zF88",
+      "catatan": "Nama File: Modul ajar kelas XII.rar",
+      "fileBase64":"",
+      "fileMimeType": "application/x-compressed",
+      "fileName": "Modul ajar kelas XII.rar",
+      "jenisDokumen": "Bundel Perangkat Ajar (ZIP/RAR)",
+      "linkDrive": "https://drive.google.com/uc?export=download&id=mock-file-id-1788230058944",
+      "namaGuru": "Dahlia",
+      "status": "Pending"
+    },
+    {
+      "id": "-P0VQrmZAgesTFspEDiD",
+      "catatan": "Nama File: PERANGKAT AJAR SOSIOLOGI KELAS XI.rar",
+      "fileBase64":"",
+      "fileMimeType": "application/x-compressed",
+      "fileName": "PERANGKAT AJAR SOSIOLOGI KELAS XI.rar",
+      "jenisDokumen": "Bundel Perangkat Ajar (ZIP/RAR)",
+      "linkDrive": "https://drive.google.com/uc?export=download&id=mock-file-id-1788324314441",
+      "namaGuru": "Indah Faridah",
+      "status": "Pending"
+    }
+  ],
+  "kelasmapelpilihan": [
+    {
+      "id": "-OyAw_D2GpSRWFaDXarH",
+      "guruEmail": "syarifhidayatullahmarioriawa@gmail.com",
+      "namaKelas": "Kelas Mapil XI",
+      "namaSiswa": "VADHEL SAPUTRA",
+      "nis": "7692",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "-OyAxenmDf8wonhqr0pe",
+      "guruEmail": "syarifhidayatullahmarioriawa@gmail.com",
+      "namaKelas": "Kelas Mapil XI",
+      "namaSiswa": "AHMAD SYUKUR",
+      "nis": "7679",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "-OyBeOUB3G_F5oLxclOL",
+      "guruEmail": "syarifhidayatullahmarioriawa@gmail.com",
+      "namaKelas": "Kelas Mapil XI",
+      "namaSiswa": "MUHAMMAD RAYHAN",
+      "nis": "7689",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "-OyIO3kzIlSbyqXBn2j8",
+      "guruEmail": "199504062023211013",
+      "namaKelas": "Kelas Mapil XI",
+      "namaSiswa": "VADHEL SAPUTRA",
+      "nis": "7692",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "-OyIOBbJu-VAejTB2Su5",
+      "guruEmail": "198203062009022007",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "A. BATARA TENRI UNGA",
+      "nis": "7655",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-OyIODzJBYgU8nxZH5CN",
+      "guruEmail": "199504062023211013",
+      "namaKelas": "Kelas Mapil XI",
+      "namaSiswa": "NUR HIDAYATULLAH",
+      "nis": "7690",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "-OyIOFblytoknZWjy7ZV",
+      "guruEmail": "198903252022212018",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "A. FATUR RAHMAN",
+      "nis": "7632",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-OyIOGYiVAGvog0_r66s",
+      "guruEmail": "198203062009022007",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "QHONZA AURA ZAHRA",
+      "nis": "7593",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-OyIOJ1tx021JviDO02D",
+      "guruEmail": "198903252022212018",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "AHMAD RISKI PALOMPAI",
+      "nis": "7605",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-OyIOKSSFpyjY5X9mzNQ",
+      "guruEmail": "198903252022212018",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "AISAH",
+      "nis": "7619",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-OyION5D3eTBIlR64UlT",
+      "guruEmail": "198203062009022007",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "NURHIDAYANA",
+      "nis": "7627",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-OyIOO1G-PjJzhRt0q7h",
+      "guruEmail": "198903252022212018",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "ALIF FATURRAHMAN",
+      "nis": "7608",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-OyIOQr606G-pCDLAZ1M",
+      "guruEmail": "198203062009022007",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "ARYANANDA IBRAHIM",
+      "nis": "7588",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-OyIOS8TPcp5EuQgZ3pl",
+      "guruEmail": "198903252022212018",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "HASRIANA EKA PUTRI",
+      "nis": "7624",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-OyIOVZQUWxDs_3DzoRU",
+      "guruEmail": "198903252022212018",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "M. IKHSAN",
+      "nis": "7638",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-OyIO_Zl5LBKRlgfo6AD",
+      "guruEmail": "198903252022212018",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "MUHAMMAD RIZALDI",
+      "nis": "7613",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-OyIOca3VpwSnaIByM7e",
+      "guruEmail": "198903252022212018",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "RIDWAN",
+      "nis": "7648",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-OyIOfcGuRCuEw4sqMXv",
+      "guruEmail": "198903252022212018",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "SINTA AMELIA",
+      "nis": "7629",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-OyIOi-4pJCrvcUNLIIZ",
+      "guruEmail": "198903252022212018",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "SYAHRIL",
+      "nis": "7649",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-OyIOjmw8_GFzznwzBAt",
+      "guruEmail": "198903252022212018",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "SYAMSUL BAHRUL",
+      "nis": "7650",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-OyIOpc3c6UnfPrYVZa4",
+      "guruEmail": "198903252022212018",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "NUR AGUSTIARA",
+      "nis": "7626",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-OyMx1f3PrjEoE96etla",
+      "guruEmail": "199504062023211013",
+      "namaKelas": "Kelas Mapil XI",
+      "namaSiswa": "AHMAD SYUKUR",
+      "nis": "7679",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "-OyMx5iSwBbIeXk6gXjE",
+      "guruEmail": "199504062023211013",
+      "namaKelas": "Kelas Mapil XI",
+      "namaSiswa": "ADIT ANUGRAH PRATAMA",
+      "nis": "7695",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "-OyMxQsoco2dPwmzoiPR",
+      "guruEmail": "199504062023211013",
+      "namaKelas": "Kelas Mapil XI",
+      "namaSiswa": "MUHAMMAD RAYHAN",
+      "nis": "7689",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "-OyWLhWOi5MExltGxVEg",
+      "guruEmail": "198903252022212018",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "AKBAR ALMUJADI",
+      "nis": "7607",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-OyWhnfmbetKd3gFzF5b",
+      "guruEmail": "199507142025212115",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "SYAHRATUL MAELANI",
+      "nis": "7630",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-OyWhro-Grfshr0vSrPq",
+      "guruEmail": "199507142025212115",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "ALVIA RESKY ANUGRAH",
+      "nis": "7587",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-OyWhuzsTNR03zOBn9dN",
+      "guruEmail": "199507142025212115",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "ANDIKA AGUSNAWAN",
+      "nis": "7609",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-OyWhxE0HklwbaJl49SN",
+      "guruEmail": "199507142025212115",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "ERIK",
+      "nis": "7636",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-OyWi02C_nlUk1z7A0fW",
+      "guruEmail": "199507142025212115",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "ERNI YANTI",
+      "nis": "7623",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-OyWi26ABfWxiauR6XAi",
+      "guruEmail": "199507142025212115",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "HAFSHAH SYARIF",
+      "nis": "7589",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-OyWi5iBQnUlmaViPPaK",
+      "guruEmail": "199507142025212115",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "MUSDALIFAH",
+      "nis": "7590",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-OyWi8mcJyNH1WoXYOxU",
+      "guruEmail": "199507142025212115",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "NUR FITRIANI. A",
+      "nis": "7591",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-OyWiDJw3UWN888Xmugf",
+      "guruEmail": "199507142025212115",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "NURFDHILAH",
+      "nis": "7592",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-OyWiHV4sgLYDwUOe6jG",
+      "guruEmail": "199507142025212115",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "RINA PARADHITA AZAHRA",
+      "nis": "7594",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-OyWiKeBsyurXQNvguqv",
+      "guruEmail": "199507142025212115",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "SITI NUR AN'NISAA APRILIA SYAM",
+      "nis": "7596",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-OyWiTPjhZcsu3gKTylk",
+      "guruEmail": "199507142025212115",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "SUCI DWI ARYANTI",
+      "nis": "7597",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-OyadIXAUYC2kBMrvGdI",
+      "guruEmail": "198203062009022007",
+      "namaKelas": "Kelas Mapil XI",
+      "namaSiswa": "WAODE A.AMRIANI",
+      "nis": "7677",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "-OyadMVrcD3dS5Fcqpio",
+      "guruEmail": "198203062009022007",
+      "namaKelas": "Kelas Mapil XI",
+      "namaSiswa": "MUH. ADZAN ASSIDDIQ",
+      "nis": "7668",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "-OyadUAEtmSaL62bADMU",
+      "guruEmail": "198203062009022007",
+      "namaKelas": "Kelas Mapil XI",
+      "namaSiswa": "VIO PUTRI CHANIA",
+      "nis": "7693",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "-OylUzrjDDBoICrB1w2M",
+      "guruEmail": "198203062009022007",
+      "namaKelas": "Kelas Mapil XI",
+      "namaSiswa": "MUH. KHAIDIL RAMADAN",
+      "nis": "7670",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "-OyqfPbE5gSTbku0JPln",
+      "guruEmail": "199507142025212115",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "NURAINI",
+      "nis": "7739",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-OyqfTE6x0voIW1Ur9ND",
+      "guruEmail": "199507142025212115",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "A. KEISYA HUZAEFAH",
+      "nis": "7699",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-OzsZU7hiytwU-rxDoFL",
+      "guruEmail": "196805311992031003",
+      "namaKelas": "Kelas Mapil XI",
+      "namaSiswa": "MUH. FAREL",
+      "nis": "7688",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "-OzsZVpQz4N13rwHtATP",
+      "guruEmail": "196805311992031003",
+      "namaKelas": "Kelas Mapil XI",
+      "namaSiswa": "MUH. NISAR",
+      "nis": "7687",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "-P-SEYFj6xSNbiP63Hry",
+      "guruEmail": "197212311997031033",
+      "namaKelas": "Kelas Mapil XI",
+      "namaSiswa": "ABRAR",
+      "nis": "7663",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "-P-SEcJx9zquwhKviKy8",
+      "guruEmail": "197212311997031033",
+      "namaKelas": "Kelas Mapil XI",
+      "namaSiswa": "AHMAD FAIZ PRATAMA",
+      "nis": "7664",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "-P-SEh7SwsM9FOEWT2Ad",
+      "guruEmail": "197212311997031033",
+      "namaKelas": "Kelas Mapil XI",
+      "namaSiswa": "AMALIA SALNA BILA",
+      "nis": "7680",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "-P-SEm3C_bZ9Aytae4IR",
+      "guruEmail": "197212311997031033",
+      "namaKelas": "Kelas Mapil XI",
+      "namaSiswa": "ANDI MUH. VIRGA",
+      "nis": "7600",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "-P-SErDql1NpYfYmIE1o",
+      "guruEmail": "197212311997031033",
+      "namaKelas": "Kelas Mapil XI",
+      "namaSiswa": "FATIMATUL ZZAHRA",
+      "nis": "7665",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "-P-SEuBhcMzIE5HuVPC7",
+      "guruEmail": "197212311997031033",
+      "namaKelas": "Kelas Mapil XI",
+      "namaSiswa": "FIRNANDA",
+      "nis": "7682",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "-P-SEy_aQdhtcEfsZ7XP",
+      "guruEmail": "197212311997031033",
+      "namaKelas": "Kelas Mapil XI",
+      "namaSiswa": "HARDIANSA LOWA",
+      "nis": "7666",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "-P-SF2rCIRFvImrsSlL5",
+      "guruEmail": "197212311997031033",
+      "namaKelas": "Kelas Mapil XI",
+      "namaSiswa": "JIHAN",
+      "nis": "7667",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "-P-SFB537iL3FeYde2gB",
+      "guruEmail": "197212311997031033",
+      "namaKelas": "Kelas Mapil XI",
+      "namaSiswa": "RAYA MAILANI",
+      "nis": "7672",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "-P-SFHbpuEGJ6MgHF1sE",
+      "guruEmail": "197212311997031033",
+      "namaKelas": "Kelas Mapil XI",
+      "namaSiswa": "SAMSUDDIN",
+      "nis": "7673",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "-P-SFMMZpEK49QDTVx7B",
+      "guruEmail": "197212311997031033",
+      "namaKelas": "Kelas Mapil XI",
+      "namaSiswa": "SULFIAH",
+      "nis": "7691",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "-P-SFRAymPGCpNO1o6Jo",
+      "guruEmail": "197212311997031033",
+      "namaKelas": "Kelas Mapil XI",
+      "namaSiswa": "UMMU SAIDAH",
+      "nis": "7675",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "-P-SFXP4YUcU0NtEc2k_",
+      "guruEmail": "197212311997031033",
+      "namaKelas": "Kelas Mapil XI",
+      "namaSiswa": "VIVI ALFIANI",
+      "nis": "7694",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "-P-SFeHwZMx4MGWwFllg",
+      "guruEmail": "197212311997031033",
+      "namaKelas": "Kelas Mapil XI",
+      "namaSiswa": "ZASKIA PUTRI AULIA",
+      "nis": "7678",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "-P-SG2hijmWsnLr1k36E",
+      "guruEmail": "197212311997031033",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "A. MUHAMMAD FAHMI",
+      "nis": "7601",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-P-SG7tKrM3I0y3j7nHd",
+      "guruEmail": "197212311997031033",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "AEDIL",
+      "nis": "7603",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-P-SGAYShqOgX5ZstWFY",
+      "guruEmail": "197212311997031033",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "AGUNG ATNADIJAYA AH.",
+      "nis": "7604",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-P-SGFpBl9S5XoaP4nZM",
+      "guruEmail": "197212311997031033",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "AINUR ROFIQ",
+      "nis": "7606",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-P-SGL-j3OS-M-06FF9n",
+      "guruEmail": "197212311997031033",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "AYLA SHAKILA",
+      "nis": "7621",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-P-SGQmhWRRhfZu0P2l5",
+      "guruEmail": "197212311997031033",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "ERNA YANTI",
+      "nis": "7622",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-P-SGVSaacq8GH0TpZj2",
+      "guruEmail": "197212311997031033",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "GIFAREL AHNAF",
+      "nis": "7637",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-P-SGaxZo9lwQQaw9nMi",
+      "guruEmail": "197212311997031033",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "MUH.FIKRAH DARMANSYAH",
+      "nis": "7642",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-P-SGeloJKMW9C-QW6ui",
+      "guruEmail": "197212311997031033",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "MUHAMAD ALIF ADIGUNA",
+      "nis": "7640",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-P-SGmrqpd_KCMUBex7R",
+      "guruEmail": "197212311997031033",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "RAMAH",
+      "nis": "7645",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-P-SGqrSIzisB3ZGw1NW",
+      "guruEmail": "197212311997031033",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "REFALDIANSA",
+      "nis": "7646",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-P-SGumZQMg6m1kd_e3h",
+      "guruEmail": "197212311997031033",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "RISMA",
+      "nis": "7595",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-P-SH-7KBNdBrWjIsahx",
+      "guruEmail": "197212311997031033",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "SENDIRAMADANA",
+      "nis": "7617",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-P-SH4aqhTtskrBBFhDy",
+      "guruEmail": "197212311997031033",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "SYAHRATURRAMADHANI",
+      "nis": "7598",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-P-SHC8ZUwlhhSa915Wy",
+      "guruEmail": "197212311997031033",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "TIMOER PRAYOGI",
+      "nis": "7618",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-P-SHQD_6xha4FDwQH6S",
+      "guruEmail": "197212311997031033",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "DWI FEBRIAN TAULA'BI",
+      "nis": "7698",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-P-SHjow3ekFjYwUL4UJ",
+      "guruEmail": "197212311997031033",
+      "namaKelas": "Kelas Mapil XII",
+      "namaSiswa": "ZALSA AULIA",
+      "nis": "7631",
+      "tingkatan": "XII"
+    },
+    {
+      "id": "-P0-jF9mpIkAtM8rJPIP",
+      "guruEmail": "199504062023211013",
+      "namaKelas": "Kelas Mapil XI",
+      "namaSiswa": "PUTRA. S",
+      "nis": "7671",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "-P0ZTOlJ4zFG1rE5mM20",
+      "guruEmail": "sman4soppeng@gmail.com",
+      "namaKelas": "Kelas Mapil XI",
+      "namaSiswa": "KHANZA ARTALITA",
+      "nis": "7684",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "-P0ZTVFAwabg-UhoXFJR",
+      "guruEmail": "sman4soppeng@gmail.com",
+      "namaKelas": "Kelas Mapil XI",
+      "namaSiswa": "MARDINA",
+      "nis": "7685",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "-P0ZTa_sA21BhibraeHP",
+      "guruEmail": "sman4soppeng@gmail.com",
+      "namaKelas": "Kelas Mapil XI",
+      "namaSiswa": "MIRANDA",
+      "nis": "7686",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "-P0ZTfc2S-kczX7ZVzv3",
+      "guruEmail": "sman4soppeng@gmail.com",
+      "namaKelas": "Kelas Mapil XI",
+      "namaSiswa": "JULIA",
+      "nis": "7683",
+      "tingkatan": "XI"
+    },
+    {
+      "id": "-P0ZTlfdZCTRNNlKIfbg",
+      "guruEmail": "sman4soppeng@gmail.com",
+      "namaKelas": "Kelas Mapil XI",
+      "namaSiswa": "MUHAMMAD AKBAR",
+      "nis": "7669",
+      "tingkatan": "XI"
+    }
+  ],
+  "laporans": [],
   "jurnal7kaih": [
     {
       "id": "-P-njzBxExJfc8qjzC3H",
@@ -20894,7 +23178,10 @@
       "namaSiswa": "VIO PUTRI CHANIA",
       "tanggal": "2026-08-28"
     }
-  ]
+  ],
+  "settings": {
+    "daftar_kelas": "X.1,X.2,XI.1,XI.2,XII.1,XII.2"
+  }
 };
 
     function generate200PlusTeachingJournals() {
@@ -20912,67 +23199,20 @@
 
     function initializeMockDatabase() {
       localStorage.setItem('db_sikurikulum_initialized', 'true');
-      const mockJurnals = generate200PlusTeachingJournals();
+      const snap = (typeof REAL_SMAPAT_DATABASE_SNAPSHOT !== 'undefined') ? REAL_SMAPAT_DATABASE_SNAPSHOT : {};
       
-      const mockPerangkats = [
-        { id: "PR-1", namaGuru: "Bu Siti (Guru Matematika)", jenisDokumen: "RPP / Modul Ajar", linkDrive: "https://drive.google.com/open?id=rpp_math_10", status: "Disetujui", catatan: "Sangat baik, modul ajar merdeka belajar telah sesuai target." },
-        { id: "PR-2", namaGuru: "Bu Siti (Guru Matematika)", jenisDokumen: "Program Semester (Promes)", linkDrive: "https://drive.google.com/open?id=promes_math_ganjil", status: "Pending", catatan: "" }
-      ];
-      
-      const mockNilais = [
-        { id: "NL-1", kelas: "10-A", mapel: "Fisika Dasar", rataNilai: 78.5, jumlahSiswaRemidial: 4 },
-        { id: "NL-2", kelas: "10-A", mapel: "Matematika Aljabar", rataNilai: 74.2, jumlahSiswaRemidial: 7 },
-        { id: "NL-3", kelas: "11-B", mapel: "Matematika Peminatan", rataNilai: 81.0, jumlahSiswaRemidial: 2 }
-      ];
- 
-      const mockJadwals = [
-        { id: "SCH-001", hari: "Senin", jamKe: "Sesi 1", kelas: "10-A", guru: "Bu Siti (Guru Matematika)", mapel: "Matematika Aljabar" },
-        { id: "SCH-002", hari: "Senin", jamKe: "Sesi 2", kelas: "10-A", guru: "Bu Siti (Guru Matematika)", mapel: "Matematika Aljabar" },
-        { id: "SCH-003", hari: "Selasa", jamKe: "Sesi 3", kelas: "10-A", guru: "Pak Joko (Wali Kelas 10A)", mapel: "Fisika Mekanika" }
-      ];
- 
-      const mockLaporans = [
-        { id: "LW-1", tanggal: "2026-07-02", waliKelas: "Pak Joko (Wali Kelas 10A)", kelas: "10-A", kategori: "Ketertiban & Kehadiran", judul: "Laporan Kehadiran KBM Pekan 1", isi: "Sebanyak 2 siswa sering terlambat masuk kelas di jam pertama. Sudah diberi pembinaan.", tindakLanjut: "Pemanggilan siswa oleh BK dan koordinasi dengan orang tua." }
-      ];
- 
-      const mockGuruMasters = [
-        { id: "GM-1", guru: "Bu Siti (Guru Matematika)", mapel: "Matematika Aljabar", kelas: "10-A", jumlahJam: 4 },
-        { id: "GM-2", guru: "Pak Joko (Wali Kelas 10A)", mapel: "Fisika Mekanika", kelas: "10-A", jumlahJam: 3 },
-        { id: "GM-3", guru: "Bu Siti (Guru Matematika)", mapel: "Matematika Peminatan", kelas: "11-B", jumlahJam: 4 }
-      ];
- 
-      const mockSettings = { hariBelajar: 5, daftarKelas: ["X.1", "X.2", "XI.1", "XI.2", "XII.1", "XII.2"] };
- 
-      const mockRekapAbsen = [
-        { id: "RA-1", bulan: "Juni", tahun: "2026", waliKelas: "Pak Joko (Wali Kelas 10A)", kelas: "10-A", namaSiswa: "Ahmad Dani", hadir: 20, sakit: 1, izin: 1, alpa: 0 },
-        { id: "RA-2", bulan: "Juni", tahun: "2026", waliKelas: "Pak Joko (Wali Kelas 10A)", kelas: "10-A", namaSiswa: "Budi Santoso", hadir: 21, sakit: 0, izin: 1, alpa: 0 },
-        { id: "RA-3", bulan: "Juni", tahun: "2026", waliKelas: "Pak Joko (Wali Kelas 10A)", kelas: "10-A", namaSiswa: "Citra Lestari", hadir: 22, sakit: 0, izin: 0, alpa: 0 }
-      ];
- 
-      const mockKondisiSiswa = [
-        { id: "KS-1", bulan: "Juni", tahun: "2026", waliKelas: "Pak Joko (Wali Kelas 10A)", kelas: "10-A", namaSiswa: "Ahmad Dani", kehadiran: "95% (Hadir terus)", prestasiAkademik: "Kenaikan rata-rata nilai Fisika dari 70 ke 85", prestasiNonAkademik: "Aktif di tim basket sekolah", tujuanSetelahLulus: "Kuliah Teknik Elektro di ITS" },
-        { id: "KS-2", bulan: "Juni", tahun: "2026", waliKelas: "Pak Joko (Wali Kelas 10A)", kelas: "10-A", namaSiswa: "Budi Santoso", kehadiran: "98% (Sangat Baik)", prestasiAkademik: "Peringkat 3 paralel matematika", prestasiNonAkademik: "Ketua OSIS periode 2026", tujuanSetelahLulus: "Kuliah Manajemen Bisnis di UI" }
-      ];
- 
-      const mockSiswaGW = [
-        { id: "SGW-1", nis: "12345", namaSiswa: "Ahmad Dani", kelas: "10-A", guruWali: "Ibu Rahma (Guru Wali)" },
-        { id: "SGW-2", nis: "12346", namaSiswa: "Budi Santoso", kelas: "10-A", guruWali: "Ibu Rahma (Guru Wali)" },
-        { id: "SGW-3", nis: "12347", namaSiswa: "Citra Lestari", kelas: "10-A", guruWali: "Ibu Rahma (Guru Wali)" }
-      ];
- 
-      const mockJurnal7KAIH = [
-        { id: "JK-1", tanggal: "2026-07-02", nis: "12345", namaSiswa: "Ahmad Dani", bangunPagi: "Ya", beribadah: "Ya", berolahraga: "Ya", makanSehat: "Ya", gemarBelajar: "Ya", bermasyarakat: "Ya", tidurCepat: "Ya" }
-      ];
- 
-      const mockCatatanBimbingan = [
-        { id: "CB-1", tanggal: "2026-07-03", guruWali: "Ibu Rahma (Guru Wali)", namaSiswa: "Ahmad Dani", catatanPerkembangan: "Ahmad menunjukkan perkembangan yang sangat baik dalam kedisiplinan dan ibadah." }
-      ];
-      
-      const mockStudents = [
-        { id: "SIS-1", nis: "12345", namaSiswa: "Ahmad Dani", kelas: "10-A" },
-        { id: "SIS-2", nis: "12346", namaSiswa: "Budi Santoso", kelas: "10-A" },
-        { id: "SIS-3", nis: "12347", namaSiswa: "Citra Lestari", kelas: "10-A" }
-      ];
+      const realUsers = (snap.users && snap.users.length > 0) ? snap.users : ((snap.gurumasters && snap.gurumasters.length > 0) ? snap.gurumasters : []);
+      const realJurnals = (snap.jurnals && snap.jurnals.length > 0) ? snap.jurnals : [];
+      const realJadwals = (snap.jadwals && snap.jadwals.length > 0) ? snap.jadwals : [];
+      const realGuruMasters = (snap.gurumasters && snap.gurumasters.length > 0) ? snap.gurumasters : [];
+      const realStudents = (snap.students && snap.students.length > 0) ? snap.students : [];
+      const realSiswaGW = (snap.siswagw && snap.siswagw.length > 0) ? snap.siswagw : [];
+      const realRekapAbsen = (snap.rekapabsen && snap.rekapabsen.length > 0) ? snap.rekapabsen : [];
+      const realPerangkats = (snap.perangkats && snap.perangkats.length > 0) ? snap.perangkats : [];
+      const realKelasMapelPilihan = (snap.kelasmapelpilihan && snap.kelasmapelpilihan.length > 0) ? snap.kelasmapelpilihan : [];
+      const realLaporans = (snap.laporans && snap.laporans.length > 0) ? snap.laporans : [];
+      const realJurnal7KAIH = (snap.jurnal7kaih && snap.jurnal7kaih.length > 0) ? snap.jurnal7kaih : [];
+      const realCatatanBimbingan = (snap.catatanbimbingan && snap.catatanbimbingan.length > 0) ? snap.catatanbimbingan : [];
 
       const mockSesi = [
         { id: "SES-001", namaSesi: "Sesi 1", jamMulai: "07:00", jamSelesai: "07:45" },
@@ -20985,22 +23225,57 @@
         { id: "SES-008", namaSesi: "Sesi 8", jamMulai: "13:15", jamSelesai: "14:00" }
       ];
       
-      if (!localStorage.getItem('db_users')) localStorage.setItem('db_users', JSON.stringify(mockUsers));
-      if (!localStorage.getItem('db_jurnals')) localStorage.setItem('db_jurnals', JSON.stringify(mockJurnals));
-      if (!localStorage.getItem('db_perangkats')) localStorage.setItem('db_perangkats', JSON.stringify(mockPerangkats));
-      if (!localStorage.getItem('db_nilais')) localStorage.setItem('db_nilais', JSON.stringify(mockNilais));
-      if (!localStorage.getItem('db_jadwals')) localStorage.setItem('db_jadwals', JSON.stringify(mockJadwals));
-      if (!localStorage.getItem('db_laporans')) localStorage.setItem('db_laporans', JSON.stringify(mockLaporans));
-      if (!localStorage.getItem('db_gurumasters')) localStorage.setItem('db_gurumasters', JSON.stringify(mockGuruMasters));
-      if (!localStorage.getItem('db_settings')) localStorage.setItem('db_settings', JSON.stringify(mockSettings));
-      if (!localStorage.getItem('db_rekap_absen')) localStorage.setItem('db_rekap_absen', JSON.stringify(mockRekapAbsen));
-      if (!localStorage.getItem('db_kondisi_siswa')) localStorage.setItem('db_kondisi_siswa', JSON.stringify(mockKondisiSiswa));
-      if (!localStorage.getItem('db_siswagw')) localStorage.setItem('db_siswagw', JSON.stringify(mockSiswaGW));
-      if (!localStorage.getItem('db_jurnal7kaih')) localStorage.setItem('db_jurnal7kaih', JSON.stringify(mockJurnal7KAIH));
-      if (!localStorage.getItem('db_catatanbimbingan')) localStorage.setItem('db_catatanbimbingan', JSON.stringify(mockCatatanBimbingan));
-      if (!localStorage.getItem('db_students')) localStorage.setItem('db_students', JSON.stringify(mockStudents));
-      if (!localStorage.getItem('db_sesi')) localStorage.setItem('db_sesi', JSON.stringify(mockSesi));
+      // FORCE OVERWRITE REAL DATA TO LOCALSTORAGE & CACHE TO PURGE ANY OLD DUMMY CACHE
+      localStorage.setItem('db_students', JSON.stringify(realStudents));
+      localStorage.setItem('cache_students', JSON.stringify(realStudents));
+
+      localStorage.setItem('db_users', JSON.stringify(realUsers));
+      localStorage.setItem('cache_teachers', JSON.stringify(realUsers));
+
+      localStorage.setItem('db_jurnals', JSON.stringify(realJurnals));
+      localStorage.setItem('cache_jurnals', JSON.stringify(realJurnals));
+
+      localStorage.setItem('db_perangkats', JSON.stringify(realPerangkats));
+      localStorage.setItem('cache_perangkats', JSON.stringify(realPerangkats));
+
+      localStorage.setItem('db_jadwals', JSON.stringify(realJadwals));
+      localStorage.setItem('cache_jadwals', JSON.stringify(realJadwals));
+
+      localStorage.setItem('db_laporans', JSON.stringify(realLaporans));
+      localStorage.setItem('db_gurumasters', JSON.stringify(realGuruMasters));
+      localStorage.setItem('db_rekap_absen', JSON.stringify(realRekapAbsen));
+      localStorage.setItem('db_siswagw', JSON.stringify(realSiswaGW));
+      localStorage.setItem('db_kelasmapelpilihan', JSON.stringify(realKelasMapelPilihan));
+      localStorage.setItem('db_jurnal7kaih', JSON.stringify(realJurnal7KAIH));
+      localStorage.setItem('db_catatanbimbingan', JSON.stringify(realCatatanBimbingan));
+      localStorage.setItem('db_sesi', JSON.stringify(mockSesi));
+
+      if (window.appState) {
+        window.appState.studentList = realStudents;
+        window.appState.jurnalList = realJurnals;
+        window.appState.teacherList = realUsers;
+        window.appState.jadwalList = realJadwals;
+        window.appState.siswaGuruWaliList = realSiswaGW;
+        window.appState.kelasMapelPilihanList = realKelasMapelPilihan;
+        window.appState.jurnal7KAIHList = realJurnal7KAIH;
+        window.appState.catatanBimbinganList = realCatatanBimbingan;
+      }
     }
+
+    // Auto-Purge Old Mock Data from Browser LocalStorage on Page Load
+    (function autoPurgeOldMockData() {
+      try {
+        const s = JSON.parse(localStorage.getItem('db_students') || '[]');
+        const isMock = s.some(x => x.namaSiswa === 'Ahmad Dani' || x.namaSiswa === 'Budi Santoso' || x.namaSiswa === 'Citra Lestari');
+        if (isMock || s.length < 10 || !localStorage.getItem('real_smapat_v100_purged')) {
+          console.warn('[Auto-Purge] Clearing old mock data and forcing 100% REAL SMAN 4 SOPPENG data...');
+          localStorage.setItem('real_smapat_v100_purged', 'true');
+          initializeMockDatabase();
+        }
+      } catch (err) {
+        initializeMockDatabase();
+      }
+    })();
 
     // ==================== PATRIOT SMAPAT: EXCEL IMPORT & ROLE FUNCTIONS ====================
 
@@ -21493,7 +23768,13 @@
       if (!tbody) return;
       tbody.innerHTML = "";
       
-      const list = appState.siswaGuruWaliList || [];
+      let list = appState.siswaGuruWaliList || [];
+      const user = appState.user;
+      
+      if (user && user.role !== "Admin" && user.role !== "Wakasek" && user.role !== "Kepala Sekolah") {
+        list = list.filter(item => isUserMatch(item.guruWali, user) || isUserMatch(item.wali, user));
+      }
+      
       if (list.length === 0) {
         tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Belum ada data siswa perwalian.</td></tr>`;
         return;
@@ -21504,8 +23785,8 @@
         const pct = calculateAttendancePercentage(item.namaSiswa, item.kelas);
         tr.innerHTML = `
           <td style="font-family: monospace;">${item.nis || '-'}</td>
-          <td style="font-weight:600;">${item.namaSiswa}</td>
-          <td><span class="badge badge-primary">${item.kelas}</span></td>
+          <td style="font-weight:600;">${item.namaSiswa || '-'}</td>
+          <td><span class="badge badge-primary">${item.kelas || '-'}</span></td>
           <td><span class="badge badge-success" style="font-weight: 700;">${pct}</span></td>
           <td>
             <button class="btn btn-danger" onclick="deleteGuruWaliStudent('${item.id}')" style="padding:0.25rem 0.5rem; font-size:0.75rem;"><i class="fa-solid fa-trash"></i></button>
@@ -23292,6 +25573,154 @@
           });
       });
     }
-  </script>
+  
+    // ==================== GAS DATABASE & MIGRATION UI HELPERS ====================
+    window.openGasMigrationModal = function() {
+      const modal = document.getElementById("gasMigrationModal");
+      if (modal) {
+        modal.style.display = "flex";
+        const input = document.getElementById("inputGasUrlModal");
+        if (input) input.value = localStorage.getItem("GAS_API_URL") || GAS_API_URL || "";
+      }
+    };
+    window.closeGasMigrationModal = function() {
+      const modal = document.getElementById("gasMigrationModal");
+      if (modal) modal.style.display = "none";
+    };
+    window.saveGasUrlFromModal = function() {
+      const val = document.getElementById("inputGasUrlModal")?.value?.trim();
+      if (val) {
+        localStorage.setItem("GAS_API_URL", val);
+        GAS_API_URL = val;
+        alert("✅ Web App URL Google Apps Script berhasil disimpan!\nAplikasi kini terhubung ke Google Sheets.");
+      } else {
+        localStorage.removeItem("GAS_API_URL");
+        GAS_API_URL = "";
+        alert("ℹ️ Web App URL GAS dikosongkan.");
+      }
+    };
+    window.testGasUrlFromModal = async function() {
+      const val = document.getElementById("inputGasUrlModal")?.value?.trim() || GAS_API_URL;
+      if (!val) {
+        alert("⚠️ Harap isi Web App URL GAS terlebih dahulu.");
+        return;
+      }
+      const statusDiv = document.getElementById("gasMigrationStatus");
+      if (statusDiv) statusDiv.innerHTML = "<span style='color:var(--warning);'>⏳ Menghubungi Google Apps Script...</span>";
+      try {
+        const res = await fetch(val, {
+          method: 'POST',
+          mode: 'cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: "getSiswaPublic" })
+        });
+        const json = await res.json();
+        if (json.status === 'success') {
+          if (statusDiv) statusDiv.innerHTML = "<span style='color:var(--success);'>✅ Koneksi ke Google Apps Script Berhasil!</span>";
+          alert("🎉 Koneksi ke Google Apps Script BERHASIL!");
+        } else {
+          if (statusDiv) statusDiv.innerHTML = "<span style='color:var(--danger);'>⚠️ Respon Gagal: " + (json.message || "") + "</span>";
+        }
+      } catch(err) {
+        if (statusDiv) statusDiv.innerHTML = "<span style='color:var(--danger);'>❌ Gagal terhubung: " + err.message + "</span>";
+      }
+    };
+    window.uploadAndMigrateFirebaseJsonFromModal = async function() {
+      const fileInput = document.getElementById("inputFirebaseJsonModal");
+      const statusDiv = document.getElementById("gasMigrationStatus");
+      const activeUrl = localStorage.getItem("GAS_API_URL") || GAS_API_URL;
+
+      if (!activeUrl) {
+        alert("⚠️ Harap isi dan simpan Web App URL Google Apps Script terlebih dahulu!");
+        return;
+      }
+      if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        alert("⚠️ Silakan pilih berkas patriot-smapat-default-rtdb-export.json terlebih dahulu!");
+        return;
+      }
+
+      const file = fileInput.files[0];
+      if (statusDiv) statusDiv.innerHTML = "<span style='color:var(--warning);'>⏳ Membaca berkas " + file.name + "...</span>";
+
+      const reader = new FileReader();
+      reader.onload = async function(e) {
+        try {
+          const jsonContent = JSON.parse(e.target.result);
+          if (statusDiv) statusDiv.innerHTML = "<span style='color:var(--warning);'>🚀 Mengunggah data ke Google Sheets... Mohon tunggu...</span>";
+
+          const response = await fetch(activeUrl, {
+            method: 'POST',
+            mode: 'cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: "importBulkFirebaseData",
+              payload: jsonContent
+            })
+          });
+
+          const res = await response.json();
+          if (res.status === 'success') {
+            if (statusDiv) statusDiv.innerHTML = "<span style='color:var(--success);'>🎉 Impor Berhasil! Seluruh data tersimpan di Google Sheets.</span>";
+            alert("🎉 IMPOR SUKSES!\n" + (res.data?.message || "Data Firebase telah berhasil dimigrasikan ke Google Sheets."));
+            location.reload();
+          } else {
+            if (statusDiv) statusDiv.innerHTML = "<span style='color:var(--danger);'>⚠️ Impor Gagal: " + (res.message || "") + "</span>";
+          }
+        } catch(err) {
+          if (statusDiv) statusDiv.innerHTML = "<span style='color:var(--danger);'>❌ Kesalahan Impor: " + err.message + "</span>";
+        }
+      };
+      reader.readAsText(file);
+    };
+</script>
+
+  <!-- ==================== MODAL PENGATURAN GAS & MIGRASI DATABASE ==================== -->
+  <div class="modal-overlay" id="gasMigrationModal" style="display:none; z-index: 99999;">
+    <div class="modal-box glass-effect" style="max-width: 550px; border-radius: 1.5rem; padding: 1.5rem;">
+      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; margin-bottom: 1rem;">
+        <h3 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 0.5rem;">
+          <i class="fa-solid fa-database" style="color: var(--primary);"></i> Pengaturan Database GAS & Migrasi
+        </h3>
+        <button class="modal-close" onclick="closeGasMigrationModal()" style="background: none; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer;">&times;</button>
+      </div>
+      <div class="modal-body" style="display: flex; flex-direction: column; gap: 1.25rem;">
+        
+        <!-- SECTION 1: SET GAS URL -->
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 1rem; border-radius: 1rem;">
+          <label style="font-weight: 600; font-size: 0.9rem; color: var(--text-main); display: block; margin-bottom: 0.5rem;">
+            <i class="fa-solid fa-link" style="color: var(--accent);"></i> Web App URL Google Apps Script (GAS)
+          </label>
+          <input type="text" id="inputGasUrlModal" placeholder="https://script.google.com/macros/s/AKfycbz.../exec" style="width: 100%; padding: 0.75rem; border-radius: 0.5rem; border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-main); font-size: 0.85rem; margin-bottom: 0.75rem;">
+          <div style="display: flex; gap: 0.5rem;">
+            <button onclick="saveGasUrlFromModal()" class="btn btn-primary" style="flex: 1; padding: 0.6rem; font-size: 0.85rem;">
+              <i class="fa-solid fa-floppy-disk"></i> Simpan URL GAS
+            </button>
+            <button onclick="testGasUrlFromModal()" class="btn btn-secondary" style="padding: 0.6rem; font-size: 0.85rem;">
+              <i class="fa-solid fa-plug"></i> Tes Koneksi
+            </button>
+          </div>
+        </div>
+
+        <!-- SECTION 2: IMPORT FIREBASE JSON -->
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 1rem; border-radius: 1rem;">
+          <label style="font-weight: 600; font-size: 0.9rem; color: var(--text-main); display: block; margin-bottom: 0.5rem;">
+            <i class="fa-solid fa-file-import" style="color: var(--success);"></i> Impor Berkas Firebase RTDB (.json)
+          </label>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0; margin-bottom: 0.75rem;">
+            Pilih berkas ekspor <code style="color: var(--accent);">patriot-smapat-default-rtdb-export.json</code> untuk mengunggah seluruh 15 tabel ke Google Sheets.
+          </p>
+          <input type="file" id="inputFirebaseJsonModal" accept=".json" style="width: 100%; padding: 0.5rem; border-radius: 0.5rem; border: 1px dashed var(--border-color); background: var(--bg-input); color: var(--text-main); font-size: 0.85rem; margin-bottom: 0.75rem;">
+          <button onclick="uploadAndMigrateFirebaseJsonFromModal()" class="btn btn-success" style="width: 100%; padding: 0.75rem; font-size: 0.9rem; font-weight: 600;">
+            <i class="fa-solid fa-cloud-arrow-up"></i> Impor Seluruh Data ke Google Sheets
+          </button>
+          <div id="gasMigrationStatus" style="margin-top: 0.75rem; font-size: 0.85rem; min-height: 1.5rem;"></div>
+        </div>
+
+      </div>
+      <div class="modal-footer" style="margin-top: 1rem; text-align: right;">
+        <button onclick="closeGasMigrationModal()" class="btn btn-secondary" style="padding: 0.5rem 1.25rem;">Tutup</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
