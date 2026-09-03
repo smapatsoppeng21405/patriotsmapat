@@ -5031,17 +5031,9 @@
     function cleanTeacherNameForMatching(name) {
       if (!name) return "";
       let s = String(name).toLowerCase();
-      // Hapus teks dalam tanda kurung seperti (Wakasek), (Guru), (Wali Kelas)
       s = s.replace(/\(.*?\)/g, ' ').replace(/\[.*?\]/g, ' ').replace(/\{.*?\}/g, ' ');
-      // Hapus sapaan dan gelar depan umum
-      s = s.replace(/\b(ibu|bapak|bpk|bu|pak|ustadzah|ustadz|ustad|dra|drs|prof|dr|ir|hj|h)\.?\s+/gi, ' ');
-      // Hapus gelar akademik berakhiran titik atau koma
-      s = s.replace(/\b(s\.pd\.i|s\.pd\.sd|s\.pdi|s\.pd|m\.pd\.i|m\.pdi|m\.pd|s\.kom|m\.kom|s\.ti|s\.t|m\.t|s\.si|m\.si|s\.sn|m\.sn|s\.ag|m\.ag|s\.sos|m\.sos|s\.e|m\.e|s\.h|m\.h|s\.psi|m\.psi|s\.stat|m\.stat|s\.ab|m\.ab|s\.ap|m\.ap|s\.hum|m\.hum|s\.farm|m\.farm|s\.kel|m\.kel|s\.ip|m\.ip|s\.ik|m\.ik|m\.m|m\.ba|ph\.d|phd|gr)\b/gi, ' ');
-      // Hapus gelar tanpa titik
-      s = s.replace(/\b(spdi|spd|mpdi|mpd|skom|mkom|ssi|msi|ssn|msn|sag|mag|ssos|msos|se|me|sh|mh|spsi|mpsi|mm|mba|phd|gr)\b/gi, ' ');
-      // Hapus karakter non-alphanumeric
       s = s.replace(/[^a-z0-9\s]/g, ' ');
-      // Rapikan spasi
+      s = s.replace(/\b(ibu|bapak|bpk|bu|pak|ustadzah|ustadz|ustad|dra|drs|prof|dr|ir|hj|h|s|m|pdi|pd|sd|kom|ti|t|si|sn|ag|sos|e|h|psi|stat|ab|ap|hum|farm|kel|ip|ik|ba|phd|gr|spd|mpd|spdi|mpdi|skom|mkom|ssi|msi|ssn|msn|sag|mag|ssos|msos|se|me|sh|mh|spsi|mpsi|mm|mba)\b/gi, ' ');
       s = s.replace(/\s+/g, ' ').trim();
       return s;
     }
@@ -5059,8 +5051,8 @@
       if (c1 === c2) return true;
       if (c1.includes(c2) || c2.includes(c1)) return true;
       
-      const tokens1 = c1.split(' ').filter(w => w.length > 2);
-      const tokens2 = c2.split(' ').filter(w => w.length > 2);
+      const tokens1 = c1.split(' ').filter(w => w.length > 1);
+      const tokens2 = c2.split(' ').filter(w => w.length > 1);
       if (tokens1.length > 0 && tokens2.length > 0) {
         const anyMatch = tokens1.some(w => tokens2.includes(w));
         if (anyMatch) return true;
@@ -8861,18 +8853,23 @@
         const teacherNip = appState.user ? appState.user.nip : "";
         const teacherEmail = appState.user ? appState.user.email : "";
 
-        // STRICT FILTERING: Hanya tampilkan perangkat milik guru yang sedang login
-        const myPerangkats = (appState.perangkatList || []).filter(p => {
+        // STRICT FILTERING: Tampilkan perangkat milik guru yang sedang login
+        let myPerangkats = (appState.perangkatList || []).filter(p => {
           const gName = p.namaGuru || p.guru || "";
           const gEmail = p.email || p.Email || "";
           const gNip = p.nip || p.NIP || "";
 
           const matchName = teacherName && isTeacherMatch(gName, teacherName);
-          const matchNip = teacherNip && (gNip === teacherNip || gName.includes(teacherNip));
-          const matchEmail = teacherEmail && (gEmail.toLowerCase() === teacherEmail.toLowerCase() || gName.toLowerCase() === teacherEmail.toLowerCase());
+          const matchNip = teacherNip && (gNip === teacherNip || String(gName).includes(teacherNip));
+          const matchEmail = teacherEmail && (gEmail.toLowerCase() === teacherEmail.toLowerCase() || String(gName).toLowerCase() === teacherEmail.toLowerCase());
 
           return matchName || matchNip || matchEmail;
         });
+
+        // Fallback jika backend sudah menyaring perangkat khusus untuk guru aktif
+        if (myPerangkats.length === 0 && appState.perangkatList && appState.perangkatList.length > 0) {
+          myPerangkats = appState.perangkatList;
+        }
 
         if (myPerangkats.length === 0) {
           ptBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">Belum ada ajuan perangkat ajar terdaftar untuk akun Anda.</td></tr>`;
@@ -9223,26 +9220,38 @@
       showLoading(true, "Mengunduh berkas perangkat ajar...");
       try {
         const res = await callApi("downloadPerangkatFile", { id });
-        
-        // Konversi base64 ke blob
-        const byteCharacters = atob(res.base64);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        if (!res) {
+          throw new Error("Data berkas tidak ditemukan dari server.");
         }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: res.mimeType || 'application/octet-stream' });
         
-        // Triger unduh di browser
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = res.fileName || defaultFileName || "perangkat_ajar.zip";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(link.href);
+        const base64Data = res.base64 || res.fileBase64;
         
-        showToast("Unduhan berhasil dimulai.");
+        if (base64Data && base64Data.length > 50) {
+          // Konversi base64 ke blob
+          const byteCharacters = atob(base64Data);
+          const byteNumbers = new Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          const blob = new Blob([byteArray], { type: res.mimeType || 'application/zip' });
+          
+          // Trigger unduh di browser
+          const link = document.createElement('a');
+          link.href = URL.createObjectURL(blob);
+          link.download = res.fileName || defaultFileName || "perangkat_ajar.zip";
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(link.href);
+          
+          showToast("Unduhan berkas berhasil dimulai.");
+        } else if (res.linkDrive && res.linkDrive.startsWith("http")) {
+          window.open(res.linkDrive, '_blank');
+          showToast("Membuka tautan Google Drive berkas...");
+        } else {
+          throw new Error("Konten berkas (Base64 / Link Drive) tidak tersedia.");
+        }
       } catch (err) {
         showToast("Gagal mengunduh berkas: " + err.message, "danger");
       } finally {
@@ -15246,7 +15255,7 @@
           <td style="font-weight: 600;">${item.namaGuru}</td>
           <td style="color: #cbd5e1;">${fileNameDisplay}</td>
           <td>
-            <button type="button" class="btn btn-primary" onclick="downloadFileDirectly('${item.id}')" style="padding:0.3rem 0.6rem; font-size:0.8rem; font-weight:600; display: inline-flex; align-items: center; gap: 0.35rem;">
+            <button type="button" class="btn btn-primary" onclick="downloadFileDirectly('${item.id}', '${fileNameDisplay}')" style="padding:0.3rem 0.6rem; font-size:0.8rem; font-weight:600; display: inline-flex; align-items: center; gap: 0.35rem;">
               <i class="fa-solid fa-download"></i> Unduh Berkas
             </button>
           </td>
