@@ -14580,21 +14580,27 @@
     function formatTimeForInput(val) {
       if (!val) return "";
       const str = String(val).trim();
+      if (str.includes("T") || str.includes("Z") || str.includes("1899")) {
+        try {
+          const d = new Date(str);
+          if (!isNaN(d.getTime())) {
+            let h = d.getHours();
+            let m = d.getMinutes();
+            if (m % 15 === 4) m -= 4;
+            else if (m % 15 === 5) m -= 5;
+            else {
+              m = Math.round(m / 15) * 15;
+              if (m === 60) { m = 0; h = (h + 1) % 24; }
+            }
+            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+          }
+        } catch (e) {}
+      }
       const match = str.match(/(\d{1,2}):(\d{2})/);
       if (match) {
         const h = match[1].padStart(2, '0');
         const m = match[2];
         return `${h}:${m}`;
-      }
-      if (str.includes("T") || str.includes("Z")) {
-        try {
-          const d = new Date(str);
-          if (!isNaN(d.getTime())) {
-            const h = String(d.getHours()).padStart(2, '0');
-            const m = String(d.getMinutes()).padStart(2, '0');
-            return `${h}:${m}`;
-          }
-        } catch (e) {}
       }
       return str;
     }
