@@ -13530,14 +13530,16 @@
       ];
 
       const mockSesi = [
-        { id: "SES-001", namaSesi: "Sesi 1", jamMulai: "07:00", jamSelesai: "07:45" },
-        { id: "SES-002", namaSesi: "Sesi 2", jamMulai: "07:45", jamSelesai: "08:30" },
-        { id: "SES-003", namaSesi: "Sesi 3", jamMulai: "08:30", jamSelesai: "09:15" },
-        { id: "SES-004", namaSesi: "Sesi 4", jamMulai: "09:30", jamSelesai: "10:15" },
-        { id: "SES-005", namaSesi: "Sesi 5", jamMulai: "10:15", jamSelesai: "11:00" },
-        { id: "SES-006", namaSesi: "Sesi 6", jamMulai: "11:00", jamSelesai: "11:45" },
-        { id: "SES-007", namaSesi: "Sesi 7", jamMulai: "12:30", jamSelesai: "13:15" },
-        { id: "SES-008", namaSesi: "Sesi 8", jamMulai: "13:15", jamSelesai: "14:00" }
+        { id: "-OyhneB2ahli6p", namaSesi: "Jam 1", jamMulai: "07:30", jamSelesai: "08:15" },
+        { id: "-Oyhnj83cW_2D", namaSesi: "Jam 2", jamMulai: "08:15", jamSelesai: "09:00" },
+        { id: "-Oyhnz0EG1HB", namaSesi: "Jam 3", jamMulai: "09:00", jamSelesai: "09:45" },
+        { id: "-OyhoBlKVK90s", namaSesi: "Jam 4", jamMulai: "09:45", jamSelesai: "10:30" },
+        { id: "-OyhoHnL4N-zirl", namaSesi: "Jam 5", jamMulai: "10:45", jamSelesai: "11:30" },
+        { id: "-OyhoN-bQkFzjb", namaSesi: "Jam 6", jamMulai: "11:30", jamSelesai: "12:15" },
+        { id: "-OyhoRFwcr8BF", namaSesi: "Jam 7", jamMulai: "12:30", jamSelesai: "13:15" },
+        { id: "-OyhohrJOyyQc", namaSesi: "Jam 8", jamMulai: "13:15", jamSelesai: "14:00" },
+        { id: "-Oyhoo6co5ta17", namaSesi: "Jam 9", jamMulai: "14:00", jamSelesai: "14:45" },
+        { id: "-OyhotQGZBI-0X", namaSesi: "Jam 10", jamMulai: "14:45", jamSelesai: "15:30" }
       ];
       
       localStorage.setItem('db_users', JSON.stringify(mockUsers));
@@ -14578,24 +14580,21 @@
     function formatTimeForInput(val) {
       if (!val) return "";
       const str = String(val).trim();
-      if (str.includes("1899-12-30") || (str.includes("T") && str.includes("Z"))) {
-        const isoMatch = str.match(/T(\d{2}):(\d{2}):(\d{2})/);
-        if (isoMatch) {
-          const utcH = parseInt(isoMatch[1], 10);
-          const utcM = parseInt(isoMatch[2], 10);
-          const utcS = parseInt(isoMatch[3], 10);
-          const totalSec = utcH * 3600 + utcM * 60 + utcS + 23125;
-          const totalMin = Math.round(totalSec / 60);
-          const locH = Math.floor(totalMin / 60) % 24;
-          const locM = totalMin % 60;
-          return `${String(locH).padStart(2, '0')}:${String(locM).padStart(2, '0')}`;
-        }
-      }
       const match = str.match(/(\d{1,2}):(\d{2})/);
       if (match) {
         const h = match[1].padStart(2, '0');
         const m = match[2];
         return `${h}:${m}`;
+      }
+      if (str.includes("T") || str.includes("Z")) {
+        try {
+          const d = new Date(str);
+          if (!isNaN(d.getTime())) {
+            const h = String(d.getHours()).padStart(2, '0');
+            const m = String(d.getMinutes()).padStart(2, '0');
+            return `${h}:${m}`;
+          }
+        } catch (e) {}
       }
       return str;
     }
