@@ -12879,23 +12879,23 @@
             const sessions = JSON.parse(localStorage.getItem('db_sesi')) || [];
             const id = payload.id || "";
             if (id) {
-              const idx = sessions.findIndex(s => s.id === id);
+              const idx = sessions.findIndex(s => s.id && id && s.id.toString() === id.toString());
               if (idx !== -1) {
                 sessions[idx] = {
                   id: id,
                   namaSesi: payload.namaSesi,
-                  jamMulai: payload.jamMulai,
-                  jamSelesai: payload.jamSelesai
+                  jamMulai: formatTimeForInput(payload.jamMulai),
+                  jamSelesai: formatTimeForInput(payload.jamSelesai)
                 };
                 safeLocalStorageSetItem('db_sesi', JSON.stringify(sessions));
               }
               resolve({ success: true, id: id });
             } else {
               const newSesi = {
-                id: "SES-" + new Date().getTime(),
+                id: "-Oyh" + Math.random().toString(36).substr(2, 9),
                 namaSesi: payload.namaSesi,
-                jamMulai: payload.jamMulai,
-                jamSelesai: payload.jamSelesai
+                jamMulai: formatTimeForInput(payload.jamMulai),
+                jamSelesai: formatTimeForInput(payload.jamSelesai)
               };
               sessions.push(newSesi);
               safeLocalStorageSetItem('db_sesi', JSON.stringify(sessions));
