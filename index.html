@@ -8057,7 +8057,13 @@
           if (data.studentList && data.studentList.length > 0) appState.studentList = data.studentList;
           if (data.catatanWaliKelasList && data.catatanWaliKelasList.length > 0) appState.catatanWaliKelasList = data.catatanWaliKelasList;
           if (data.kelasMapelPilihanList && data.kelasMapelPilihanList.length > 0) appState.kelasMapelPilihanList = data.kelasMapelPilihanList;
-          if (data.sesiList && data.sesiList.length > 0) appState.sesiList = data.sesiList;
+          if (data.sesiList && data.sesiList.length > 0) {
+            appState.sesiList = data.sesiList.map(s => ({
+              ...s,
+              jamMulai: formatTimeForInput(s.jamMulai),
+              jamSelesai: formatTimeForInput(s.jamSelesai)
+            }));
+          }
           
           // Jika data masih kosong akibat masalah jaringan, inisialisasi dari mock DB cadangan
           if (!appState.jurnalList || appState.jurnalList.length === 0) {
@@ -10616,7 +10622,9 @@
         const lbl = document.createElement('label');
         lbl.htmlFor = `cb_sesi_${s.id}`;
         lbl.style.cssText = "cursor: pointer; font-size: 0.85rem; font-weight: 500; margin: 0; color: #cbd5e1;";
-        lbl.textContent = `${s.namaSesi} (${s.jamMulai} - ${s.jamSelesai})`;
+        const jMulai = formatTimeForInput(s.jamMulai) || s.jamMulai || "-";
+        const jSelesai = formatTimeForInput(s.jamSelesai) || s.jamSelesai || "-";
+        lbl.textContent = `${s.namaSesi} (${jMulai} - ${jSelesai})`;
         
         div.appendChild(cb);
         div.appendChild(lbl);
@@ -10657,7 +10665,9 @@
         const lbl = document.createElement('label');
         lbl.htmlFor = `cb_guru_sesi_${s.id}`;
         lbl.style.cssText = "cursor: pointer; font-size: 0.85rem; font-weight: 500; margin: 0; color: #cbd5e1;";
-        lbl.textContent = `${s.namaSesi} (${s.jamMulai} - ${s.jamSelesai})`;
+        const jMulai = formatTimeForInput(s.jamMulai) || s.jamMulai || "-";
+        const jSelesai = formatTimeForInput(s.jamSelesai) || s.jamSelesai || "-";
+        lbl.textContent = `${s.namaSesi} (${jMulai} - ${jSelesai})`;
         
         div.appendChild(cb);
         div.appendChild(lbl);
@@ -14568,13 +14578,18 @@
     function formatTimeForInput(val) {
       if (!val) return "";
       const str = String(val).trim();
-      if (str.includes("T") && str.includes("Z")) {
-        try {
-          const d = new Date(str);
-          const h = String(d.getHours()).padStart(2, '0');
-          const m = String(d.getMinutes()).padStart(2, '0');
-          return `${h}:${m}`;
-        } catch (e) {}
+      if (str.includes("1899-12-30") || (str.includes("T") && str.includes("Z"))) {
+        const isoMatch = str.match(/T(\d{2}):(\d{2}):(\d{2})/);
+        if (isoMatch) {
+          const utcH = parseInt(isoMatch[1], 10);
+          const utcM = parseInt(isoMatch[2], 10);
+          const utcS = parseInt(isoMatch[3], 10);
+          const totalSec = utcH * 3600 + utcM * 60 + utcS + 23125;
+          const totalMin = Math.round(totalSec / 60);
+          const locH = Math.floor(totalMin / 60) % 24;
+          const locM = totalMin % 60;
+          return `${String(locH).padStart(2, '0')}:${String(locM).padStart(2, '0')}`;
+        }
       }
       const match = str.match(/(\d{1,2}):(\d{2})/);
       if (match) {
@@ -14903,7 +14918,7 @@
         let detailCell = "-";
         
         const sessInfo = sessions.find(s => s.namaSesi === sched.jamKe);
-        const timeStr = sessInfo ? `${sessInfo.jamMulai} - ${sessInfo.jamSelesai}` : "-";
+        const timeStr = sessInfo ? `${formatTimeForInput(sessInfo.jamMulai)} - ${formatTimeForInput(sessInfo.jamSelesai)}` : "-";
         
         if (matchingJournal) {
           if (matchingJournal.mode === "Tidak Masuk") {
@@ -15098,7 +15113,7 @@
         });
         
         const sessInfo = sessions.find(s => s.namaSesi === sched.jamKe);
-        const timeStr = sessInfo ? `${sessInfo.jamMulai} - ${sessInfo.jamSelesai}` : "-";
+        const timeStr = sessInfo ? `${formatTimeForInput(sessInfo.jamMulai)} - ${formatTimeForInput(sessInfo.jamSelesai)}` : "-";
         
         let status = "Belum Mengisi Jurnal";
         let detail = "Belum ada laporan dari guru bersangkutan.";
