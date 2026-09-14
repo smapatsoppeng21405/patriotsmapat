@@ -2955,9 +2955,12 @@
 
           <div class="card glass-effect" style="margin-top: 2rem;">
             <div class="card-title">Aksi Cepat Wali Kelas</div>
-            <div>
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
               <button class="btn btn-primary" onclick="switchPane('pane-walikelas-inputnilai')">
                 <i class="fa-solid fa-chart-line"></i> Input Analisis Nilai Kelas
+              </button>
+              <button class="btn btn-secondary" onclick="switchPane('pane-walikelas-catatanguruwali')">
+                <i class="fa-solid fa-comment-medical"></i> Catatan untuk Guru Wali
               </button>
             </div>
           </div>
@@ -3410,6 +3413,16 @@
               </div>
               <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--success);">
                 <i class="fa-solid fa-heart-pulse"></i>
+              </div>
+            </div>
+
+            <div class="stat-card glass-effect">
+              <div class="stat-info">
+                <h3>Catatan Wali Kelas</h3>
+                <div class="stat-number" id="gw-stat-catatan-wali">0</div>
+              </div>
+              <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--warning);">
+                <i class="fa-solid fa-comment-medical"></i>
               </div>
             </div>
           </div>
@@ -5921,6 +5934,7 @@
         } else if (paneId === "pane-walikelas-catatanguruwali") {
           const form = document.getElementById('formCatatanWaliKelas');
           if (form) form.reset();
+          populateClassDropdowns();
           const selectSiswa = document.getElementById('catatanWaliSiswaSelect');
           if (selectSiswa) selectSiswa.innerHTML = '<option value="">Pilih Siswa (Pilih Kelas Dulu)</option>';
           const classSelect = document.getElementById('catatanWaliKelasSelect');
@@ -8286,7 +8300,11 @@
       else if (role === "Guru Wali" || role === "Guru BK") {
         // Stats
         document.getElementById('gw-stat-bimbingan').textContent = appState.stats.totalSiswaBimbingan || 0;
-        document.getElementById('gw-stat-jurnal7kaih').textContent = appState.stats.totalJurnal7KAIH || 0; // Menggunakan jumlah jurnal 7KAIH terisi sebagai stat utama guru wali
+        document.getElementById('gw-stat-jurnal7kaih').textContent = appState.stats.totalJurnal7KAIH || 0;
+        const statCatatanWaliEl = document.getElementById('gw-stat-catatan-wali');
+        if (statCatatanWaliEl) {
+          statCatatanWaliEl.textContent = appState.stats.totalCatatanWali !== undefined ? appState.stats.totalCatatanWali : (appState.catatanWaliKelasList || []).length;
+        }
         
         const titleLaporan = document.querySelector('#pane-guruwali-jurnal7kaih .card-title');
         if (titleLaporan) {
