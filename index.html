@@ -3436,6 +3436,9 @@
               <button class="btn btn-primary" onclick="switchPane('pane-guruwali-jurnal7kaih')">
                 <i class="fa-solid fa-list-check"></i> Tinjau Jurnal 7KAIH & Bimbingan
               </button>
+              <button class="btn btn-warning" onclick="switchPane('pane-guruwali-catatanwalikelas')">
+                <i class="fa-solid fa-comment-medical"></i> Catatan Wali Kelas
+              </button>
             </div>
           </div>
 
@@ -3498,26 +3501,6 @@
             </form>
           </div>
 
-          <div class="card glass-effect" style="margin-bottom: 2rem;">
-            <div class="card-title">
-              <span>Catatan dari Wali Kelas untuk Siswa Bimbingan</span>
-            </div>
-            <div class="table-container">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>Tanggal</th>
-                    <th>Nama Siswa</th>
-                    <th>Wali Kelas</th>
-                    <th>Catatan dari Wali Kelas</th>
-                  </tr>
-                </thead>
-                <tbody id="gw-catatan-walikelas-table-body">
-                  <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Belum ada catatan dari Wali Kelas.</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
 
           <div class="card glass-effect" style="margin-bottom: 2rem;">
             <div class="card-title">
@@ -3575,6 +3558,30 @@
                 </thead>
                 <tbody id="gw-jurnal7kaih-table-body">
                   <tr><td colspan="9" style="text-align: center; color: var(--text-muted);">Belum ada riwayat jurnal 7KAIH dari siswa.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- GURU WALI: CATATAN DARI WALI KELAS -->
+        <div id="pane-guruwali-catatanwalikelas" class="view-pane">
+          <div class="card glass-effect" style="margin-bottom: 2rem;">
+            <div class="card-title">
+              <span>Catatan dari Wali Kelas untuk Siswa Bimbingan</span>
+            </div>
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Tanggal</th>
+                    <th>Nama Siswa</th>
+                    <th>Wali Kelas</th>
+                    <th>Catatan dari Wali Kelas</th>
+                  </tr>
+                </thead>
+                <tbody id="gw-catatan-walikelas-table-body">
+                  <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Belum ada catatan dari Wali Kelas.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -5813,12 +5820,14 @@
       } else if (role === "Guru Wali") {
         menuItems = [
           { text: "Ringkasan", pane: "pane-guruwali-ringkasan", icon: "fa-chart-pie" },
-          { text: "Jurnal 7KAIH", pane: "pane-guruwali-jurnal7kaih", icon: "fa-heart-pulse" }
+          { text: "Jurnal 7KAIH", pane: "pane-guruwali-jurnal7kaih", icon: "fa-heart-pulse" },
+          { text: "Catatan Wali Kelas", pane: "pane-guruwali-catatanwalikelas", icon: "fa-comment-medical" }
         ];
       } else if (role === "Guru BK") {
         menuItems = [
           { text: "Ringkasan BK", pane: "pane-guruwali-ringkasan", icon: "fa-chart-pie" },
-          { text: "Bimbingan & 7KAIH", pane: "pane-guruwali-jurnal7kaih", icon: "fa-heart-pulse" }
+          { text: "Bimbingan & 7KAIH", pane: "pane-guruwali-jurnal7kaih", icon: "fa-heart-pulse" },
+          { text: "Catatan Wali Kelas", pane: "pane-guruwali-catatanwalikelas", icon: "fa-comment-medical" }
         ];
       } else if (role === "Tenaga Kependidikan") {
         menuItems = [
@@ -5973,6 +5982,7 @@
         else if (paneId === "pane-wakasek-kondisisiswa") pageTitle = "Monitoring Kondisi Peserta Didik";
         else if (paneId === "pane-guruwali-ringkasan") pageTitle = "Ringkasan Dasbor Guru Wali";
         else if (paneId === "pane-guruwali-jurnal7kaih") pageTitle = "Jurnal 7KAIH Bimbingan";
+        else if (paneId === "pane-guruwali-catatanwalikelas") pageTitle = "Catatan dari Wali Kelas";
         else if (paneId === "pane-kepala-ringkasan") pageTitle = "Dasbor Kepala Sekolah";
         else if (paneId === "pane-kepala-jurnal") pageTitle = "Monitoring Jurnal KBM";
         else if (paneId === "pane-kepala-perangkat") pageTitle = "Monitoring Perangkat Ajar";
