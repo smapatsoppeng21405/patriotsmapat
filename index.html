@@ -4681,10 +4681,10 @@
           await Promise.all(keys.map(key => caches.delete(key)));
         }
 
-        // Hapus cache lokal data agar ditarik ulang secara bersih dari Firebase
+        // Hapus cache temporer browser agar ditarik ulang secara bersih tanpa merusak database fisik
         for (let i = localStorage.length - 1; i >= 0; i--) {
           const k = localStorage.key(i);
-          if (k && (k.startsWith("cache_") || k.startsWith("db_"))) {
+          if (k && k.startsWith("cache_")) {
             localStorage.removeItem(k);
           }
         }
@@ -6726,9 +6726,10 @@
           });
 
           // Jaminan Data Permanen: Jika server belum memiliki data koleksi tertentu, gabungkan data lokal agar tidak hilang setelah refresh
-          if (jdRaw.length === 0) {
-            const localJd = JSON.parse(localStorage.getItem('db_jadwals')) || JSON.parse(localStorage.getItem('cache_jadwals')) || [];
-            if (localJd.length > 0) jdRaw = localJd;
+          const rawDbJd = localStorage.getItem('db_jadwals');
+          if (jdRaw.length === 0 && rawDbJd !== "[]") {
+            const localJd = rawDbJd ? JSON.parse(rawDbJd) : (JSON.parse(localStorage.getItem('cache_jadwals')) || []);
+            if (Array.isArray(localJd) && localJd.length > 0) jdRaw = localJd;
           }
           if (jRaw.length === 0) {
             const localJ = JSON.parse(localStorage.getItem('db_jurnals')) || JSON.parse(localStorage.getItem('cache_jurnals')) || [];
@@ -6750,9 +6751,12 @@
             const localU = JSON.parse(localStorage.getItem('db_users')) || JSON.parse(localStorage.getItem('cache_teachers')) || [];
             if (localU.length > teachers.length) teachers = localU;
           }
-          if (fullStudentList.length <= 3) {
-            const localS = JSON.parse(localStorage.getItem('db_students')) || JSON.parse(localStorage.getItem('cache_students')) || [];
-            if (localS.length > fullStudentList.length) fullStudentList = localS;
+          const localS = JSON.parse(localStorage.getItem('db_students')) || JSON.parse(localStorage.getItem('cache_students')) || [];
+          if (Array.isArray(localS) && localS.length > 0) {
+            localS.forEach(ls => {
+              const exists = fullStudentList.some(s => (s.nis && ls.nis && s.nis.toString().trim() === ls.nis.toString().trim()) || (s.namaSiswa && ls.namaSiswa && s.namaSiswa.toLowerCase().trim() === ls.namaSiswa.toLowerCase().trim()));
+              if (!exists && ls.namaSiswa) fullStudentList.push(ls);
+            });
           }
           if (sesiRaw.length === 0) {
             const localSesi = JSON.parse(localStorage.getItem('db_sesi')) || JSON.parse(localStorage.getItem('cache_sesi')) || [];
@@ -8315,21 +8319,65 @@
         if (data) {
           if (data.stats && Object.keys(data.stats).length > 0) appState.stats = data.stats;
           
-          // SAFETY GUARD: Jangan pernah menimpa data yang sudah ada dengan array kosong
-          if (data.jurnalList && data.jurnalList.length > 0) appState.jurnalList = data.jurnalList;
+          // SAFETY GUARD: Gabungkan data lokal fisik (db_*) agar data pengguna tidak pernah hilang saat refresh atau update
+          const localStudents = JSON.parse(localStorage.getItem('db_students')) || [];
+          if (data.studentList && data.studentList.length > 0) {
+            const mergedS = [...data.studentList];
+            localStudents.forEach(ls => {
+              const exists = mergedS.some(s => (s.nis && ls.nis && s.nis.toString().trim() === ls.nis.toString().trim()) || (s.namaSiswa && ls.namaSiswa && s.namaSiswa.toLowerCase().trim() === ls.namaSiswa.toLowerCase().trim()));
+              if (!exists && ls.namaSiswa) mergedS.push(ls);
+            });
+            appState.studentList = mergedS;
+            safeLocalStorageSetItem('db_students', JSON.stringify(mergedS));
+          } else if (localStudents.length > 0) {
+            appState.studentList = localStudents;
+          }
+
+          const localUsers = JSON.parse(localStorage.getItem('db_users')) || [];
+          if (data.teacherList && data.teacherList.length > 0) {
+            const mergedU = [...data.teacherList];
+            localUsers.forEach(lu => {
+              const exists = mergedU.some(u => (u.email && lu.email && u.email.toLowerCase().trim() === lu.email.toLowerCase().trim()) || (u.nama && lu.nama && u.nama.toLowerCase().trim() === lu.nama.toLowerCase().trim()));
+              if (!exists && lu.nama) mergedU.push(lu);
+            });
+            appState.teacherList = mergedU;
+            safeLocalStorageSetItem('db_users', JSON.stringify(mergedU));
+          } else if (localUsers.length > 0) {
+            appState.teacherList = localUsers;
+          }
+
+          const localJurnals = JSON.parse(localStorage.getItem('db_jurnals')) || [];
+          if (data.jurnalList && data.jurnalList.length > 0) {
+            const mergedJ = [...data.jurnalList];
+            localJurnals.forEach(lj => {
+              const exists = mergedJ.some(j => j.id === lj.id || (j.tanggal === lj.tanggal && j.guru === lj.guru && j.sesi === lj.sesi && j.kelas === lj.kelas));
+              if (!exists) mergedJ.push(lj);
+            });
+            appState.jurnalList = mergedJ;
+            safeLocalStorageSetItem('db_jurnals', JSON.stringify(mergedJ));
+          } else if (localJurnals.length > 0) {
+            appState.jurnalList = localJurnals;
+          }
+
           if (data.perangkatList && data.perangkatList.length > 0) appState.perangkatList = data.perangkatList;
           if (data.nilaiList && data.nilaiList.length > 0) appState.nilaiList = data.nilaiList;
-          if (data.jadwalList !== undefined) appState.jadwalList = data.jadwalList;
           if (data.laporanWaliList && data.laporanWaliList.length > 0) appState.laporanWaliList = data.laporanWaliList;
-          if (data.guruJadwalList !== undefined) appState.guruJadwalList = data.guruJadwalList;
           if (data.guruMasterList && data.guruMasterList.length > 0) appState.guruMasterList = data.guruMasterList;
           if (data.settings) appState.settings = data.settings;
-          if (data.teacherList && data.teacherList.length > 0) appState.teacherList = data.teacherList;
           if (data.siswaGuruWaliList && data.siswaGuruWaliList.length > 0) appState.siswaGuruWaliList = data.siswaGuruWaliList;
           if (data.jurnal7KAIHList && data.jurnal7KAIHList.length > 0) appState.jurnal7KAIHList = data.jurnal7KAIHList;
-          if (data.studentList && data.studentList.length > 0) appState.studentList = data.studentList;
           if (data.catatanWaliKelasList && data.catatanWaliKelasList.length > 0) appState.catatanWaliKelasList = data.catatanWaliKelasList;
           if (data.kelasMapelPilihanList && data.kelasMapelPilihanList.length > 0) appState.kelasMapelPilihanList = data.kelasMapelPilihanList;
+
+          const rawDbJd = localStorage.getItem('db_jadwals');
+          if (rawDbJd === "[]") {
+            appState.jadwalList = [];
+            appState.guruJadwalList = [];
+          } else {
+            if (data.jadwalList !== undefined) appState.jadwalList = data.jadwalList;
+            if (data.guruJadwalList !== undefined) appState.guruJadwalList = data.guruJadwalList;
+          }
+
           if (data.sesiList && data.sesiList.length > 0) {
             appState.sesiList = data.sesiList.map(s => ({
               ...s,
@@ -8396,16 +8444,16 @@
       const getVal = (dbKey, cacheKey) => {
         try {
           const rawDb = localStorage.getItem(dbKey);
-          if (rawDb && rawDb !== "[]") {
+          if (rawDb !== null && rawDb !== undefined) {
             const parsed = JSON.parse(rawDb);
-            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+            if (Array.isArray(parsed)) return parsed;
           }
         } catch(e) {}
         try {
           const rawCache = localStorage.getItem(cacheKey) || localStorage.getItem(`${cacheKey}_${role}`);
-          if (rawCache && rawCache !== "[]") {
+          if (rawCache !== null && rawCache !== undefined) {
             const parsed = JSON.parse(rawCache);
-            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+            if (Array.isArray(parsed)) return parsed;
           }
         } catch(e) {}
         return [];
