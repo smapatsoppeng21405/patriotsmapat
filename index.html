@@ -6173,9 +6173,9 @@
         payload.currentUserWaliKelasClass = appState.user.waliKelasClass || "";
       }
 
-      const activeGasUrl = localStorage.getItem("GAS_API_URL") || GAS_API_URL || "https://script.google.com/macros/s/AKfycbxaIe9k2Tq-SlLGjtHlqSqg413Y8QVqZr4Gq_YS8FX5jukrIj-SFMheqzjiFVJswfNWKg/exec";
+      const activeGasUrl = localStorage.getItem("GAS_API_URL") || GAS_API_URL || "";
 
-      // 1. UTAMAKAN GOOGLE APPS SCRIPT WEB APP (JIKA TERSEDIA URL)
+      // 1. UTAMAKAN GOOGLE APPS SCRIPT WEB APP (JIKA TERSEDIA URL KONFIGURASI)
       if (activeGasUrl !== "") {
         try {
           const response = await fetch(activeGasUrl, {
@@ -6725,6 +6725,40 @@
             }
           });
 
+          // Jaminan Data Permanen: Jika server belum memiliki data koleksi tertentu, gabungkan data lokal agar tidak hilang setelah refresh
+          if (jdRaw.length === 0) {
+            const localJd = JSON.parse(localStorage.getItem('db_jadwals')) || JSON.parse(localStorage.getItem('cache_jadwals')) || [];
+            if (localJd.length > 0) jdRaw = localJd;
+          }
+          if (jRaw.length === 0) {
+            const localJ = JSON.parse(localStorage.getItem('db_jurnals')) || JSON.parse(localStorage.getItem('cache_jurnals')) || [];
+            if (localJ.length > 0) jRaw = localJ;
+          }
+          if (pRaw.length === 0) {
+            const localP = JSON.parse(localStorage.getItem('db_perangkats')) || JSON.parse(localStorage.getItem('cache_perangkats')) || [];
+            if (localP.length > 0) pRaw = localP;
+          }
+          if (nRaw.length === 0) {
+            const localN = JSON.parse(localStorage.getItem('db_nilais')) || JSON.parse(localStorage.getItem('cache_nilais')) || [];
+            if (localN.length > 0) nRaw = localN;
+          }
+          if (lpRaw.length === 0) {
+            const localLp = JSON.parse(localStorage.getItem('db_laporans')) || JSON.parse(localStorage.getItem('cache_laporans')) || [];
+            if (localLp.length > 0) lpRaw = localLp;
+          }
+          if (teachers.length <= 6) {
+            const localU = JSON.parse(localStorage.getItem('db_users')) || JSON.parse(localStorage.getItem('cache_teachers')) || [];
+            if (localU.length > teachers.length) teachers = localU;
+          }
+          if (fullStudentList.length <= 3) {
+            const localS = JSON.parse(localStorage.getItem('db_students')) || JSON.parse(localStorage.getItem('cache_students')) || [];
+            if (localS.length > fullStudentList.length) fullStudentList = localS;
+          }
+          if (sesiRaw.length === 0) {
+            const localSesi = JSON.parse(localStorage.getItem('db_sesi')) || JSON.parse(localStorage.getItem('cache_sesi')) || [];
+            if (localSesi.length > 0) sesiRaw = localSesi;
+          }
+
           let result = {
             role: role,
             stats: {},
@@ -6819,17 +6853,23 @@
           const cachedTeachers = JSON.parse(localStorage.getItem('cache_teachers')) || JSON.parse(localStorage.getItem('db_users')) || [];
 
           result.jurnalList = jRaw.length > 0 ? [...jRaw] : cachedJurnals;
-          result.perangkatList = pRaw.length > 0 ? [...pRaw] : (JSON.parse(localStorage.getItem('cache_perangkats')) || []);
-          result.nilaiList = nRaw.length > 0 ? [...nRaw] : (JSON.parse(localStorage.getItem('cache_nilais')) || []);
-          result.jadwalList = jdRaw.length > 0 ? [...jdRaw] : (JSON.parse(localStorage.getItem('cache_jadwals')) || []);
-          result.laporanWaliList = lpRaw.length > 0 ? [...lpRaw] : (JSON.parse(localStorage.getItem('cache_laporans')) || []);
-          result.guruMasterList = gmRaw.length > 0 ? [...gmRaw] : (JSON.parse(localStorage.getItem('cache_gurumaster')) || []);
+          result.perangkatList = pRaw.length > 0 ? [...pRaw] : (JSON.parse(localStorage.getItem('cache_perangkats')) || JSON.parse(localStorage.getItem('db_perangkats')) || []);
+          result.nilaiList = nRaw.length > 0 ? [...nRaw] : (JSON.parse(localStorage.getItem('cache_nilais')) || JSON.parse(localStorage.getItem('db_nilais')) || []);
+          result.jadwalList = jdRaw.length > 0 ? [...jdRaw] : (JSON.parse(localStorage.getItem('cache_jadwals')) || JSON.parse(localStorage.getItem('db_jadwals')) || []);
+          result.laporanWaliList = lpRaw.length > 0 ? [...lpRaw] : (JSON.parse(localStorage.getItem('cache_laporans')) || JSON.parse(localStorage.getItem('db_laporans')) || []);
+          result.guruMasterList = gmRaw.length > 0 ? [...gmRaw] : (JSON.parse(localStorage.getItem('cache_gurumaster')) || JSON.parse(localStorage.getItem('db_gurumasters')) || []);
           result.teacherList = teachers.length > 0 ? [...teachers] : cachedTeachers;
           result.rekapAbsenList = [...raRaw];
           result.kondisiSiswaList = [...ksRaw];
           result.jurnal7KAIHList = [...j7kaihRaw];
           result.catatanBimbinganList = [...cbRaw];
-          result.studentList = fullStudentList.length > 0 ? [...fullStudentList] : (JSON.parse(localStorage.getItem('cache_students')) || []);
+          result.studentList = fullStudentList.length > 0 ? [...fullStudentList] : (JSON.parse(localStorage.getItem('cache_students')) || JSON.parse(localStorage.getItem('db_students')) || []);
+
+          if (result.jadwalList.length > 0) safeLocalStorageSetItem('db_jadwals', JSON.stringify(result.jadwalList));
+          if (result.jurnalList.length > 0) safeLocalStorageSetItem('db_jurnals', JSON.stringify(result.jurnalList));
+          if (result.teacherList.length > 0) safeLocalStorageSetItem('db_users', JSON.stringify(result.teacherList));
+          if (result.studentList.length > 0) safeLocalStorageSetItem('db_students', JSON.stringify(result.studentList));
+          if (result.sesiList && result.sesiList.length > 0) safeLocalStorageSetItem('db_sesi', JSON.stringify(result.sesiList));
 
           return result;
         }
@@ -7250,17 +7290,24 @@
           await ref("jadwals").remove();
           const scheduleList = payload.scheduleList || [];
           const updates = {};
+          const fullListWithIds = [];
           scheduleList.forEach(item => {
             const newKey = ref("jadwals").push().key;
-            updates[`jadwals/${newKey}`] = {
+            const newItem = {
+              id: newKey,
               hari: item.hari,
               jamKe: item.jamKe,
+              jam: item.jam || "",
               kelas: item.kelas,
               guru: item.guru,
               mapel: item.mapel
             };
+            updates[`jadwals/${newKey}`] = newItem;
+            fullListWithIds.push(newItem);
           });
           await ref("/").update(updates);
+          safeLocalStorageSetItem('db_jadwals', JSON.stringify(fullListWithIds));
+          safeLocalStorageSetItem('cache_jadwals', JSON.stringify(fullListWithIds));
           return { success: true };
         }
 
@@ -7271,39 +7318,63 @@
 
         else if (action === "addSesi") {
           const key = payload.id || ref("sessions").push().key;
-          await ref(`sessions/${key}`).update({
+          const newSesi = {
+            id: key,
             namaSesi: payload.namaSesi,
             jamMulai: payload.jamMulai,
             jamSelesai: payload.jamSelesai
-          });
+          };
+          await ref(`sessions/${key}`).update(newSesi);
+          const localSesi = JSON.parse(localStorage.getItem('db_sesi')) || [];
+          const idx = localSesi.findIndex(s => s.id === key);
+          if (idx !== -1) localSesi[idx] = newSesi; else localSesi.push(newSesi);
+          safeLocalStorageSetItem('db_sesi', JSON.stringify(localSesi));
+          safeLocalStorageSetItem('cache_sesi', JSON.stringify(localSesi));
           return { success: true, id: key };
         }
 
         else if (action === "deleteSesi") {
           await ref(`sessions/${payload.id}`).remove();
+          const localSesi = JSON.parse(localStorage.getItem('db_sesi')) || [];
+          const updated = localSesi.filter(s => s.id !== payload.id);
+          safeLocalStorageSetItem('db_sesi', JSON.stringify(updated));
+          safeLocalStorageSetItem('cache_sesi', JSON.stringify(updated));
           return { success: true };
         }
 
         else if (action === "addJadwal") {
           const key = payload.id || ref("jadwals").push().key;
-          await ref(`jadwals/${key}`).update({
+          const newItem = {
+            id: key,
             hari: payload.hari || "",
             jamKe: payload.jamKe || payload.sesi || "",
             jam: payload.jam || "",
             kelas: payload.kelas || "",
             guru: payload.guru || payload.namaGuru || "",
             mapel: payload.mapel || ""
-          });
+          };
+          await ref(`jadwals/${key}`).update(newItem);
+          const localJd = JSON.parse(localStorage.getItem('db_jadwals')) || [];
+          const idx = localJd.findIndex(j => j.id === key);
+          if (idx !== -1) localJd[idx] = newItem; else localJd.push(newItem);
+          safeLocalStorageSetItem('db_jadwals', JSON.stringify(localJd));
+          safeLocalStorageSetItem('cache_jadwals', JSON.stringify(localJd));
           return { success: true, id: key };
         }
 
         else if (action === "deleteJadwal") {
           await ref(`jadwals/${payload.id}`).remove();
+          const localJd = JSON.parse(localStorage.getItem('db_jadwals')) || [];
+          const updated = localJd.filter(j => j.id !== payload.id);
+          safeLocalStorageSetItem('db_jadwals', JSON.stringify(updated));
+          safeLocalStorageSetItem('cache_jadwals', JSON.stringify(updated));
           return { success: true };
         }
 
         else if (action === "clearAllJadwal") {
           await ref("jadwals").remove();
+          safeLocalStorageSetItem('db_jadwals', JSON.stringify([]));
+          safeLocalStorageSetItem('cache_jadwals', JSON.stringify([]));
           return { success: true };
         }
       } catch (err) {
