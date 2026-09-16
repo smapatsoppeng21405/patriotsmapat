@@ -5502,10 +5502,25 @@
       return false;
     }
 
+    function normalizeDayName(d) {
+      if (!d) return "";
+      let s = String(d).trim().toLowerCase();
+      s = s.replace(/[^a-z]/g, '');
+      if (s.startsWith('ahad') || s.startsWith('minggu')) return 'minggu';
+      if (s.startsWith('jumat')) return 'jumat';
+      return s;
+    }
+
+    function isDayMatch(d1, d2) {
+      if (!d1 || !d2) return false;
+      return normalizeDayName(d1) === normalizeDayName(d2);
+    }
+
     function normalizeClassName(cls) {
       if (!cls) return "";
       let s = cls.toString().trim().toLowerCase();
       s = s.replace(/^kelas\s+/i, '').replace(/^rombel\s+/i, '');
+      s = s.replace(/mapel\s*pilihan/gi, 'mapil').replace(/mapelpil/gi, 'mapil');
       s = s.replace(/[\.\-_]/g, ' ');
       s = s.replace(/\bx\b/gi, '10').replace(/\bxi\b/gi, '11').replace(/\bxii\b/gi, '12');
       return s.replace(/\s+/g, ' ').trim();
@@ -10907,6 +10922,10 @@
         if (appState.user && appState.user.role === "Guru") {
           if (id === 'jurnalKelas' || id === 'guruJadwalKelas') {
             allowedClasses.push("Kelas Mapil X", "Kelas Mapil XI", "Kelas Mapil XII");
+            const mapilSchedClasses = (appState.jadwalList || [])
+              .map(j => j.kelas)
+              .filter(c => c && (c.toLowerCase().includes("mapil") || c.toLowerCase().includes("mapel pilihan")));
+            allowedClasses = [...new Set(allowedClasses.concat(mapilSchedClasses))];
           }
         }
         // Jika user adalah Wali Kelas, batasi kelas input bimbingan (absen, kondisi, laporan, nilai) ke kelasnya sendiri
@@ -11365,12 +11384,24 @@
       });
 
       // Filter jadwal berdasarkan Hari, Kelas, dan Mapel jika telah dipilih
-      const matchingSchedules = teacherSchedules.filter(j => {
-        const matchHari = !dayName || (j.hari && (j.hari.toLowerCase() === dayName.toLowerCase() || (j.hari.toLowerCase().startsWith('ahad') && dayName === 'Minggu') || (j.hari.toLowerCase().startsWith('minggu') && dayName === 'Minggu')));
+      let matchingSchedules = teacherSchedules.filter(j => {
+        const matchHari = !dayName || isDayMatch(j.hari, dayName);
         const matchKelas = !kelasVal || (j.kelas && isClassMatch(j.kelas, kelasVal));
         const matchMapel = !mapelVal || (j.mapel && (j.mapel.trim().toLowerCase().includes(mapelVal.trim().toLowerCase()) || mapelVal.trim().toLowerCase().includes(j.mapel.trim().toLowerCase())));
         return matchHari && matchKelas && matchMapel;
       });
+
+      // Pass 2 Fallback: Jika tidak ditemukan dari teacherSchedules (misal ejaan nama guru di jadwal berbeda), cari dari seluruh jadwal
+      if (matchingSchedules.length === 0 && (dayName || kelasVal)) {
+        matchingSchedules = schedules.filter(j => {
+          const matchHari = !dayName || isDayMatch(j.hari, dayName);
+          const matchKelas = !kelasVal || (j.kelas && isClassMatch(j.kelas, kelasVal));
+          const matchMapel = !mapelVal || (j.mapel && (j.mapel.trim().toLowerCase().includes(mapelVal.trim().toLowerCase()) || mapelVal.trim().toLowerCase().includes(j.mapel.trim().toLowerCase())));
+          const gName = j.guru || j.namaGuru || "";
+          const matchGuru = !gName || isTeacherMatch(gName, teacherName) || (tNip && gName.includes(tNip));
+          return matchHari && matchKelas && matchMapel && matchGuru;
+        });
+      }
 
       // Kumpulkan nomor sesi yang memang terjadwal untuk guru ini
       const scheduledSessionSet = new Set();
