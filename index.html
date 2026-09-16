@@ -4575,16 +4575,27 @@
       let str = String(rawVal).trim();
       if (!str || str === "-") return "-";
 
-      // Tangani format Date ISO dari Excel (seperti 2026-03-01T16:00:00.000Z atau 2026-10-07)
+      // Tangani format Date ISO dari Excel (seperti 2026-02-28T16:00:00.000Z, 2026-03-01T16:00:00.000Z atau 2026-10-07)
       if (str.match(/^\d{4}-\d{2}-\d{2}/) || str.includes('T') || str.includes('Z')) {
         const dt = new Date(str);
         if (!isNaN(dt.getTime())) {
-          let m = dt.getUTCMonth() + 1;
-          let d = dt.getUTCDate();
-          if (d >= 1 && d <= 10 && m >= 1 && m <= 10) {
+          let localM = dt.getMonth() + 1;
+          let localD = dt.getDate();
+          let utcM = dt.getUTCMonth() + 1;
+          let utcD = dt.getUTCDate();
+
+          // Cari nomor sesi pelajaran (1-12) dari Local/UTC Date
+          let d = (localD >= 1 && localD <= 12) ? localD : ((utcD >= 1 && utcD <= 12) ? utcD : 0);
+          let m = (localM >= 1 && localM <= 12) ? localM : ((utcM >= 1 && utcM <= 12) ? utcM : 0);
+
+          if (d >= 1 && d <= 12 && m >= 1 && m <= 12) {
             let sStart = Math.min(d, m);
             let sEnd = Math.max(d, m);
             return sStart === sEnd ? `${sStart}` : `${sStart}-${sEnd}`;
+          } else if (d >= 1 && d <= 12) {
+            return `${d}`;
+          } else if (m >= 1 && m <= 12) {
+            return `${m}`;
           }
         }
       }
@@ -4598,7 +4609,7 @@
     }
 
     function getJamFromSesi(sesiVal, existingJam) {
-      if (existingJam && existingJam !== "-" && existingJam.trim() !== "" && !existingJam.includes("NaN")) {
+      if (existingJam && existingJam !== "-" && existingJam.trim() !== "" && !existingJam.includes("NaN") && !existingJam.includes("2026-") && !existingJam.includes("T") && !existingJam.includes("Z")) {
         return existingJam.trim();
       }
       const cleanS = cleanSesiValue(sesiVal);
@@ -4653,8 +4664,136 @@
     let guruJurnalChartInstance = null;
     let currentAlarmAudio = null;
 
+    // HELPER PEMBERSIH DATA DUMMY BAWAAN SIKURIKULUM
+    function purgeDefaultDummyData() {
+      try {
+        const dummyUserIds = ["USR001", "USR002", "USR003", "USR004", "USR005", "USR006"];
+        const dummyUserEmails = ["wakasek@sekolah.com", "guru@sekolah.com", "walikelas@sekolah.com", "guruwali@sekolah.com", "kepala@sekolah.com", "admin@sekolah.com"];
+        const dummyStudentNis = ["12345", "12346", "12347"];
+        const dummyStudentIds = ["SIS-001", "SIS-002", "SIS-003", "SIS-1", "SIS-2", "SIS-3", "SGW-001", "SGW-002", "SGW-003", "SGW-1", "SGW-2", "SGW-3"];
+        const dummyJadwalIds = ["SCH-001", "SCH-002", "SCH-003", "SCH-1", "SCH-2", "SCH-3"];
+
+        // 1. Users / Teachers
+        let users = JSON.parse(localStorage.getItem('db_users')) || [];
+        if (users.length > 0) {
+          users = users.filter(u => !dummyUserIds.includes(u.id) && !dummyUserEmails.includes(u.email));
+          localStorage.setItem('db_users', JSON.stringify(users));
+          localStorage.setItem('cache_teachers', JSON.stringify(users));
+          if (typeof appState !== 'undefined' && appState.teacherList) appState.teacherList = users;
+        }
+
+        // 2. Students Master
+        let students = JSON.parse(localStorage.getItem('db_students')) || [];
+        if (students.length > 0) {
+          students = students.filter(s => !dummyStudentIds.includes(s.id) && !dummyStudentNis.includes(s.nis));
+          localStorage.setItem('db_students', JSON.stringify(students));
+          localStorage.setItem('cache_students', JSON.stringify(students));
+          if (typeof appState !== 'undefined' && appState.studentList) appState.studentList = students;
+        }
+
+        // 3. Siswa Guru Wali
+        let siswagw = JSON.parse(localStorage.getItem('db_siswagw')) || [];
+        if (siswagw.length > 0) {
+          siswagw = siswagw.filter(s => !dummyStudentIds.includes(s.id) && !dummyStudentNis.includes(s.nis));
+          localStorage.setItem('db_siswagw', JSON.stringify(siswagw));
+          if (typeof appState !== 'undefined' && appState.siswaGuruWaliList) appState.siswaGuruWaliList = siswagw;
+        }
+
+        // 4. Jadwals
+        let jadwals = JSON.parse(localStorage.getItem('db_jadwals')) || [];
+        if (jadwals.length > 0) {
+          jadwals = jadwals.filter(j => !dummyJadwalIds.includes(j.id) && j.guru !== "Bu Siti (Guru Matematika)" && j.guru !== "Pak Joko (Wali Kelas 10A)");
+          localStorage.setItem('db_jadwals', JSON.stringify(jadwals));
+          localStorage.setItem('cache_jadwals', JSON.stringify(jadwals));
+          if (typeof appState !== 'undefined' && appState.jadwalList) appState.jadwalList = jadwals;
+        }
+
+        let gurujadwals = JSON.parse(localStorage.getItem('db_gurujadwals')) || [];
+        if (gurujadwals.length > 0) {
+          gurujadwals = gurujadwals.filter(j => !dummyJadwalIds.includes(j.id) && j.guru !== "Bu Siti (Guru Matematika)" && j.guru !== "Pak Joko (Wali Kelas 10A)");
+          localStorage.setItem('db_gurujadwals', JSON.stringify(gurujadwals));
+          if (typeof appState !== 'undefined' && appState.guruJadwalList) appState.guruJadwalList = gurujadwals;
+        }
+
+        // 5. Jurnals
+        let jurnals = JSON.parse(localStorage.getItem('db_jurnals')) || [];
+        if (jurnals.length > 0) {
+          jurnals = jurnals.filter(j => !["JR-1", "JR-2", "JR-3"].includes(j.id));
+          localStorage.setItem('db_jurnals', JSON.stringify(jurnals));
+          if (typeof appState !== 'undefined' && appState.jurnalList) appState.jurnalList = jurnals;
+        }
+
+        // 6. Perangkats
+        let perangkats = JSON.parse(localStorage.getItem('db_perangkats')) || [];
+        if (perangkats.length > 0) {
+          perangkats = perangkats.filter(p => !["PR-1", "PR-2"].includes(p.id));
+          localStorage.setItem('db_perangkats', JSON.stringify(perangkats));
+          if (typeof appState !== 'undefined' && appState.perangkatList) appState.perangkatList = perangkats;
+        }
+
+        // 7. Nilai
+        let nilais = JSON.parse(localStorage.getItem('db_nilais')) || [];
+        if (nilais.length > 0) {
+          nilais = nilais.filter(n => !["NL-1", "NL-2", "NL-3"].includes(n.id));
+          localStorage.setItem('db_nilais', JSON.stringify(nilais));
+          if (typeof appState !== 'undefined' && appState.nilaiList) appState.nilaiList = nilais;
+        }
+
+        // 8. Laporan
+        let laporans = JSON.parse(localStorage.getItem('db_laporans')) || [];
+        if (laporans.length > 0) {
+          laporans = laporans.filter(l => !["LW-1"].includes(l.id));
+          localStorage.setItem('db_laporans', JSON.stringify(laporans));
+          if (typeof appState !== 'undefined' && appState.laporanWaliList) appState.laporanWaliList = laporans;
+        }
+
+        // 9. GuruMasters
+        let gurumasters = JSON.parse(localStorage.getItem('db_gurumasters')) || [];
+        if (gurumasters.length > 0) {
+          gurumasters = gurumasters.filter(g => !["GM-1", "GM-2", "GM-3"].includes(g.id));
+          localStorage.setItem('db_gurumasters', JSON.stringify(gurumasters));
+          if (typeof appState !== 'undefined' && appState.guruMasterList) appState.guruMasterList = gurumasters;
+        }
+
+        // 10. Rekap Absen
+        let rekap = JSON.parse(localStorage.getItem('db_rekap_absen')) || [];
+        if (rekap.length > 0) {
+          rekap = rekap.filter(r => !["RA-1", "RA-2", "RA-3"].includes(r.id) && !dummyStudentNis.includes(r.nis));
+          localStorage.setItem('db_rekap_absen', JSON.stringify(rekap));
+        }
+
+        // 11. Kondisi Siswa
+        let kondisi = JSON.parse(localStorage.getItem('db_kondisi_siswa')) || [];
+        if (kondisi.length > 0) {
+          kondisi = kondisi.filter(k => !["KS-1", "KS-2"].includes(k.id) && !dummyStudentNis.includes(k.nis));
+          localStorage.setItem('db_kondisi_siswa', JSON.stringify(kondisi));
+        }
+
+        // 12. Jurnal 7KAIH
+        let j7 = JSON.parse(localStorage.getItem('db_jurnal7kaih')) || [];
+        if (j7.length > 0) {
+          j7 = j7.filter(j => !["JK-1"].includes(j.id) && !dummyStudentNis.includes(j.nis));
+          localStorage.setItem('db_jurnal7kaih', JSON.stringify(j7));
+          if (typeof appState !== 'undefined' && appState.jurnal7KAIHList) appState.jurnal7KAIHList = j7;
+        }
+
+        // 13. Catatan Bimbingan
+        let cb = JSON.parse(localStorage.getItem('db_catatanbimbingan')) || [];
+        if (cb.length > 0) {
+          cb = cb.filter(c => !["CB-1"].includes(c.id) && !dummyStudentNis.includes(c.nis));
+          localStorage.setItem('db_catatanbimbingan', JSON.stringify(cb));
+          if (typeof appState !== 'undefined' && appState.catatanWaliKelasList) appState.catatanWaliKelasList = cb;
+        }
+      } catch (e) {
+        console.warn("Error purging dummy data:", e);
+      }
+    }
+
     // INITIALIZATION RUN
     window.addEventListener('DOMContentLoaded', () => {
+      // Hapus data bawaan dummy agar tidak muncul kembali setelah refresh
+      purgeDefaultDummyData();
+
       // Pastikan database mockup hanya diinisialisasi jika benar-benar belum ada data dan mode offline murni
       const users = JSON.parse(localStorage.getItem('db_users')) || [];
       if (!useRTDB && !useFirebase && users.length === 0) {
@@ -4663,6 +4802,7 @@
 
       // Pastikan akun admin yang diminta selalu terdaftar
       ensureAdminAccountExists();
+      purgeDefaultDummyData();
 
       // Periksa koneksi internet saat ini
       updateOnlineStatus();
@@ -8530,6 +8670,7 @@
             syncAlarmsToServiceWorker();
           }
           
+          purgeDefaultDummyData();
           renderDashboardData();
         }
       } catch (err) {
@@ -8598,6 +8739,7 @@
       appState.sesiList = getVal('db_sesi', 'cache_sesi');
       appState.stats = JSON.parse(localStorage.getItem('cache_stats')) || JSON.parse(localStorage.getItem(`cache_stats_${role}`)) || {};
 
+      purgeDefaultDummyData();
       renderDashboardData();
     }
 
@@ -13967,85 +14109,13 @@
     // INITIALIZE STATS FOR QUICK START DEMO
     function initializeMockDatabase() {
       if (localStorage.getItem('db_sikurikulum_initialized') === 'true') {
+        purgeDefaultDummyData();
         return;
       }
       localStorage.setItem('db_sikurikulum_initialized', 'true');
       
-      const mockUsers = [
-        { id: "USR001", nama: "Pak Budi (Wakasek)", email: "wakasek@sekolah.com", role: "Wakasek", password: "wakasek123" },
-        { id: "USR002", nama: "Bu Siti (Guru Matematika)", email: "guru@sekolah.com", role: "Guru", password: "guru123", mapel: "Matematika Aljabar, Matematika Peminatan" },
-        { id: "USR003", nama: "Pak Joko (Wali Kelas 10A)", email: "walikelas@sekolah.com", role: "Wali Kelas", password: "walikelas123", waliKelasClass: "10-A", mapel: "Fisika Mekanika" },
-        { id: "USR004", nama: "Ibu Rahma (Guru Wali)", email: "guruwali@sekolah.com", role: "Guru Wali", password: "wali123" },
-        { id: "USR005", nama: "Drs. H. Mulyono (Kepala Sekolah)", email: "kepala@sekolah.com", role: "Kepala Sekolah", password: "kepala123" },
-        { id: "USR006", nama: "Administrator Sistem (Admin)", email: "admin@sekolah.com", role: "Admin", password: "admin123" }
-      ];
-      
-      const mockJurnals = [
-        { id: "JR-1", tanggal: "2026-07-29", guru: "Bu Siti (Guru Matematika)", kelas: "10-A", mapel: "Matematika Aljabar", sesi: "Sesi 1", materi: "Persamaan Aljabar Kuadrat", kehadiran: "Hadir: 31, Izin: 1, Alfa: 0", catatan: "Siswa sangat antusias memahami visualisasi grafik parabola.", mode: "Tatap Muka" },
-        { id: "JR-2", tanggal: "2026-07-29", guru: "Bu Siti (Guru Matematika)", kelas: "11-B", mapel: "Matematika Peminatan", sesi: "Sesi 2", materi: "Turunan dan Integral Sederhana", kehadiran: "Hadir: 30, Sakit: 2, Alfa: 0", catatan: "Beberapa siswa perlu bimbingan khusus pengerjaan turunan pecahan.", mode: "Daring" },
-        { id: "JR-3", tanggal: "2026-07-29", guru: "Pak Joko (Wali Kelas 10A)", kelas: "10-A", mapel: "Fisika Mekanika", sesi: "Sesi 3", materi: "Pengenalan Fisika Kuantum & Hukum Newton", kehadiran: "Hadir: 32, Alfa: 0", catatan: "KBM terlaksana penuh, eksperimen gaya pegas berhasil disimulasikan.", mode: "Tatap Muka" }
-      ];
-      
-      const mockPerangkats = [
-        { id: "PR-1", namaGuru: "Bu Siti (Guru Matematika)", jenisDokumen: "RPP / Modul Ajar", linkDrive: "https://drive.google.com/open?id=rpp_math_10", status: "Disetujui", catatan: "Sangat baik, modul ajar merdeka belajar telah sesuai target." },
-        { id: "PR-2", namaGuru: "Bu Siti (Guru Matematika)", jenisDokumen: "Program Semester (Promes)", linkDrive: "https://drive.google.com/open?id=promes_math_ganjil", status: "Pending", catatan: "" }
-      ];
-      
-      const mockNilais = [
-        { id: "NL-1", kelas: "10-A", mapel: "Fisika Dasar", rataNilai: 78.5, jumlahSiswaRemidial: 4 },
-        { id: "NL-2", kelas: "10-A", mapel: "Matematika Aljabar", rataNilai: 74.2, jumlahSiswaRemidial: 7 },
-        { id: "NL-3", kelas: "11-B", mapel: "Matematika Peminatan", rataNilai: 81.0, jumlahSiswaRemidial: 2 }
-      ];
- 
-      const mockJadwals = [
-        { id: "SCH-001", hari: "Senin", jamKe: "Sesi 1", kelas: "10-A", guru: "Bu Siti (Guru Matematika)", mapel: "Matematika Aljabar" },
-        { id: "SCH-002", hari: "Senin", jamKe: "Sesi 2", kelas: "10-A", guru: "Bu Siti (Guru Matematika)", mapel: "Matematika Aljabar" },
-        { id: "SCH-003", hari: "Selasa", jamKe: "Sesi 3", kelas: "10-A", guru: "Pak Joko (Wali Kelas 10A)", mapel: "Fisika Mekanika" }
-      ];
- 
-      const mockLaporans = [
-        { id: "LW-1", tanggal: "2026-07-02", waliKelas: "Pak Joko (Wali Kelas 10A)", kelas: "10-A", kategori: "Ketertiban & Kehadiran", judul: "Laporan Kehadiran KBM Pekan 1", isi: "Sebanyak 2 siswa sering terlambat masuk kelas di jam pertama. Sudah diberi pembinaan.", tindakLanjut: "Pemanggilan siswa oleh BK dan koordinasi dengan orang tua." }
-      ];
- 
-      const mockGuruMasters = [
-        { id: "GM-1", guru: "Bu Siti (Guru Matematika)", mapel: "Matematika Aljabar", kelas: "10-A", jumlahJam: 4 },
-        { id: "GM-2", guru: "Pak Joko (Wali Kelas 10A)", mapel: "Fisika Mekanika", kelas: "10-A", jumlahJam: 3 },
-        { id: "GM-3", guru: "Bu Siti (Guru Matematika)", mapel: "Matematika Peminatan", kelas: "11-B", jumlahJam: 4 }
-      ];
- 
       const mockSettings = { hariBelajar: 5, daftarKelas: ["X.1", "X.2", "XI.1", "XI.2", "XII.1", "XII.2"] };
  
-      const mockRekapAbsen = [
-        { id: "RA-1", bulan: "Juni", tahun: "2026", waliKelas: "Pak Joko (Wali Kelas 10A)", kelas: "10-A", namaSiswa: "Ahmad Dani", hadir: 20, sakit: 1, izin: 1, alpa: 0 },
-        { id: "RA-2", bulan: "Juni", tahun: "2026", waliKelas: "Pak Joko (Wali Kelas 10A)", kelas: "10-A", namaSiswa: "Budi Santoso", hadir: 21, sakit: 0, izin: 1, alpa: 0 },
-        { id: "RA-3", bulan: "Juni", tahun: "2026", waliKelas: "Pak Joko (Wali Kelas 10A)", kelas: "10-A", namaSiswa: "Citra Lestari", hadir: 22, sakit: 0, izin: 0, alpa: 0 }
-      ];
- 
-      const mockKondisiSiswa = [
-        { id: "KS-1", bulan: "Juni", tahun: "2026", waliKelas: "Pak Joko (Wali Kelas 10A)", kelas: "10-A", namaSiswa: "Ahmad Dani", kehadiran: "95% (Hadir terus)", prestasiAkademik: "Kenaikan rata-rata nilai Fisika dari 70 ke 85", prestasiNonAkademik: "Aktif di tim basket sekolah", tujuanSetelahLulus: "Kuliah Teknik Elektro di ITS" },
-        { id: "KS-2", bulan: "Juni", tahun: "2026", waliKelas: "Pak Joko (Wali Kelas 10A)", kelas: "10-A", namaSiswa: "Budi Santoso", kehadiran: "98% (Sangat Baik)", prestasiAkademik: "Peringkat 3 paralel matematika", prestasiNonAkademik: "Ketua OSIS periode 2026", tujuanSetelahLulus: "Kuliah Manajemen Bisnis di UI" }
-      ];
- 
-      const mockSiswaGW = [
-        { id: "SGW-1", nis: "12345", namaSiswa: "Ahmad Dani", kelas: "10-A", guruWali: "Ibu Rahma (Guru Wali)" },
-        { id: "SGW-2", nis: "12346", namaSiswa: "Budi Santoso", kelas: "10-A", guruWali: "Ibu Rahma (Guru Wali)" },
-        { id: "SGW-3", nis: "12347", namaSiswa: "Citra Lestari", kelas: "10-A", guruWali: "Ibu Rahma (Guru Wali)" }
-      ];
- 
-      const mockJurnal7KAIH = [
-        { id: "JK-1", tanggal: "2026-07-02", nis: "12345", namaSiswa: "Ahmad Dani", bangunPagi: "Ya", beribadah: "Ya", berolahraga: "Ya", makanSehat: "Ya", gemarBelajar: "Ya", bermasyarakat: "Ya", tidurCepat: "Ya" }
-      ];
- 
-      const mockCatatanBimbingan = [
-        { id: "CB-1", tanggal: "2026-07-03", guruWali: "Ibu Rahma (Guru Wali)", namaSiswa: "Ahmad Dani", catatanPerkembangan: "Ahmad menunjukkan perkembangan yang sangat baik dalam kedisiplinan dan ibadah." }
-      ];
-      
-      const mockStudents = [
-        { id: "SIS-1", nis: "12345", namaSiswa: "Ahmad Dani", kelas: "10-A" },
-        { id: "SIS-2", nis: "12346", namaSiswa: "Budi Santoso", kelas: "10-A" },
-        { id: "SIS-3", nis: "12347", namaSiswa: "Citra Lestari", kelas: "10-A" }
-      ];
-
       const mockSesi = [
         { id: "-OyhneB2ahli6p", namaSesi: "Jam 1", jamMulai: "07:30", jamSelesai: "08:15" },
         { id: "-Oyhnj83cW_2D", namaSesi: "Jam 2", jamMulai: "08:15", jamSelesai: "09:00" },
@@ -14059,21 +14129,23 @@
         { id: "-OyhotQGZBI-0X", namaSesi: "Jam 10", jamMulai: "14:45", jamSelesai: "15:30" }
       ];
       
-      if (!localStorage.getItem('db_users')) localStorage.setItem('db_users', JSON.stringify(mockUsers));
-      if (!localStorage.getItem('db_jurnals')) localStorage.setItem('db_jurnals', JSON.stringify(mockJurnals));
-      if (!localStorage.getItem('db_perangkats')) localStorage.setItem('db_perangkats', JSON.stringify(mockPerangkats));
-      if (!localStorage.getItem('db_nilais')) localStorage.setItem('db_nilais', JSON.stringify(mockNilais));
-      if (!localStorage.getItem('db_jadwals')) localStorage.setItem('db_jadwals', JSON.stringify(mockJadwals));
-      if (!localStorage.getItem('db_laporans')) localStorage.setItem('db_laporans', JSON.stringify(mockLaporans));
-      if (!localStorage.getItem('db_gurumasters')) localStorage.setItem('db_gurumasters', JSON.stringify(mockGuruMasters));
+      if (!localStorage.getItem('db_users')) localStorage.setItem('db_users', JSON.stringify([]));
+      if (!localStorage.getItem('db_jurnals')) localStorage.setItem('db_jurnals', JSON.stringify([]));
+      if (!localStorage.getItem('db_perangkats')) localStorage.setItem('db_perangkats', JSON.stringify([]));
+      if (!localStorage.getItem('db_nilais')) localStorage.setItem('db_nilais', JSON.stringify([]));
+      if (!localStorage.getItem('db_jadwals')) localStorage.setItem('db_jadwals', JSON.stringify([]));
+      if (!localStorage.getItem('db_laporans')) localStorage.setItem('db_laporans', JSON.stringify([]));
+      if (!localStorage.getItem('db_gurumasters')) localStorage.setItem('db_gurumasters', JSON.stringify([]));
       if (!localStorage.getItem('db_settings')) localStorage.setItem('db_settings', JSON.stringify(mockSettings));
-      if (!localStorage.getItem('db_rekap_absen')) localStorage.setItem('db_rekap_absen', JSON.stringify(mockRekapAbsen));
-      if (!localStorage.getItem('db_kondisi_siswa')) localStorage.setItem('db_kondisi_siswa', JSON.stringify(mockKondisiSiswa));
-      if (!localStorage.getItem('db_siswagw')) localStorage.setItem('db_siswagw', JSON.stringify(mockSiswaGW));
-      if (!localStorage.getItem('db_jurnal7kaih')) localStorage.setItem('db_jurnal7kaih', JSON.stringify(mockJurnal7KAIH));
-      if (!localStorage.getItem('db_catatanbimbingan')) localStorage.setItem('db_catatanbimbingan', JSON.stringify(mockCatatanBimbingan));
-      if (!localStorage.getItem('db_students')) localStorage.setItem('db_students', JSON.stringify(mockStudents));
+      if (!localStorage.getItem('db_rekap_absen')) localStorage.setItem('db_rekap_absen', JSON.stringify([]));
+      if (!localStorage.getItem('db_kondisi_siswa')) localStorage.setItem('db_kondisi_siswa', JSON.stringify([]));
+      if (!localStorage.getItem('db_siswagw')) localStorage.setItem('db_siswagw', JSON.stringify([]));
+      if (!localStorage.getItem('db_jurnal7kaih')) localStorage.setItem('db_jurnal7kaih', JSON.stringify([]));
+      if (!localStorage.getItem('db_catatanbimbingan')) localStorage.setItem('db_catatanbimbingan', JSON.stringify([]));
+      if (!localStorage.getItem('db_students')) localStorage.setItem('db_students', JSON.stringify([]));
       if (!localStorage.getItem('db_sesi')) localStorage.setItem('db_sesi', JSON.stringify(mockSesi));
+
+      purgeDefaultDummyData();
     }
 
     // ==================== PATRIOT SMAPAT: EXCEL IMPORT & ROLE FUNCTIONS ====================
