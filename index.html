@@ -1605,6 +1605,7 @@
                     <th>Nama Guru</th>
                     <th>Kelas</th>
                     <th>Mata Pelajaran</th>
+                    <th>Sesi / Jam Ke</th>
                     <th>Materi Mengajar</th>
                     <th>Kehadiran</th>
                     <th>Catatan Jurnal</th>
@@ -1612,7 +1613,7 @@
                   </tr>
                 </thead>
                 <tbody id="w-jurnal-table-body">
-                  <tr><td colspan="8" style="text-align: center; color: var(--text-muted);">Memuat...</td></tr>
+                  <tr><td colspan="9" style="text-align: center; color: var(--text-muted);">Memuat...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -2891,6 +2892,7 @@
                   <tr>
                     <th>Tanggal</th>
                     <th>Kelas</th>
+                    <th>Sesi / Jam Ke</th>
                     <th>Mata Pelajaran</th>
                     <th>Materi Mengajar</th>
                     <th>Kehadiran</th>
@@ -2899,7 +2901,7 @@
                   </tr>
                 </thead>
                 <tbody id="g-jurnal-table-body">
-                  <tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Belum ada data.</td></tr>
+                  <tr><td colspan="8" style="text-align: center; color: var(--text-muted);">Belum ada data.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -3147,13 +3149,14 @@
                     <th>Tanggal</th>
                     <th>Nama Guru</th>
                     <th>Kelas</th>
+                    <th>Sesi / Jam Ke</th>
                     <th>Materi Mengajar</th>
                     <th>Kehadiran</th>
                     <th>Catatan</th>
                   </tr>
                 </thead>
                 <tbody id="wk-jurnal-table-body">
-                  <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Belum ada data.</td></tr>
+                  <tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Belum ada data.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -4575,7 +4578,7 @@
       let str = String(rawVal).trim();
       if (!str || str === "-") return "-";
 
-      // Tangani format Date ISO dari Excel (seperti 2026-02-28T16:00:00.000Z, 2026-03-01T16:00:00.000Z atau 2026-10-07)
+      // Tangani format Date ISO / Excel Date String (seperti 2026-02-28T16:00:00.000Z, 2026-03-01T16:00:00.000Z, atau 2026-10-07)
       if (str.match(/^\d{4}-\d{2}-\d{2}/) || str.includes('T') || str.includes('Z')) {
         const dt = new Date(str);
         if (!isNaN(dt.getTime())) {
@@ -4584,18 +4587,31 @@
           let utcM = dt.getUTCMonth() + 1;
           let utcD = dt.getUTCDate();
 
-          // Cari nomor sesi pelajaran (1-12) dari Local/UTC Date
-          let d = (localD >= 1 && localD <= 12) ? localD : ((utcD >= 1 && utcD <= 12) ? utcD : 0);
-          let m = (localM >= 1 && localM <= 12) ? localM : ((utcM >= 1 && utcM <= 12) ? utcM : 0);
-
-          if (d >= 1 && d <= 12 && m >= 1 && m <= 12) {
-            let sStart = Math.min(d, m);
-            let sEnd = Math.max(d, m);
+          // 1. Jika Local Day & Month valid 1..12
+          if (localD >= 1 && localD <= 12 && localM >= 1 && localM <= 12) {
+            let sStart = Math.min(localD, localM);
+            let sEnd = Math.max(localD, localM);
             return sStart === sEnd ? `${sStart}` : `${sStart}-${sEnd}`;
-          } else if (d >= 1 && d <= 12) {
-            return `${d}`;
-          } else if (m >= 1 && m <= 12) {
-            return `${m}`;
+          }
+          // 2. Jika UTC Day & Month valid 1..12
+          if (utcD >= 1 && utcD <= 12 && utcM >= 1 && utcM <= 12) {
+            let sStart = Math.min(utcD, utcM);
+            let sEnd = Math.max(utcD, utcM);
+            return sStart === sEnd ? `${sStart}` : `${sStart}-${sEnd}`;
+          }
+
+          // 3. Fallback jika salah satu tanggal shifted akibat UTC timezone (misal 28 Feb / 31 Jan untuk tanggal 1)
+          let validM = (localM >= 1 && localM <= 12) ? localM : ((utcM >= 1 && utcM <= 12) ? utcM : 0);
+          let validD = (localD >= 1 && localD <= 12) ? localD : ((utcD >= 1 && utcD <= 12) ? utcD : 0);
+
+          if (validD >= 1 && validD <= 12 && validM >= 1 && validM <= 12) {
+            let sStart = Math.min(validD, validM);
+            let sEnd = Math.max(validD, validM);
+            return sStart === sEnd ? `${sStart}` : `${sStart}-${sEnd}`;
+          } else if (validM >= 1 && validM <= 12) {
+            return `1-${validM}`;
+          } else if (validD >= 1 && validD <= 12) {
+            return `1-${validD}`;
           }
         }
       }
@@ -4656,6 +4672,32 @@
       return "-";
     }
 
+    // HELPER PARSER NOMOR SESI UNTUK PENCATATAN & PENCOCOKAN JURNAL
+    function parseSessionNumbers(val) {
+      if (val === null || val === undefined) return [];
+      const cleanStr = cleanSesiValue(val);
+      if (!cleanStr || cleanStr === "-") return [];
+
+      // Jika format range "1-3" atau "3-6"
+      const rangeMatch = cleanStr.match(/^(\d+)\s*-\s*(\d+)$/);
+      if (rangeMatch) {
+        const start = parseInt(rangeMatch[1]);
+        const end = parseInt(rangeMatch[2]);
+        const res = [];
+        for (let i = Math.min(start, end); i <= Math.max(start, end); i++) {
+          res.push(i.toString());
+        }
+        return res;
+      }
+
+      // Jika format koma atau nomor tunggal "1, 2, 3" / "Jam 1"
+      const nums = cleanStr.match(/\d+/g);
+      if (nums && nums.length > 0) {
+        return Array.from(new Set(nums.map(n => parseInt(n).toString())));
+      }
+      return [];
+    }
+
     // Chart.js instances
     let barChartInstance = null;
     let pieChartInstance = null;
@@ -4703,16 +4745,58 @@
         let jadwals = JSON.parse(localStorage.getItem('db_jadwals')) || [];
         if (jadwals.length > 0) {
           jadwals = jadwals.filter(j => !dummyJadwalIds.includes(j.id) && j.guru !== "Bu Siti (Guru Matematika)" && j.guru !== "Pak Joko (Wali Kelas 10A)");
+          jadwals = jadwals.map(j => {
+            const rawS = j.jamKe || j.sesi || "";
+            const cleanS = cleanSesiValue(rawS);
+            return {
+              ...j,
+              jamKe: cleanS,
+              sesi: cleanS,
+              jam: getJamFromSesi(cleanS, j.jam)
+            };
+          });
           localStorage.setItem('db_jadwals', JSON.stringify(jadwals));
           localStorage.setItem('cache_jadwals', JSON.stringify(jadwals));
-          if (typeof appState !== 'undefined' && appState.jadwalList) appState.jadwalList = jadwals;
+        }
+        if (typeof appState !== 'undefined' && appState.jadwalList && appState.jadwalList.length > 0) {
+          appState.jadwalList = appState.jadwalList.filter(j => !dummyJadwalIds.includes(j.id) && j.guru !== "Bu Siti (Guru Matematika)" && j.guru !== "Pak Joko (Wali Kelas 10A)").map(j => {
+            const rawS = j.jamKe || j.sesi || "";
+            const cleanS = cleanSesiValue(rawS);
+            return {
+              ...j,
+              jamKe: cleanS,
+              sesi: cleanS,
+              jam: getJamFromSesi(cleanS, j.jam)
+            };
+          });
         }
 
         let gurujadwals = JSON.parse(localStorage.getItem('db_gurujadwals')) || [];
         if (gurujadwals.length > 0) {
           gurujadwals = gurujadwals.filter(j => !dummyJadwalIds.includes(j.id) && j.guru !== "Bu Siti (Guru Matematika)" && j.guru !== "Pak Joko (Wali Kelas 10A)");
+          gurujadwals = gurujadwals.map(j => {
+            const rawS = j.jamKe || j.sesi || "";
+            const cleanS = cleanSesiValue(rawS);
+            return {
+              ...j,
+              jamKe: cleanS,
+              sesi: cleanS,
+              jam: getJamFromSesi(cleanS, j.jam)
+            };
+          });
           localStorage.setItem('db_gurujadwals', JSON.stringify(gurujadwals));
-          if (typeof appState !== 'undefined' && appState.guruJadwalList) appState.guruJadwalList = gurujadwals;
+        }
+        if (typeof appState !== 'undefined' && appState.guruJadwalList && appState.guruJadwalList.length > 0) {
+          appState.guruJadwalList = appState.guruJadwalList.filter(j => !dummyJadwalIds.includes(j.id) && j.guru !== "Bu Siti (Guru Matematika)" && j.guru !== "Pak Joko (Wali Kelas 10A)").map(j => {
+            const rawS = j.jamKe || j.sesi || "";
+            const cleanS = cleanSesiValue(rawS);
+            return {
+              ...j,
+              jamKe: cleanS,
+              sesi: cleanS,
+              jam: getJamFromSesi(cleanS, j.jam)
+            };
+          });
         }
 
         // 5. Jurnals
@@ -8951,19 +9035,23 @@
       tbody.innerHTML = "";
       
       if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-muted);">Tidak ada aktivitas jurnal mengajar.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:var(--text-muted);">Tidak ada aktivitas jurnal mengajar.</td></tr>`;
         return;
       }
       
       list.forEach(item => {
         const tr = document.createElement('tr');
         const formattedDate = new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+        const cleanS = cleanSesiValue(item.sesi || item.jamKe || '-');
+        const jam = getJamFromSesi(cleanS, item.jam);
+        const jamDisplay = jam && jam !== "-" ? `<br><small style="color:var(--text-muted); font-size:0.75rem;">${jam}</small>` : "";
         
         tr.innerHTML = `
           <td style="font-weight: 500;">${formattedDate}</td>
           <td style="color: #cbd5e1; font-weight: 600;"><i class="fa-regular fa-user" style="margin-right: 0.35rem; font-size:0.8rem; color:var(--primary);"></i> ${item.guru}</td>
           <td><span class="badge badge-primary">${item.kelas}</span></td>
           <td style="font-weight: 600; color: #cbd5e1;">${item.mapel || '-'}</td>
+          <td style="font-weight: 600; color: var(--accent);">${cleanS}${jamDisplay}</td>
           <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.materi}</td>
           <td><span class="badge badge-success" style="background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.15);">${item.kehadiran}</span></td>
           <td style="color: var(--text-muted); font-size: 0.85rem;">${item.catatan || '-'}</td>
@@ -9427,14 +9515,19 @@
         });
 
         if (myJurnals.length === 0) {
-          jtBody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted);">Belum ada riwayat mengajar terdaftar untuk akun Anda.</td></tr>`;
+          jtBody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-muted);">Belum ada riwayat mengajar terdaftar untuk akun Anda.</td></tr>`;
         } else {
           myJurnals.forEach(item => {
             const tr = document.createElement('tr');
             const formattedDate = item.tanggal ? new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
+            const cleanS = cleanSesiValue(item.sesi || item.jamKe || '-');
+            const jam = getJamFromSesi(cleanS, item.jam);
+            const jamDisplay = jam && jam !== "-" ? `<br><small style="color:var(--text-muted); font-size:0.75rem;">${jam}</small>` : "";
+
             tr.innerHTML = `
               <td style="font-weight: 500;">${formattedDate}</td>
               <td><span class="badge badge-primary">${item.kelas || '-'}</span></td>
+              <td style="font-weight: 600; color: var(--accent);">${cleanS}${jamDisplay}</td>
               <td style="font-weight: 600; color: #cbd5e1;">${item.mapel || '-'}</td>
               <td>${item.materi || '-'}</td>
               <td><span class="badge badge-success" style="background: rgba(16,185,129,0.08);">${item.kehadiran || '-'}</span></td>
@@ -10418,18 +10511,22 @@
       tbody.innerHTML = "";
       
       if (appState.jurnalList.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">Tidak ada jurnal KBM untuk sekolah ini.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted);">Tidak ada jurnal KBM untuk sekolah ini.</td></tr>`;
         return;
       }
       
       appState.jurnalList.forEach(item => {
         const tr = document.createElement('tr');
         const formattedDate = new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+        const cleanS = cleanSesiValue(item.sesi || item.jamKe || '-');
+        const jam = getJamFromSesi(cleanS, item.jam);
+        const jamDisplay = jam && jam !== "-" ? `<br><small style="color:var(--text-muted); font-size:0.75rem;">${jam}</small>` : "";
         
         tr.innerHTML = `
           <td style="font-weight: 500;">${formattedDate}</td>
           <td style="font-weight: 600;">${item.guru}</td>
           <td><span class="badge badge-primary">${item.kelas}</span></td>
+          <td style="font-weight: 600; color: var(--accent);">${cleanS}${jamDisplay}</td>
           <td>${item.materi}</td>
           <td><span class="badge badge-success" style="background: rgba(16,185,129,0.08);">${item.kehadiran}</span></td>
           <td style="color: var(--text-muted); font-size: 0.85rem;">${item.catatan || '-'}</td>
@@ -14960,6 +15057,7 @@
       const teacherDetails = realTeachers.map(t => ({
         nama: t.nama,
         journalsFilled: 0,
+        sessionsTaught: 0,
         status: "Kurang Aktif",
         isLow: true
       }));
@@ -14981,6 +15079,8 @@
         const matched = teacherDetails.find(item => isTeacherMatch(item.nama, j.guru));
         if (matched) {
           matched.journalsFilled++;
+          const sessCount = parseSessionNumbers(j.sesi).length || 1;
+          matched.sessionsTaught += sessCount;
         }
       });
 
@@ -14988,10 +15088,10 @@
       let lowActiveTeachers = 0;
 
       teacherDetails.forEach(item => {
-        if (item.journalsFilled >= 12) {
+        if (item.sessionsTaught >= 12 || item.journalsFilled >= 12) {
           item.status = "Sangat Aktif";
           item.isLow = false;
-        } else if (item.journalsFilled >= 6) {
+        } else if (item.sessionsTaught >= 6 || item.journalsFilled >= 6) {
           item.status = "Cukup Aktif";
           item.isLow = false;
         } else {
@@ -15018,7 +15118,7 @@
         if (a.isLow !== b.isLow) {
           return b.isLow ? -1 : 1;
         }
-        return b.journalsFilled - a.journalsFilled;
+        return (b.sessionsTaught || b.journalsFilled) - (a.sessionsTaught || a.journalsFilled);
       });
 
       teacherDetails.forEach(item => {
@@ -15034,7 +15134,7 @@
 
         tr.innerHTML = `
           <td style="font-weight: 600; color: #cbd5e1;"><i class="fa-regular fa-user" style="color:var(--primary); margin-right:0.25rem;"></i> ${item.nama}</td>
-          <td><span class="badge badge-primary">${item.journalsFilled} Jurnal</span></td>
+          <td><span class="badge badge-primary">${item.journalsFilled} Jurnal (${item.sessionsTaught} Sesi KBM)</span></td>
           <td>${statusBadge}</td>
         `;
         tbody.appendChild(tr);
@@ -15885,7 +15985,9 @@
         const matchingJournal = dateJournals.find(j => {
           const teacherMatches = isTeacherMatch(j.guru, sched.guru);
           const classMatches = j.kelas === sched.kelas;
-          const sesiMatches = !j.sesi || !sched.jamKe || j.sesi.toString().split(',').map(s => s.trim()).some(s => sched.jamKe.toString().split(',').map(x => x.trim()).includes(s));
+          const jSessions = parseSessionNumbers(j.sesi);
+          const schedSessions = parseSessionNumbers(sched.jamKe);
+          const sesiMatches = !j.sesi || !sched.jamKe || jSessions.length === 0 || schedSessions.length === 0 || jSessions.some(s => schedSessions.includes(s));
           
           return teacherMatches && classMatches && sesiMatches;
         });
@@ -15932,7 +16034,9 @@
         const isScheduled = daySchedules.some(sched => {
           const teacherMatches = isTeacherMatch(j.guru, sched.guru);
           const classMatches = j.kelas === sched.kelas;
-          const sesiMatches = !j.sesi || !sched.jamKe || j.sesi.toString().split(',').map(s => s.trim()).some(s => sched.jamKe.toString().split(',').map(x => x.trim()).includes(s));
+          const jSessions = parseSessionNumbers(j.sesi);
+          const schedSessions = parseSessionNumbers(sched.jamKe);
+          const sesiMatches = !j.sesi || !sched.jamKe || jSessions.length === 0 || schedSessions.length === 0 || jSessions.some(s => schedSessions.includes(s));
           return teacherMatches && classMatches && sesiMatches;
         });
         return !isScheduled;
