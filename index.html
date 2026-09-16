@@ -14608,12 +14608,27 @@
     function formatTimeForInput(val) {
       if (!val) return "";
       const str = String(val).trim();
+      if (!str) return "";
+
+      // 1. Ekstrak jam dinding langsung dari string jika ada (misal "07:30" atau "1899-12-30T07:30:00")
+      // Mencegah konversi timezone browser lokal (seperti WITA GMT+8) yang mengubah 07:30 WIB menjadi 08:30
+      const directMatch = str.match(/(?:T|\s|^)([0-1]?\d|2[0-3])[:.]([0-5]\d)/);
+      if (directMatch) {
+        const h = parseInt(directMatch[1], 10);
+        const m = directMatch[2];
+        if (h >= 5 && h <= 22) {
+          return `${String(h).padStart(2, '0')}:${m}`;
+        }
+      }
+
+      // 2. Jika string merupakan format ISO UTC jadul (seperti "1899-12-30T00:30:00.000Z") di mana jam UTC < 5:
       if (str.includes("T") || str.includes("Z") || str.includes("1899")) {
         try {
           const d = new Date(str);
           if (!isNaN(d.getTime())) {
-            let h = d.getHours();
-            let m = d.getMinutes();
+            let totalMins = d.getUTCHours() * 60 + d.getUTCMinutes() + 420;
+            let h = Math.floor((totalMins / 60) % 24);
+            let m = Math.round(totalMins % 60);
             if (m % 15 === 4) m -= 4;
             else if (m % 15 === 5) m -= 5;
             else {
@@ -14624,9 +14639,11 @@
           }
         } catch (e) {}
       }
-      const match = str.match(/(\d{1,2}):(\d{2})/);
+
+      // 3. Fallback regex jam:menit
+      const match = str.match(/(\d{1,2})[:.](\d{2})/);
       if (match) {
-        const h = match[1].padStart(2, '0');
+        const h = String(parseInt(match[1], 10)).padStart(2, '0');
         const m = match[2];
         return `${h}:${m}`;
       }
