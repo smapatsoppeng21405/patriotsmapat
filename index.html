@@ -4569,6 +4569,82 @@
       currentActivePane: ""
     };
 
+    // HELPER FORMATTER SESI & JAM KELAS (ANTI-CONVERT DATES)
+    function cleanSesiValue(rawVal) {
+      if (rawVal === null || rawVal === undefined) return "-";
+      let str = String(rawVal).trim();
+      if (!str || str === "-") return "-";
+
+      // Tangani format Date ISO dari Excel (seperti 2026-03-01T16:00:00.000Z atau 2026-10-07)
+      if (str.match(/^\d{4}-\d{2}-\d{2}/) || str.includes('T') || str.includes('Z')) {
+        const dt = new Date(str);
+        if (!isNaN(dt.getTime())) {
+          let m = dt.getUTCMonth() + 1;
+          let d = dt.getUTCDate();
+          if (d >= 1 && d <= 10 && m >= 1 && m <= 10) {
+            let sStart = Math.min(d, m);
+            let sEnd = Math.max(d, m);
+            return sStart === sEnd ? `${sStart}` : `${sStart}-${sEnd}`;
+          }
+        }
+      }
+
+      // Bersihkan teks "Sesi " jika ada
+      if (str.toLowerCase().startsWith("sesi ")) {
+        str = str.substring(5).trim();
+      }
+
+      return str || "-";
+    }
+
+    function getJamFromSesi(sesiVal, existingJam) {
+      if (existingJam && existingJam !== "-" && existingJam.trim() !== "" && !existingJam.includes("NaN")) {
+        return existingJam.trim();
+      }
+      const cleanS = cleanSesiValue(sesiVal);
+      if (!cleanS || cleanS === "-") return "-";
+
+      const defaultSesiTimes = {
+        1: { start: "07.30", end: "08.15" },
+        2: { start: "08.15", end: "09.00" },
+        3: { start: "09.00", end: "09.45" },
+        4: { start: "09.45", end: "10.30" },
+        5: { start: "10.45", end: "11.30" },
+        6: { start: "11.30", end: "12.15" },
+        7: { start: "12.30", end: "13.15" },
+        8: { start: "13.15", end: "14.00" },
+        9: { start: "14.00", end: "14.45" },
+        10: { start: "14.45", end: "15.30" }
+      };
+
+      let sesiMap = defaultSesiTimes;
+      if (typeof appState !== 'undefined' && appState.sesiList && appState.sesiList.length > 0) {
+        appState.sesiList.forEach((s, idx) => {
+          const idxNum = idx + 1;
+          if (s.jamMulai && s.jamSelesai) {
+            sesiMap[idxNum] = {
+              start: s.jamMulai.replace(":", "."),
+              end: s.jamSelesai.replace(":", ".")
+            };
+          }
+        });
+      }
+
+      const nums = cleanS.match(/\d+/g);
+      if (!nums || nums.length === 0) return "-";
+
+      const startNum = parseInt(nums[0]);
+      const endNum = nums.length > 1 ? parseInt(nums[nums.length - 1]) : startNum;
+
+      const startTime = sesiMap[startNum] ? sesiMap[startNum].start : "";
+      const endTime = sesiMap[endNum] ? sesiMap[endNum].end : "";
+
+      if (startTime && endTime) {
+        return `${startTime}-${endTime}`;
+      }
+      return "-";
+    }
+
     // Chart.js instances
     let barChartInstance = null;
     let pieChartInstance = null;
@@ -11951,10 +12027,11 @@
       
       sorted.forEach(item => {
         const tr = document.createElement('tr');
-        const timeSlot = CLASS_HOURS.find(h => h.jam === item.jamKe.toString()) || { start: "", end: "" };
+        const sesi = cleanSesiValue(item.jamKe || item.sesi);
+        const jamStr = getJamFromSesi(sesi, item.jam);
         tr.innerHTML = `
           <td><span class="badge badge-primary">${item.hari}</span></td>
-          <td><strong>Jam Ke-${item.jamKe}</strong> <span style="font-size:0.8rem; color:var(--text-muted);">(${timeSlot.start}-${timeSlot.end})</span></td>
+          <td><strong>Sesi ${sesi}</strong> <span style="font-size:0.8rem; color:var(--text-muted);">(${jamStr})</span></td>
           <td><span class="badge badge-success" style="background:rgba(16,185,129,0.08);">${item.kelas}</span></td>
           <td style="color:#cbd5e1; font-weight:600;"><i class="fa-regular fa-user" style="margin-right: 0.35rem; font-size:0.8rem;"></i>${item.guru}</td>
           <td>${item.mapel}</td>
@@ -12105,38 +12182,9 @@
       sorted.forEach(item => {
         const tr = document.createElement('tr');
         
-        let timeDisplay = "";
-        let sesiName = item.jamKe || "";
-        
-        if (item.jamKe && item.jamKe.includes("-")) {
-          timeDisplay = item.jamKe + " WITA";
-          sesiName = "Kustom";
-        } else if (item.jamKe) {
-          const parts = item.jamKe.toString().split(',').map(p => p.trim());
-          const matchedSess = (appState.sesiList || []).filter(s => parts.includes(s.namaSesi));
-          if (matchedSess.length > 0) {
-            matchedSess.sort((a, b) => (a.jamMulai || "").localeCompare(b.jamMulai || ""));
-            const startTimeStr = matchedSess[0].jamMulai;
-            const endTimeStr = matchedSess[matchedSess.length - 1].jamSelesai;
-            timeDisplay = `${startTimeStr} - ${endTimeStr} WITA`;
-            sesiName = parts.join(", ");
-          } else {
-            const matchedHours = CLASS_HOURS.filter(h => parts.includes(h.jam));
-            if (matchedHours.length > 0) {
-              matchedHours.sort((a, b) => (a.start || "").localeCompare(b.start || ""));
-              const startTimeStr = matchedHours[0].start;
-              const endTimeStr = matchedHours[matchedHours.length - 1].end;
-              timeDisplay = `${startTimeStr} - ${endTimeStr} WITA`;
-              sesiName = parts.map(p => `Jam ${p}`).join(", ");
-            } else {
-              timeDisplay = "-";
-              sesiName = item.jamKe;
-            }
-          }
-        } else {
-          timeDisplay = "-";
-          sesiName = "-";
-        }
+        const rawS = item.jamKe || item.sesi || "-";
+        const sesiName = cleanSesiValue(rawS);
+        const timeDisplay = getJamFromSesi(sesiName, item.jam);
         
         tr.innerHTML = `
           <td><span class="badge badge-primary">${item.hari}</span></td>
@@ -15218,8 +15266,9 @@
       filtered.forEach((item, index) => {
         const tr = document.createElement('tr');
         const gName = item.guru || item.namaGuru || "-";
-        const sesi = item.jamKe || item.sesi || "-";
-        const jam = item.jam || "-";
+        const rawS = item.jamKe || item.sesi || "-";
+        const sesi = cleanSesiValue(rawS);
+        const jam = getJamFromSesi(sesi, item.jam);
         
         tr.innerHTML = `
           <td style="font-weight: 500; color: var(--text-muted);">${index + 1}</td>
@@ -15478,8 +15527,12 @@
           
           const guru = String(row[colGuru] || "").trim();
           const hari = String(row[colHari] || "").trim();
-          const sesi = String(row[colSesi] || "").trim();
-          const jam = String(row[colJam] || "").trim();
+          const rawSesi = row[colSesi];
+          const sesi = cleanSesiValue(rawSesi);
+          let jam = String(row[colJam] || "").trim();
+          if (!jam || jam === "-") {
+            jam = getJamFromSesi(sesi);
+          }
           const kelas = String(row[colKelas] || "").trim();
           const mapel = String(row[colMapel] || "").trim();
 
