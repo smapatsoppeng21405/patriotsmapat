@@ -2444,6 +2444,128 @@
           </div>
         </div>
 
+        <!-- ADMIN: MANAJEMEN JADWAL MENGAJAR GURU -->
+        <div id="pane-admin-jadwal" class="view-pane">
+          <div class="card glass-effect" style="margin-bottom: 2rem;">
+            <div class="card-title" id="titleFormJadwal">Registrasi & Edit Jadwal Mengajar Guru</div>
+            <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1.5rem; line-height:1.5;">
+              Atur dan kelola jadwal mengajar harian guru di sini. Setiap jadwal yang disimpan atau diimpor otomatis <strong>tersinkronisasi</strong> dengan akun guru bersangkutan.
+            </p>
+
+            <form id="formAdminJadwal" onsubmit="submitAdminJadwalForm(event)" style="margin-bottom: 1rem;">
+              <input type="hidden" id="adminJadwalId">
+              <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem;">
+                <div class="form-group">
+                  <label for="adminJadwalGuru">Nama Guru</label>
+                  <select id="adminJadwalGuru" class="form-control" required style="padding-left:0.75rem;">
+                    <option value="">-- Pilih Guru --</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="adminJadwalHari">Hari</label>
+                  <select id="adminJadwalHari" class="form-control" required style="padding-left:0.75rem;">
+                    <option value="Senin">Senin</option>
+                    <option value="Selasa">Selasa</option>
+                    <option value="Rabu">Rabu</option>
+                    <option value="Kamis">Kamis</option>
+                    <option value="Jum'at">Jum'at</option>
+                    <option value="Sabtu">Sabtu</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="adminJadwalSesi">Sesi / Jam Ke</label>
+                  <input type="text" id="adminJadwalSesi" class="form-control" placeholder="E.g., 1-3 atau 4-6" required style="padding-left:0.75rem;">
+                </div>
+                <div class="form-group">
+                  <label for="adminJadwalJam">Jam Kelas</label>
+                  <input type="text" id="adminJadwalJam" class="form-control" placeholder="E.g., 07.30-09.45" required style="padding-left:0.75rem;">
+                </div>
+                <div class="form-group">
+                  <label for="adminJadwalKelas">Kelas</label>
+                  <input type="text" id="adminJadwalKelas" class="form-control" placeholder="E.g., X.1, XI.1, XII.1, MAPIL XI" required style="padding-left:0.75rem;">
+                </div>
+                <div class="form-group">
+                  <label for="adminJadwalMapel">Mata Pelajaran</label>
+                  <input type="text" id="adminJadwalMapel" class="form-control" placeholder="E.g., Kimia, Bahasa Indonesia" required style="padding-left:0.75rem;">
+                </div>
+              </div>
+
+              <div style="display:flex; gap:1rem; margin-top: 1.25rem;">
+                <button type="submit" class="btn btn-primary" style="flex:1;">
+                  <i class="fa-solid fa-floppy-disk"></i> Simpan Jadwal
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="resetAdminJadwalForm()" style="display:none;" id="btnCancelEditAdminJadwal">
+                  Batal Edit
+                </button>
+              </div>
+            </form>
+
+            <hr style="border-color: var(--border-color); margin: 1.5rem 0;">
+
+            <div style="background: rgba(30, 41, 59, 0.4); border: 1px dashed var(--primary); padding: 1.25rem; border-radius: 0.75rem;">
+              <h4 style="font-size: 0.95rem; margin-top: 0; margin-bottom: 0.5rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fa-solid fa-file-excel"></i> Impor Jadwal Mengajar Sekaligus (Excel / CSV)
+              </h4>
+              <p style="font-size: 0.825rem; color: var(--text-muted); margin-bottom: 1rem;">
+                Unggah file Excel / CSV berisi daftar jadwal seluruh guru dengan format kolom: <strong>Nomor, Nama Guru, Hari, Sesi, Jam, Kelas, Mata Pelajaran</strong>.
+              </p>
+              
+              <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
+                <button type="button" class="btn btn-secondary" onclick="downloadTemplateJadwalExcel()" style="font-size: 0.85rem;">
+                  <i class="fa-solid fa-download"></i> Unduh Template Excel
+                </button>
+
+                <label class="btn btn-primary" style="cursor: pointer; font-size: 0.85rem; margin: 0;">
+                  <i class="fa-solid fa-file-import"></i> Pilih & Impor File Excel
+                  <input type="file" id="fileExcelAdminJadwal" accept=".xlsx, .xls, .csv" onchange="handleAdminJadwalExcelImport(event)" style="display: none;">
+                </label>
+
+                <button type="button" class="btn btn-secondary" onclick="clearAllAdminJadwal()" style="color: var(--danger); font-size: 0.85rem; margin-left: auto;">
+                  <i class="fa-solid fa-trash-can"></i> Kosongkan Semua Jadwal
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card glass-effect">
+            <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+              <div class="card-title" style="margin:0;">Master Jadwal Mengajar Guru</div>
+              <div style="display: flex; gap: 0.5rem;">
+                <input type="text" id="searchAdminJadwal" class="form-control" placeholder="Cari guru / mapel / kelas..." oninput="renderAdminJadwalTable()" style="padding-left:0.75rem; width: 220px; font-size: 0.85rem;">
+                <select id="filterHariAdminJadwal" class="form-control" onchange="renderAdminJadwalTable()" style="padding-left:0.5rem; font-size: 0.85rem; width: 130px;">
+                  <option value="">Semua Hari</option>
+                  <option value="Senin">Senin</option>
+                  <option value="Selasa">Selasa</option>
+                  <option value="Rabu">Rabu</option>
+                  <option value="Kamis">Kamis</option>
+                  <option value="Jum'at">Jum'at</option>
+                  <option value="Sabtu">Sabtu</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>No</th>
+                    <th>Nama Guru</th>
+                    <th>Hari</th>
+                    <th>Sesi</th>
+                    <th>Jam Kelas</th>
+                    <th>Kelas</th>
+                    <th>Mata Pelajaran</th>
+                    <th>Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-jadwal-table-body">
+                  <tr><td colspan="8" style="text-align: center; color: var(--text-muted);">Memuat master jadwal mengajar...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
         <!-- WAKASEK: MONITORING JURNAL 7KAIH & BIMBINGAN GURU WALI -->
         <div id="pane-wakasek-jurnal7kaih" class="view-pane">
           <div class="card glass-effect" style="margin-bottom: 2rem;">
@@ -5792,6 +5914,7 @@
           { text: "Ringkasan", pane: "pane-wakasek-ringkasan", icon: "fa-chart-pie" },
           { text: "Data Utama Guru", pane: "pane-wakasek-gurumaster", icon: "fa-user-gear" },
           { text: "Data Utama Siswa", pane: "pane-wakasek-siswamaster", icon: "fa-users-gear" },
+          { text: "Jadwal Mengajar Guru", pane: "pane-admin-jadwal", icon: "fa-calendar-days" },
           ...(role === "Admin" || role === "Wakasek" ? [{ text: "Manajemen Sesi", pane: "pane-admin-sesi", icon: "fa-clock" }] : []),
           { text: "Monitoring Jurnal", pane: "pane-wakasek-jurnal", icon: "fa-book-open" },
           { text: "Daftar Perangkat", pane: "pane-wakasek-perangkat", icon: "fa-file-shield" },
@@ -5973,6 +6096,8 @@
         else if (paneId.includes("inputnilai")) pageTitle = "Input Nilai Hasil Belajar Kelas";
         else if (paneId.includes("laporankelas")) pageTitle = "Kirim Laporan Wali Kelas";
         else if (paneId.includes("laporanwali")) pageTitle = "Monitoring Laporan Wali Kelas";
+        else if (paneId === "pane-admin-sesi") pageTitle = "Manajemen Sesi Pelajaran";
+        else if (paneId === "pane-admin-jadwal") pageTitle = "Jadwal Mengajar Guru (Master)";
         else if (paneId.includes("jadwal") && paneId.includes("wakasek")) pageTitle = "Manajemen Jadwal Mengajar (Anti-Tabrakan)";
         else if (paneId.includes("jadwal") && paneId.includes("guru")) pageTitle = "Jadwal Mengajar Saya";
         else if (paneId === "pane-walikelas-rekapabsen") pageTitle = "Rekap Absen Siswa Bulanan";
@@ -6004,6 +6129,9 @@
         setTimeout(renderWakasekCharts, 100);
       } else if (paneId === "pane-kepala-ringkasan") {
         setTimeout(renderKepalaCharts, 100);
+      } else if (paneId === "pane-admin-jadwal") {
+        if (typeof populateAdminJadwalGuruDropdown === "function") populateAdminJadwalGuruDropdown();
+        if (typeof renderAdminJadwalTable === "function") renderAdminJadwalTable();
       }
     }
     
@@ -7155,6 +7283,29 @@
           await ref(`sessions/${payload.id}`).remove();
           return { success: true };
         }
+
+        else if (action === "addJadwal") {
+          const key = payload.id || ref("jadwals").push().key;
+          await ref(`jadwals/${key}`).update({
+            hari: payload.hari || "",
+            jamKe: payload.jamKe || payload.sesi || "",
+            jam: payload.jam || "",
+            kelas: payload.kelas || "",
+            guru: payload.guru || payload.namaGuru || "",
+            mapel: payload.mapel || ""
+          });
+          return { success: true, id: key };
+        }
+
+        else if (action === "deleteJadwal") {
+          await ref(`jadwals/${payload.id}`).remove();
+          return { success: true };
+        }
+
+        else if (action === "clearAllJadwal") {
+          await ref("jadwals").remove();
+          return { success: true };
+        }
       } catch (err) {
         console.error("Firebase RTDB Error:", err);
         const errMsg = (err && err.message ? err.message : "").toLowerCase();
@@ -8008,11 +8159,12 @@
           scheduleList.forEach(item => {
             const docRef = db.collection("jadwals").doc();
             batch.set(docRef, {
-              hari: item.hari,
-              jamKe: item.jamKe,
-              kelas: item.kelas,
-              guru: item.guru,
-              mapel: item.mapel
+              hari: item.hari || "",
+              jamKe: item.jamKe || item.sesi || "",
+              jam: item.jam || "",
+              kelas: item.kelas || "",
+              guru: item.guru || item.namaGuru || "",
+              mapel: item.mapel || ""
             });
           });
           await batch.commit();
@@ -8038,6 +8190,32 @@
 
         else if (action === "deleteSesi") {
           await db.collection("sessions").doc(payload.id).delete();
+          return { success: true };
+        }
+
+        else if (action === "addJadwal") {
+          const id = payload.id || db.collection("jadwals").doc().id;
+          await db.collection("jadwals").doc(id).set({
+            hari: payload.hari || "",
+            jamKe: payload.jamKe || payload.sesi || "",
+            jam: payload.jam || "",
+            kelas: payload.kelas || "",
+            guru: payload.guru || payload.namaGuru || "",
+            mapel: payload.mapel || ""
+          }, { merge: true });
+          return { success: true, id: id };
+        }
+
+        else if (action === "deleteJadwal") {
+          await db.collection("jadwals").doc(payload.id).delete();
+          return { success: true };
+        }
+
+        else if (action === "clearAllJadwal") {
+          const snap = await db.collection("jadwals").get();
+          const batch = db.batch();
+          snap.forEach(d => batch.delete(d.ref));
+          await batch.commit();
           return { success: true };
         }
       } catch (err) {
@@ -12936,6 +13114,46 @@
             safeLocalStorageSetItem('db_sesi', JSON.stringify(filtered));
             resolve({ success: true });
           }
+
+          else if (action === "saveGeneratedSchedule") {
+            const list = payload.scheduleList || [];
+            safeLocalStorageSetItem('db_jadwals', JSON.stringify(list));
+            resolve({ success: true });
+          }
+
+          else if (action === "addJadwal") {
+            const jdRaw = JSON.parse(localStorage.getItem('db_jadwals')) || [];
+            const id = payload.id || ("JD-" + Date.now() + "-" + Math.random().toString(36).substr(2, 4));
+            const idx = jdRaw.findIndex(j => j.id && j.id.toString() === id.toString());
+            const newItem = {
+              id: id,
+              hari: payload.hari || "",
+              jamKe: payload.jamKe || payload.sesi || "",
+              jam: payload.jam || "",
+              kelas: payload.kelas || "",
+              guru: payload.guru || payload.namaGuru || "",
+              mapel: payload.mapel || ""
+            };
+            if (idx !== -1) {
+              jdRaw[idx] = newItem;
+            } else {
+              jdRaw.push(newItem);
+            }
+            safeLocalStorageSetItem('db_jadwals', JSON.stringify(jdRaw));
+            resolve({ success: true, id: id });
+          }
+
+          else if (action === "deleteJadwal") {
+            const jdRaw = JSON.parse(localStorage.getItem('db_jadwals')) || [];
+            const filtered = jdRaw.filter(j => j.id !== payload.id);
+            safeLocalStorageSetItem('db_jadwals', JSON.stringify(filtered));
+            resolve({ success: true });
+          }
+
+          else if (action === "clearAllJadwal") {
+            safeLocalStorageSetItem('db_jadwals', JSON.stringify([]));
+            resolve({ success: true });
+          }
           
           else if (action === "addRekapAbsen") {
             const raRaw = JSON.parse(localStorage.getItem('db_rekap_absen')) || [];
@@ -14750,6 +14968,350 @@
         await loadDashboardData();
       } catch (err) {
         showToast("Gagal menghapus sesi: " + err.message, "danger");
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    // ===== ADMIN: MANAGEMENT JADWAL MENGAJAR GURU =====
+    function populateAdminJadwalGuruDropdown() {
+      const select = document.getElementById('adminJadwalGuru');
+      if (!select) return;
+      const currentVal = select.value;
+      select.innerHTML = '<option value="">-- Pilih Guru --</option>';
+      
+      const teachers = appState.teacherList || appState.guruMasterList || [];
+      const teacherNames = [];
+      teachers.forEach(t => {
+        const name = t.nama || t.namaGuru || "";
+        if (name && !teacherNames.includes(name)) {
+          teacherNames.push(name);
+        }
+      });
+      teacherNames.sort((a, b) => a.localeCompare(b));
+      
+      teacherNames.forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        select.appendChild(opt);
+      });
+      
+      if (currentVal) select.value = currentVal;
+    }
+
+    function renderAdminJadwalTable() {
+      const tbody = document.getElementById('admin-jadwal-table-body');
+      if (!tbody) return;
+      tbody.innerHTML = "";
+      
+      const search = (document.getElementById('searchAdminJadwal')?.value || "").toLowerCase().trim();
+      const filterHari = document.getElementById('filterHariAdminJadwal')?.value || "";
+      
+      const rawList = appState.jadwalList || [];
+      if (rawList.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted);">Belum ada jadwal mengajar terdaftar. Silakan tambah atau impor dari Excel.</td></tr>';
+        return;
+      }
+      
+      let filtered = rawList.filter(item => {
+        const gName = (item.guru || item.namaGuru || "").toLowerCase();
+        const mapel = (item.mapel || "").toLowerCase();
+        const kelas = (item.kelas || "").toLowerCase();
+        const hari = item.hari || "";
+        
+        const matchQuery = !search || gName.includes(search) || mapel.includes(search) || kelas.includes(search);
+        const matchHari = !filterHari || hari === filterHari;
+        return matchQuery && matchHari;
+      });
+
+      const dayOrder = { "Senin": 1, "Selasa": 2, "Rabu": 3, "Kamis": 4, "Jum'at": 5, "Jumat": 5, "Sabtu": 6, "Ahad": 7 };
+      filtered.sort((a, b) => {
+        if (dayOrder[a.hari] !== dayOrder[b.hari]) {
+          return (dayOrder[a.hari] || 99) - (dayOrder[b.hari] || 99);
+        }
+        return (a.guru || a.namaGuru || "").localeCompare(b.guru || b.namaGuru || "");
+      });
+      
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted);">Tidak ada jadwal mengajar yang sesuai filter.</td></tr>';
+        return;
+      }
+      
+      filtered.forEach((item, index) => {
+        const tr = document.createElement('tr');
+        const gName = item.guru || item.namaGuru || "-";
+        const sesi = item.jamKe || item.sesi || "-";
+        const jam = item.jam || "-";
+        
+        tr.innerHTML = `
+          <td style="font-weight: 500; color: var(--text-muted);">${index + 1}</td>
+          <td style="font-weight: 600; color: #cbd5e1;">${gName}</td>
+          <td><span class="badge badge-primary">${item.hari || '-'}</span></td>
+          <td style="color:#cbd5e1; font-weight: 600;">${sesi}</td>
+          <td style="color:#cbd5e1;">${jam}</td>
+          <td><span class="badge badge-success" style="background:rgba(16,185,129,0.08);">${item.kelas || '-'}</span></td>
+          <td style="font-weight: 600; color: var(--accent);">${item.mapel || '-'}</td>
+          <td>
+            <button type="button" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-right: 0.25rem;" onclick="editAdminJadwal('${item.id}')">
+              <i class="fa-solid fa-edit"></i> Edit
+            </button>
+            <button type="button" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; color: var(--danger);" onclick="deleteAdminJadwal('${item.id}')">
+              <i class="fa-solid fa-trash"></i> Hapus
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function submitAdminJadwalForm(e) {
+      e.preventDefault();
+      const id = document.getElementById('adminJadwalId').value;
+      const guru = document.getElementById('adminJadwalGuru').value;
+      const hari = document.getElementById('adminJadwalHari').value;
+      const sesi = document.getElementById('adminJadwalSesi').value;
+      const jam = document.getElementById('adminJadwalJam').value;
+      const kelas = document.getElementById('adminJadwalKelas').value;
+      const mapel = document.getElementById('adminJadwalMapel').value;
+      
+      showLoading(true, "Menyimpan jadwal mengajar guru...");
+      try {
+        const payload = {
+          guru: guru,
+          hari: hari,
+          jamKe: sesi,
+          jam: jam,
+          kelas: kelas,
+          mapel: mapel
+        };
+        if (id) payload.id = id;
+        
+        await callApi("addJadwal", payload);
+        showToast("Jadwal mengajar guru berhasil disimpan!");
+        resetAdminJadwalForm();
+        await loadDashboardData();
+        renderAdminJadwalTable();
+      } catch (err) {
+        showToast("Gagal menyimpan jadwal: " + err.message, "danger");
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    function editAdminJadwal(id) {
+      const item = (appState.jadwalList || []).find(j => j.id && id && j.id.toString() === id.toString());
+      if (!item) {
+        showToast("Jadwal mengajar tidak ditemukan!", "warning");
+        return;
+      }
+      
+      populateAdminJadwalGuruDropdown();
+      document.getElementById('adminJadwalId').value = item.id;
+      document.getElementById('adminJadwalGuru').value = item.guru || item.namaGuru || "";
+      document.getElementById('adminJadwalHari').value = item.hari || "Senin";
+      document.getElementById('adminJadwalSesi').value = item.jamKe || item.sesi || "";
+      document.getElementById('adminJadwalJam').value = item.jam || "";
+      document.getElementById('adminJadwalKelas').value = item.kelas || "";
+      document.getElementById('adminJadwalMapel').value = item.mapel || "";
+      
+      document.getElementById('btnCancelEditAdminJadwal').style.display = "inline-block";
+      document.getElementById('titleFormJadwal').textContent = "Edit Jadwal Mengajar Guru";
+      
+      const formEl = document.getElementById('formAdminJadwal');
+      if (formEl) formEl.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function resetAdminJadwalForm() {
+      document.getElementById('formAdminJadwal').reset();
+      document.getElementById('adminJadwalId').value = "";
+      document.getElementById('btnCancelEditAdminJadwal').style.display = "none";
+      document.getElementById('titleFormJadwal').textContent = "Registrasi & Edit Jadwal Mengajar Guru";
+    }
+
+    async function deleteAdminJadwal(id) {
+      const confirmed = await showCustomConfirm("Hapus Jadwal", "Apakah Anda yakin ingin menghapus jadwal mengajar ini?", "Hapus", true);
+      if (!confirmed) return;
+      
+      showLoading(true, "Menghapus jadwal mengajar...");
+      try {
+        await callApi("deleteJadwal", { id });
+        showToast("Jadwal mengajar berhasil dihapus.");
+        await loadDashboardData();
+        renderAdminJadwalTable();
+      } catch (err) {
+        showToast("Gagal menghapus jadwal: " + err.message, "danger");
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    async function clearAllAdminJadwal() {
+      const confirmed = await showCustomConfirm("Kosongkan Semua Jadwal", "Apakah Anda yakin ingin MENGOSONGKAN SELURUH JADWAL MENGAJAR GURU? Semua data jadwal di sistem akan dihapus.", "Kosongkan", true);
+      if (!confirmed) return;
+      
+      showLoading(true, "Mengosongkan seluruh jadwal mengajar...");
+      try {
+        await callApi("clearAllJadwal");
+        showToast("Seluruh jadwal mengajar berhasil dikosongkan.");
+        await loadDashboardData();
+        renderAdminJadwalTable();
+      } catch (err) {
+        showToast("Gagal mengosongkan jadwal: " + err.message, "danger");
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    function downloadTemplateJadwalExcel() {
+      const rows = [
+        ["Nomor", "Nama Guru", "Hari", "Sesi", "Jam", "Kelas", "Mata Pelajaran"],
+        [1, "Ruhul Yusuf", "Senin", "4-6", "09.45-12.15", "XII.1", "Pendidikan Agama Islam dan Budi Pekerti"],
+        [2, "Ruhul Yusuf", "Selasa", "1-3", "07.30-09.45", "X.1", "Pendidikan Agama Islam dan Budi Pekerti"],
+        [3, "Ruhul Yusuf", "Selasa", "7-8", "12.30-14.00", "X.2", "PKN"],
+        [4, "Andi Nurfadillah", "Senin", "2-3", "08.15-09.45", "MAPIL XI", "Kimia"],
+        [5, "Andi Nurfadillah", "Selasa", "2-4", "08.15-10.30", "MAPIL XI", "Kimia"],
+        [6, "Nurlaelah Husain", "Senin", "2-3", "08.15-09.45", "XI.1", "Bahasa Indonesia"],
+        [7, "Nurlaelah Husain", "Senin", "9-10", "14.00-15.30", "XI.2", "Bahasa Indonesia"],
+        [8, "Sukirman Dalle", "Senin", "5-6", "10.45-12.15", "XI.2", "Matematika Umum"],
+        [9, "Sukirman Dalle", "Senin", "7-8", "12.30-14.00", "XII.1", "Matematika Umum"]
+      ];
+
+      if (typeof XLSX !== 'undefined') {
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Jadwal Guru");
+        XLSX.writeFile(wb, "Template_Jadwal_Mengajar_Guru.xlsx");
+      } else {
+        let csvContent = "data:text/csv;charset=utf-8," + rows.map(r => r.map(x => `"${x}"`).join(",")).join("\n");
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "Template_Jadwal_Mengajar_Guru.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+      showToast("Template Excel Jadwal Mengajar Guru berhasil diunduh.");
+    }
+
+    function handleAdminJadwalExcelImport(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          const data = evt.target.result;
+          if (typeof XLSX === 'undefined') {
+            showLoading(true, "Memuat library parser Excel...");
+            const script = document.createElement('script');
+            script.src = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+            script.onload = () => {
+              showLoading(false);
+              processAdminJadwalExcel(data, file.name);
+            };
+            document.head.appendChild(script);
+            return;
+          }
+          processAdminJadwalExcel(data, file.name);
+        } catch (err) {
+          showToast("Gagal membaca file: " + err.message, "danger");
+        }
+      };
+
+      if (file.name.endsWith('.csv')) {
+        reader.readAsText(file);
+      } else {
+        reader.readAsArrayBuffer(file);
+      }
+      e.target.value = "";
+    }
+
+    async function processAdminJadwalExcel(data, fileName) {
+      showLoading(true, "Memproses data impor jadwal...");
+      try {
+        let rawRows = [];
+        if (fileName.endsWith('.csv') && typeof data === 'string') {
+          const lines = data.split('\n');
+          lines.forEach(l => {
+            if (l.trim()) {
+              const cols = l.split(/[,;]/).map(c => c.replace(/^["']|["']$/g, '').trim());
+              rawRows.push(cols);
+            }
+          });
+        } else {
+          const uint8 = new Uint8Array(data);
+          const workbook = XLSX.read(uint8, { type: 'array' });
+          const firstSheet = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheet];
+          rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        }
+
+        if (!rawRows || rawRows.length < 2) {
+          showToast("File tidak berisi baris data jadwal.", "warning");
+          return;
+        }
+
+        let headerRowIdx = 0;
+        for (let i = 0; i < Math.min(5, rawRows.length); i++) {
+          const rowStr = (rawRows[i] || []).join(" ").toLowerCase();
+          if (rowStr.includes("nama") || rowStr.includes("guru") || rowStr.includes("hari") || rowStr.includes("mapel")) {
+            headerRowIdx = i;
+            break;
+          }
+        }
+
+        const headers = (rawRows[headerRowIdx] || []).map(h => String(h || "").toLowerCase().trim());
+        let colGuru = headers.findIndex(h => h.includes("guru") || h.includes("nama"));
+        let colHari = headers.findIndex(h => h.includes("hari"));
+        let colSesi = headers.findIndex(h => h.includes("sesi") || h.includes("jam ke") || h.includes("jamke"));
+        let colJam = headers.findIndex(h => h.includes("jam") && !h.includes("jam ke") && !h.includes("jamke") && !h.includes("sesi"));
+        let colKelas = headers.findIndex(h => h.includes("kelas"));
+        let colMapel = headers.findIndex(h => h.includes("mapel") || h.includes("mata pelajaran") || h.includes("pelajaran"));
+
+        if (colGuru === -1) colGuru = 1;
+        if (colHari === -1) colHari = 2;
+        if (colSesi === -1) colSesi = 3;
+        if (colJam === -1) colJam = 4;
+        if (colKelas === -1) colKelas = 5;
+        if (colMapel === -1) colMapel = 6;
+
+        const importedSchedule = [];
+        for (let i = headerRowIdx + 1; i < rawRows.length; i++) {
+          const row = rawRows[i];
+          if (!row || row.length === 0) continue;
+          
+          const guru = String(row[colGuru] || "").trim();
+          const hari = String(row[colHari] || "").trim();
+          const sesi = String(row[colSesi] || "").trim();
+          const jam = String(row[colJam] || "").trim();
+          const kelas = String(row[colKelas] || "").trim();
+          const mapel = String(row[colMapel] || "").trim();
+
+          if (!guru || !hari) continue;
+
+          importedSchedule.push({
+            guru: guru,
+            hari: hari,
+            jamKe: sesi,
+            jam: jam,
+            kelas: kelas,
+            mapel: mapel
+          });
+        }
+
+        if (importedSchedule.length === 0) {
+          showToast("Tidak ada jadwal valid yang ditemukan di file excel.", "warning");
+          return;
+        }
+
+        await callApi("saveGeneratedSchedule", { scheduleList: importedSchedule });
+        showToast(`Berhasil mengimpor ${importedSchedule.length} jadwal mengajar guru!`);
+        await loadDashboardData();
+        renderAdminJadwalTable();
+      } catch (err) {
+        showToast("Gagal memproses Excel: " + err.message, "danger");
       } finally {
         showLoading(false);
       }
