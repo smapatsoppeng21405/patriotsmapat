@@ -11375,8 +11375,8 @@
         cb.id = `cb_sesi_${s.id}`;
         cb.style.cssText = "cursor: pointer; accent-color: var(--primary); margin: 0;";
 
-        // Otomatis centang jika terdaftar di jadwal dan pengguna belum mencentang manual
-        if (checkedValues.has(s.namaSesi) || (hasScheduled && isScheduled && checkedValues.size === 0)) {
+        // Hanya tercentang jika sebelumnya pengguna telah mencentang (misal saat re-render)
+        if (checkedValues.has(s.namaSesi)) {
           cb.checked = true;
         }
         
