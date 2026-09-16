@@ -8454,6 +8454,34 @@
             if (data.guruJadwalList !== undefined) appState.guruJadwalList = data.guruJadwalList;
           }
 
+          if (appState.jadwalList && appState.jadwalList.length > 0) {
+            appState.jadwalList = appState.jadwalList.map(j => {
+              const rawS = j.jamKe || j.sesi || "";
+              const cleanS = cleanSesiValue(rawS);
+              return {
+                ...j,
+                jamKe: cleanS,
+                sesi: cleanS,
+                jam: getJamFromSesi(cleanS, j.jam)
+              };
+            });
+            safeLocalStorageSetItem('db_jadwals', JSON.stringify(appState.jadwalList));
+          }
+
+          if (appState.guruJadwalList && appState.guruJadwalList.length > 0) {
+            appState.guruJadwalList = appState.guruJadwalList.map(j => {
+              const rawS = j.jamKe || j.sesi || "";
+              const cleanS = cleanSesiValue(rawS);
+              return {
+                ...j,
+                jamKe: cleanS,
+                sesi: cleanS,
+                jam: getJamFromSesi(cleanS, j.jam)
+              };
+            });
+            safeLocalStorageSetItem('db_gurujadwals', JSON.stringify(appState.guruJadwalList));
+          }
+
           if (data.sesiList && data.sesiList.length > 0) {
             appState.sesiList = data.sesiList.map(s => ({
               ...s,
@@ -8538,9 +8566,27 @@
       appState.jurnalList = getVal('db_jurnals', 'cache_jurnals');
       appState.perangkatList = getVal('db_perangkats', 'cache_perangkats');
       appState.nilaiList = getVal('db_nilais', 'cache_nilais');
-      appState.jadwalList = getVal('db_jadwals', 'cache_jadwals');
+      appState.jadwalList = getVal('db_jadwals', 'cache_jadwals').map(j => {
+        const rawS = j.jamKe || j.sesi || "";
+        const cleanS = cleanSesiValue(rawS);
+        return {
+          ...j,
+          jamKe: cleanS,
+          sesi: cleanS,
+          jam: getJamFromSesi(cleanS, j.jam)
+        };
+      });
       appState.laporanWaliList = getVal('db_laporans', 'cache_laporans');
-      appState.guruJadwalList = getVal('db_gurujadwals', 'cache_gurujadwals');
+      appState.guruJadwalList = getVal('db_gurujadwals', 'cache_gurujadwals').map(j => {
+        const rawS = j.jamKe || j.sesi || "";
+        const cleanS = cleanSesiValue(rawS);
+        return {
+          ...j,
+          jamKe: cleanS,
+          sesi: cleanS,
+          jam: getJamFromSesi(cleanS, j.jam)
+        };
+      });
       appState.guruMasterList = getVal('db_gurumasters', 'cache_gurumaster');
       appState.settings = JSON.parse(localStorage.getItem('db_settings')) || JSON.parse(localStorage.getItem('cache_settings')) || { hariBelajar: 5 };
       appState.teacherList = getVal('db_users', 'cache_teachers');
