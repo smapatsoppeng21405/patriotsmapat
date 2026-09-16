@@ -5502,6 +5502,29 @@
       return false;
     }
 
+    function normalizeClassName(cls) {
+      if (!cls) return "";
+      let s = cls.toString().trim().toLowerCase();
+      s = s.replace(/^kelas\s+/i, '').replace(/^rombel\s+/i, '');
+      s = s.replace(/[\.\-_]/g, ' ');
+      s = s.replace(/\bx\b/gi, '10').replace(/\bxi\b/gi, '11').replace(/\bxii\b/gi, '12');
+      return s.replace(/\s+/g, ' ').trim();
+    }
+
+    function isClassMatch(c1, c2) {
+      if (!c1 || !c2) return false;
+      const str1 = c1.toString().trim().toLowerCase();
+      const str2 = c2.toString().trim().toLowerCase();
+      if (str1 === str2) return true;
+
+      const norm1 = normalizeClassName(c1);
+      const norm2 = normalizeClassName(c2);
+      if (!norm1 || !norm2) return false;
+      if (norm1 === norm2) return true;
+      if (norm1.includes(norm2) || norm2.includes(norm1)) return true;
+      return false;
+    }
+
     // TOAST NOTIFICATIONS
     function showToast(message, type = "success") {
       const container = document.getElementById('toastContainer');
@@ -11344,8 +11367,8 @@
       // Filter jadwal berdasarkan Hari, Kelas, dan Mapel jika telah dipilih
       const matchingSchedules = teacherSchedules.filter(j => {
         const matchHari = !dayName || (j.hari && (j.hari.toLowerCase() === dayName.toLowerCase() || (j.hari.toLowerCase().startsWith('ahad') && dayName === 'Minggu') || (j.hari.toLowerCase().startsWith('minggu') && dayName === 'Minggu')));
-        const matchKelas = !kelasVal || (j.kelas && j.kelas.trim().toLowerCase() === kelasVal.trim().toLowerCase());
-        const matchMapel = !mapelVal || (j.mapel && j.mapel.trim().toLowerCase().includes(mapelVal.trim().toLowerCase()));
+        const matchKelas = !kelasVal || (j.kelas && isClassMatch(j.kelas, kelasVal));
+        const matchMapel = !mapelVal || (j.mapel && (j.mapel.trim().toLowerCase().includes(mapelVal.trim().toLowerCase()) || mapelVal.trim().toLowerCase().includes(j.mapel.trim().toLowerCase())));
         return matchHari && matchKelas && matchMapel;
       });
 
