@@ -11326,17 +11326,26 @@
       const mapelVal = (mapelInput && mapelInput.style.display !== "none") ? mapelInput.value.trim() : (mapelSelect ? mapelSelect.value : "");
 
       const dayName = tanggalVal ? getIndonesianDayName(tanggalVal) : "";
-      const teacherName = appState.user ? appState.user.nama : "";
+      const currentEmail = appState.user ? appState.user.email : "";
+      const teacher = (appState.teacherList || []).find(t => t.email === currentEmail) || appState.user || {};
+      const teacherName = teacher.nama || appState.user?.nama || "";
+      const tNip = teacher.nip || appState.user?.nip || "";
 
       // 2. Cari jadwal mengajar milik guru yang sedang login
       const schedules = appState.jadwalList || [];
-      const teacherSchedules = schedules.filter(j => isTeacherMatch(j.guru || j.namaGuru, teacherName));
+      const teacherSchedules = schedules.filter(j => {
+        const gName = j.guru || j.namaGuru || "";
+        if (!gName) return false;
+        return isTeacherMatch(gName, teacherName) 
+            || (tNip && gName.includes(tNip)) 
+            || (currentEmail && j.email && j.email.toLowerCase() === currentEmail.toLowerCase());
+      });
 
       // Filter jadwal berdasarkan Hari, Kelas, dan Mapel jika telah dipilih
       const matchingSchedules = teacherSchedules.filter(j => {
-        const matchHari = !dayName || j.hari === dayName;
-        const matchKelas = !kelasVal || j.kelas === kelasVal;
-        const matchMapel = !mapelVal || (j.mapel && j.mapel.toLowerCase().includes(mapelVal.toLowerCase()));
+        const matchHari = !dayName || (j.hari && (j.hari.toLowerCase() === dayName.toLowerCase() || (j.hari.toLowerCase().startsWith('ahad') && dayName === 'Minggu') || (j.hari.toLowerCase().startsWith('minggu') && dayName === 'Minggu')));
+        const matchKelas = !kelasVal || (j.kelas && j.kelas.trim().toLowerCase() === kelasVal.trim().toLowerCase());
+        const matchMapel = !mapelVal || (j.mapel && j.mapel.trim().toLowerCase().includes(mapelVal.trim().toLowerCase()));
         return matchHari && matchKelas && matchMapel;
       });
 
@@ -11353,14 +11362,27 @@
 
       container.innerHTML = '';
 
+      // Tampilkan keterangan peringatan jika tidak ada jadwal di kelas ini pada hari/jam ini
+      const isNoScheduleOnFilter = (dayName || kelasVal) && scheduledSessionSet.size === 0;
+
+      if (isNoScheduleOnFilter && !showAllJurnalSesiOverride) {
+        const warningDiv = document.createElement('div');
+        warningDiv.style.cssText = "width: 100%; padding: 0.5rem 0.75rem; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5; border-radius: 0.375rem; font-size: 0.825rem; font-weight: 500; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem;";
+        const infoMsg = (dayName && kelasVal) 
+          ? `Tidak ada jadwal mengajar di kelas ${kelasVal} pada hari ${dayName} untuk Anda.`
+          : `Tidak ada jadwal di kelas ini pada jam/hari ini.`;
+        warningDiv.innerHTML = `<i class="fa-solid fa-triangle-exclamation" style="font-size: 0.95rem; color: #f87171;"></i> <span>${infoMsg}</span>`;
+        container.appendChild(warningDiv);
+      }
+
       const hasScheduled = scheduledSessionSet.size > 0 && !showAllJurnalSesiOverride;
 
       sessions.forEach(s => {
         const sesiNumStr = parseSessionNumbers(s.namaSesi)[0] || "";
         const isScheduled = scheduledSessionSet.has(sesiNumStr) || (s.namaSesi && Array.from(scheduledSessionSet).some(num => s.namaSesi.includes(num)));
 
-        // Sembunyikan sesi luar jadwal jika guru punya jadwal resmi pada hari/kelas ini & override mati
-        if (hasScheduled && !isScheduled && !checkedValues.has(s.namaSesi)) {
+        // Sembunyikan sesi luar jadwal jika guru punya/tidak punya jadwal resmi pada hari/kelas ini & override mati
+        if (!showAllJurnalSesiOverride && !isScheduled && !checkedValues.has(s.namaSesi)) {
           return;
         }
 
@@ -11405,15 +11427,13 @@
         container.appendChild(div);
       });
 
-      if (scheduledSessionSet.size > 0) {
-        const toggleDiv = document.createElement('div');
-        toggleDiv.style.cssText = "width: 100%; margin-top: 0.35rem; font-size: 0.8rem; color: var(--accent); cursor: pointer; text-decoration: underline;";
-        toggleDiv.innerHTML = showAllJurnalSesiOverride 
-          ? '<i class="fa-solid fa-filter"></i> Tampilkan Sesuai Roster Saja' 
-          : '<i class="fa-solid fa-list-check"></i> Tampilkan Semua Sesi Pelajaran';
-        toggleDiv.onclick = toggleShowAllJurnalSesiOverride;
-        container.appendChild(toggleDiv);
-      }
+      const toggleDiv = document.createElement('div');
+      toggleDiv.style.cssText = "width: 100%; margin-top: 0.35rem; font-size: 0.8rem; color: var(--accent); cursor: pointer; text-decoration: underline;";
+      toggleDiv.innerHTML = showAllJurnalSesiOverride 
+        ? '<i class="fa-solid fa-filter"></i> Tampilkan Sesuai Roster Saja' 
+        : '<i class="fa-solid fa-list-check"></i> Tampilkan Semua Sesi Pelajaran';
+      toggleDiv.onclick = toggleShowAllJurnalSesiOverride;
+      container.appendChild(toggleDiv);
     }
 
     // Populasikan Checkboxes Sesi di Form Jadwal Guru
@@ -15909,8 +15929,19 @@
 
     function getIndonesianDayName(dateString) {
       if (!dateString) return "";
-      const date = new Date(dateString);
-      const days = ["Ahad", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+      let date;
+      if (typeof dateString === 'string' && dateString.includes('-')) {
+        const parts = dateString.split('-');
+        if (parts.length === 3) {
+          date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        } else {
+          date = new Date(dateString);
+        }
+      } else {
+        date = new Date(dateString);
+      }
+      if (isNaN(date.getTime())) return "";
+      const days = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
       return days[date.getDay()];
     }
 
