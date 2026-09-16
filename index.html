@@ -2697,7 +2697,7 @@
               <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem;">
                 <div class="form-group">
                   <label for="jurnalTanggal">Tanggal KBM</label>
-                  <input type="date" id="jurnalTanggal" class="form-control" style="padding-left: 1rem; cursor: pointer;" required onclick="if (typeof this.showPicker === 'function') { try { this.showPicker(); } catch(e) {} }">
+                  <input type="date" id="jurnalTanggal" class="form-control" style="padding-left: 1rem; cursor: pointer;" required onchange="populateJurnalSesiDropdown()" onclick="if (typeof this.showPicker === 'function') { try { this.showPicker(); } catch(e) {} }">
                 </div>
                 <div class="form-group">
                   <label for="jurnalKelas">Kelas</label>
@@ -2722,10 +2722,10 @@
               <div class="form-group">
                 <label for="jurnalMapelSelect">Mata Pelajaran</label>
                 <div style="position: relative; display: flex; gap: 0.5rem;">
-                  <select id="jurnalMapelSelect" class="form-control" style="padding-left: 1rem; flex: 1;">
+                  <select id="jurnalMapelSelect" class="form-control" style="padding-left: 1rem; flex: 1;" onchange="populateJurnalSesiDropdown()">
                     <option value="">Pilih Kelas Dulu</option>
                   </select>
-                  <input type="text" id="jurnalMapelInput" class="form-control" style="padding-left: 1rem; display: none; flex: 1;" placeholder="Ketik Mata Pelajaran...">
+                  <input type="text" id="jurnalMapelInput" class="form-control" style="padding-left: 1rem; display: none; flex: 1;" placeholder="Ketik Mata Pelajaran..." oninput="populateJurnalSesiDropdown()">
                   <button type="button" id="btnToggleMapelInput" class="btn btn-secondary" onclick="toggleMapelInputMode()" style="padding: 0 0.85rem; font-size: 0.85rem; display: none;">
                     Ketik Manual
                   </button>
@@ -9445,6 +9445,7 @@
         mapelInput.style.display = "none";
         mapelInput.value = "";
         if (btnToggle) btnToggle.style.display = "none";
+        populateJurnalSesiDropdown();
         return;
       }
       
@@ -9471,6 +9472,7 @@
         mapelInput.value = "";
         if (btnToggle) btnToggle.style.display = "none";
       }
+      populateJurnalSesiDropdown();
     }
     
     function toggleMapelInputMode() {
@@ -9489,6 +9491,7 @@
         mapelInput.value = "";
         btnToggle.innerText = "Ketik Manual";
       }
+      populateJurnalSesiDropdown();
     }
 
     function renderGuruHistoryTables() {
@@ -11297,39 +11300,102 @@
       });
     }
 
-    // Populasikan Checkboxes Sesi di Form Jurnal
+    // Populasikan Checkboxes Sesi di Form Jurnal (Disesuaikan dengan Jadwal Guru)
+    let showAllJurnalSesiOverride = false;
+
+    function toggleShowAllJurnalSesiOverride() {
+      showAllJurnalSesiOverride = !showAllJurnalSesiOverride;
+      populateJurnalSesiDropdown();
+    }
+
     function populateJurnalSesiDropdown() {
       const container = document.getElementById('jurnalSesiCheckboxes');
       if (!container) return;
-      container.innerHTML = '';
       
       const sessions = appState.sesiList || [];
       if (sessions.length === 0) {
         container.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">Tidak ada sesi pelajaran aktif.</span>';
         return;
       }
-      
+
+      // 1. Ambil nilai input Tanggal, Kelas, dan Mapel dari form jurnal
+      const tanggalVal = document.getElementById('jurnalTanggal')?.value;
+      const kelasVal = document.getElementById('jurnalKelas')?.value;
+      const mapelSelect = document.getElementById('jurnalMapelSelect');
+      const mapelInput = document.getElementById('jurnalMapelInput');
+      const mapelVal = (mapelInput && mapelInput.style.display !== "none") ? mapelInput.value.trim() : (mapelSelect ? mapelSelect.value : "");
+
+      const dayName = tanggalVal ? getIndonesianDayName(tanggalVal) : "";
+      const teacherName = appState.user ? appState.user.nama : "";
+
+      // 2. Cari jadwal mengajar milik guru yang sedang login
+      const schedules = appState.jadwalList || [];
+      const teacherSchedules = schedules.filter(j => isTeacherMatch(j.guru || j.namaGuru, teacherName));
+
+      // Filter jadwal berdasarkan Hari, Kelas, dan Mapel jika telah dipilih
+      const matchingSchedules = teacherSchedules.filter(j => {
+        const matchHari = !dayName || j.hari === dayName;
+        const matchKelas = !kelasVal || j.kelas === kelasVal;
+        const matchMapel = !mapelVal || (j.mapel && j.mapel.toLowerCase().includes(mapelVal.toLowerCase()));
+        return matchHari && matchKelas && matchMapel;
+      });
+
+      // Kumpulkan nomor sesi yang memang terjadwal untuk guru ini
+      const scheduledSessionSet = new Set();
+      matchingSchedules.forEach(s => {
+        const nums = parseSessionNumbers(s.jamKe || s.sesi);
+        nums.forEach(n => scheduledSessionSet.add(n));
+      });
+
+      // Tangkap checkbox mana saja yang sedang tercentang oleh user
+      const checkedValues = new Set();
+      container.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => checkedValues.add(cb.value));
+
+      container.innerHTML = '';
+
+      const hasScheduled = scheduledSessionSet.size > 0 && !showAllJurnalSesiOverride;
+
       sessions.forEach(s => {
+        const sesiNumStr = parseSessionNumbers(s.namaSesi)[0] || "";
+        const isScheduled = scheduledSessionSet.has(sesiNumStr) || (s.namaSesi && Array.from(scheduledSessionSet).some(num => s.namaSesi.includes(num)));
+
+        // Sembunyikan sesi luar jadwal jika guru punya jadwal resmi pada hari/kelas ini & override mati
+        if (hasScheduled && !isScheduled && !checkedValues.has(s.namaSesi)) {
+          return;
+        }
+
         const div = document.createElement('div');
-        div.style.cssText = "display: flex; align-items: center; gap: 0.35rem; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); padding: 0.35rem 0.65rem; border-radius: 0.35rem; cursor: pointer; user-select: none;";
+        const borderColor = isScheduled ? "rgba(99, 102, 241, 0.5)" : "var(--border-color)";
+        const bgColor = isScheduled ? "rgba(99, 102, 241, 0.12)" : "rgba(255,255,255,0.03)";
+        div.style.cssText = `display: flex; align-items: center; gap: 0.35rem; background: ${bgColor}; border: 1px solid ${borderColor}; padding: 0.35rem 0.65rem; border-radius: 0.35rem; cursor: pointer; user-select: none; transition: var(--transition);`;
         
         const cb = document.createElement('input');
         cb.type = "checkbox";
         cb.value = s.namaSesi;
         cb.id = `cb_sesi_${s.id}`;
         cb.style.cssText = "cursor: pointer; accent-color: var(--primary); margin: 0;";
+
+        // Otomatis centang jika terdaftar di jadwal dan pengguna belum mencentang manual
+        if (checkedValues.has(s.namaSesi) || (hasScheduled && isScheduled && checkedValues.size === 0)) {
+          cb.checked = true;
+        }
         
         const lbl = document.createElement('label');
         lbl.htmlFor = `cb_sesi_${s.id}`;
         lbl.style.cssText = "cursor: pointer; font-size: 0.85rem; font-weight: 500; margin: 0; color: #cbd5e1;";
         const jMulai = formatTimeForInput(s.jamMulai) || s.jamMulai || "-";
         const jSelesai = formatTimeForInput(s.jamSelesai) || s.jamSelesai || "-";
-        lbl.textContent = `${s.namaSesi} (${jMulai} - ${jSelesai})`;
+
+        let badgeHtml = "";
+        if (isScheduled) {
+          badgeHtml = `<span class="badge badge-success" style="font-size: 0.7rem; padding: 0.15rem 0.35rem; margin-left: 0.35rem;">Sesuai Jadwal</span>`;
+        }
+
+        lbl.innerHTML = `${s.namaSesi} (${jMulai} - ${jSelesai}) ${badgeHtml}`;
         
         div.appendChild(cb);
         div.appendChild(lbl);
         
-        // Menjadikan klik pada div otomatis mencentang checkbox
         div.addEventListener('click', (e) => {
           if (e.target !== cb && e.target !== lbl) {
             cb.checked = !cb.checked;
@@ -11338,6 +11404,16 @@
         
         container.appendChild(div);
       });
+
+      if (scheduledSessionSet.size > 0) {
+        const toggleDiv = document.createElement('div');
+        toggleDiv.style.cssText = "width: 100%; margin-top: 0.35rem; font-size: 0.8rem; color: var(--accent); cursor: pointer; text-decoration: underline;";
+        toggleDiv.innerHTML = showAllJurnalSesiOverride 
+          ? '<i class="fa-solid fa-filter"></i> Tampilkan Sesuai Roster Saja' 
+          : '<i class="fa-solid fa-list-check"></i> Tampilkan Semua Sesi Pelajaran';
+        toggleDiv.onclick = toggleShowAllJurnalSesiOverride;
+        container.appendChild(toggleDiv);
+      }
     }
 
     // Populasikan Checkboxes Sesi di Form Jadwal Guru
