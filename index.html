@@ -12904,13 +12904,13 @@
       
       // Filter list berdasarkan email, NIP, atau nama guru (case-insensitive & teacher match)
       let myMapil = list.filter(item => {
-        if (!item || !item.guruEmail) return false;
-        const gEmail = item.guruEmail.toString().toLowerCase().trim();
+        if (!item) return false;
+        const gEmail = (item.guruEmail || item.email || "").toString().toLowerCase().trim();
         const mEmail = myEmail ? myEmail.toLowerCase().trim() : "";
         const mNip = myNip ? myNip.toLowerCase().trim() : "";
         
-        const matchEmail = mEmail && gEmail === mEmail;
-        const matchNip = mNip && (gEmail === mNip || gEmail.includes(mNip));
+        const matchEmail = mEmail && (gEmail === mEmail || gEmail.includes(mEmail) || mEmail.includes(gEmail));
+        const matchNip = mNip && (gEmail === mNip || gEmail.includes(mNip) || mNip.includes(gEmail));
         const matchName = myNama && isTeacherMatch(gEmail, myNama);
         return matchEmail || matchNip || matchName;
       });
@@ -17172,6 +17172,7 @@
         navigator.serviceWorker.register('./sw.js')
           .then((reg) => {
             console.log('PWA Service Worker berhasil didaftarkan scope: ', reg.scope);
+            reg.update();
           })
           .catch((err) => {
             console.error('Registrasi Service Worker gagal: ', err);
