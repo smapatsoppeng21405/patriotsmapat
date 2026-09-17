@@ -5638,6 +5638,41 @@
       return false;
     }
 
+    function isSameDate(d1, d2) {
+      if (!d1 || !d2) return false;
+      const s1 = String(d1).trim();
+      const s2 = String(d2).trim();
+      if (!s1 || !s2) return false;
+      if (s1 === s2) return true;
+
+      const toYMD = (str) => {
+        if (!str) return "";
+        let clean = str.split('T')[0].split(' ')[0].trim();
+        if (clean.includes('-')) {
+          const parts = clean.split('-');
+          if (parts[0].length === 4) {
+            return `${parts[0]}-${String(parts[1]).padStart(2, '0')}-${String(parts[2]).padStart(2, '0')}`;
+          } else if (parts[2].length === 4) {
+            return `${parts[2]}-${String(parts[1]).padStart(2, '0')}-${String(parts[0]).padStart(2, '0')}`;
+          }
+        } else if (clean.includes('/')) {
+          const parts = clean.split('/');
+          if (parts[2] && parts[2].length === 4) {
+            return `${parts[2]}-${String(parts[1]).padStart(2, '0')}-${String(parts[0]).padStart(2, '0')}`;
+          } else if (parts[0].length === 4) {
+            return `${parts[0]}-${String(parts[1]).padStart(2, '0')}-${String(parts[2]).padStart(2, '0')}`;
+          }
+        }
+        const d = new Date(str);
+        if (!isNaN(d.getTime())) {
+          return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        }
+        return clean;
+      };
+
+      return toYMD(s1) === toYMD(s2);
+    }
+
     // TOAST NOTIFICATIONS
     function showToast(message, type = "success") {
       const container = document.getElementById('toastContainer');
@@ -16187,18 +16222,20 @@
       const dayName = getIndonesianDayName(selectedDate);
       
       const schedules = appState.jadwalList || [];
-      const daySchedules = schedules.filter(s => s.hari === dayName);
+      const daySchedules = schedules.filter(s => isDayMatch(s.hari, dayName));
       
       const journals = appState.jurnalList || [];
-      const dateJournals = journals.filter(j => j.tanggal === selectedDate);
+      const dateJournals = journals.filter(j => isSameDate(j.tanggal, selectedDate));
       
       const sessions = appState.sesiList || [];
       
       const tidakBerjalanSchedules = daySchedules.filter(sched => {
         const matchingJournal = dateJournals.find(j => {
-          const teacherMatches = isTeacherMatch(j.guru, sched.guru);
-          const classMatches = j.kelas === sched.kelas;
-          const sesiMatches = !j.sesi || !sched.jamKe || j.sesi.toString().split(',').map(s => s.trim()).some(s => sched.jamKe.toString().split(',').map(x => x.trim()).includes(s));
+          const teacherMatches = isTeacherMatch(j.guru, sched.guru) || (j.email && isTeacherMatch(j.email, sched.guru)) || (sched.guruEmail && isTeacherMatch(j.guru, sched.guruEmail));
+          const classMatches = isClassMatch(j.kelas, sched.kelas);
+          const jSessions = parseSessionNumbers(j.sesi);
+          const schedSessions = parseSessionNumbers(sched.jamKe);
+          const sesiMatches = !j.sesi || !sched.jamKe || jSessions.length === 0 || schedSessions.length === 0 || jSessions.some(s => schedSessions.includes(s));
           
           return teacherMatches && classMatches && sesiMatches;
         });
@@ -16286,10 +16323,10 @@
       tbody.innerHTML = "";
       
       const schedules = appState.jadwalList || [];
-      const daySchedules = schedules.filter(s => s.hari === dayName);
+      const daySchedules = schedules.filter(s => isDayMatch(s.hari, dayName));
       
       const journals = appState.jurnalList || [];
-      const dateJournals = journals.filter(j => j.tanggal === selectedDate);
+      const dateJournals = journals.filter(j => isSameDate(j.tanggal, selectedDate));
       
       const sessions = appState.sesiList || [];
       
@@ -16321,8 +16358,8 @@
         }
 
         const matchingJournal = dateJournals.find(j => {
-          const teacherMatches = isTeacherMatch(j.guru, sched.guru);
-          const classMatches = j.kelas === sched.kelas;
+          const teacherMatches = isTeacherMatch(j.guru, sched.guru) || (j.email && isTeacherMatch(j.email, sched.guru)) || (sched.guruEmail && isTeacherMatch(j.guru, sched.guruEmail));
+          const classMatches = isClassMatch(j.kelas, sched.kelas);
           const jSessions = parseSessionNumbers(j.sesi);
           const schedSessions = parseSessionNumbers(sched.jamKe);
           const sesiMatches = !j.sesi || !sched.jamKe || jSessions.length === 0 || schedSessions.length === 0 || jSessions.some(s => schedSessions.includes(s));
@@ -16370,8 +16407,8 @@
       // Find extra/out-of-schedule journals filled on this date
       const extraJournals = dateJournals.filter(j => {
         const isScheduled = daySchedules.some(sched => {
-          const teacherMatches = isTeacherMatch(j.guru, sched.guru);
-          const classMatches = j.kelas === sched.kelas;
+          const teacherMatches = isTeacherMatch(j.guru, sched.guru) || (j.email && isTeacherMatch(j.email, sched.guru)) || (sched.guruEmail && isTeacherMatch(j.guru, sched.guruEmail));
+          const classMatches = isClassMatch(j.kelas, sched.kelas);
           const jSessions = parseSessionNumbers(j.sesi);
           const schedSessions = parseSessionNumbers(sched.jamKe);
           const sesiMatches = !j.sesi || !sched.jamKe || jSessions.length === 0 || schedSessions.length === 0 || jSessions.some(s => schedSessions.includes(s));
@@ -16493,9 +16530,9 @@
       const dayName = getIndonesianDayName(selectedDate);
       
       const schedules = appState.jadwalList || [];
-      const daySchedules = schedules.filter(s => s.hari === dayName);
+      const daySchedules = schedules.filter(s => isDayMatch(s.hari, dayName));
       const journals = appState.jurnalList || [];
-      const dateJournals = journals.filter(j => j.tanggal === selectedDate);
+      const dateJournals = journals.filter(j => isSameDate(j.tanggal, selectedDate));
       const sessions = appState.sesiList || [];
       
       daySchedules.sort((a, b) => {
@@ -16525,9 +16562,11 @@
         }
 
         const matchingJournal = dateJournals.find(j => {
-          const teacherMatches = isTeacherMatch(j.guru, sched.guru);
-          const classMatches = j.kelas === sched.kelas;
-          const sesiMatches = !j.sesi || !sched.jamKe || j.sesi.toString().split(',').map(s => s.trim()).some(s => sched.jamKe.toString().split(',').map(x => x.trim()).includes(s));
+          const teacherMatches = isTeacherMatch(j.guru, sched.guru) || (j.email && isTeacherMatch(j.email, sched.guru)) || (sched.guruEmail && isTeacherMatch(j.guru, sched.guruEmail));
+          const classMatches = isClassMatch(j.kelas, sched.kelas);
+          const jSessions = parseSessionNumbers(j.sesi);
+          const schedSessions = parseSessionNumbers(sched.jamKe);
+          const sesiMatches = !j.sesi || !sched.jamKe || jSessions.length === 0 || schedSessions.length === 0 || jSessions.some(s => schedSessions.includes(s));
           return teacherMatches && classMatches && sesiMatches;
         });
         
@@ -17061,7 +17100,7 @@
       
       const filterDate = document.getElementById('ks-chart-filter-tanggal')?.value || "";
       const filteredJurnalList = filterDate 
-        ? appState.jurnalList.filter(j => j.tanggal === filterDate) 
+        ? appState.jurnalList.filter(j => isSameDate(j.tanggal, filterDate)) 
         : appState.jurnalList;
 
       // Update stats cards based on date filter if elements are available
@@ -17070,7 +17109,7 @@
       }
       if (document.getElementById('ks-stat-jurnal7kaih')) {
         const filteredJurnal7KAIH = filterDate
-          ? (appState.jurnal7KAIHList || []).filter(j => j.tanggal === filterDate)
+          ? (appState.jurnal7KAIHList || []).filter(j => isSameDate(j.tanggal, filterDate))
           : (appState.jurnal7KAIHList || []);
         document.getElementById('ks-stat-jurnal7kaih').textContent = filteredJurnal7KAIH.length;
       }
