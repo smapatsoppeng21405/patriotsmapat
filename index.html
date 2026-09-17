@@ -4709,11 +4709,11 @@
     // HELPER PEMBERSIH DATA DUMMY BAWAAN SIKURIKULUM
     function purgeDefaultDummyData() {
       try {
-        const dummyUserIds = ["USR001", "USR002", "USR003", "USR004", "USR005", "USR006"];
-        const dummyUserEmails = ["wakasek@sekolah.com", "guru@sekolah.com", "walikelas@sekolah.com", "guruwali@sekolah.com", "kepala@sekolah.com", "admin@sekolah.com"];
-        const dummyStudentNis = ["12345", "12346", "12347"];
-        const dummyStudentIds = ["SIS-001", "SIS-002", "SIS-003", "SIS-1", "SIS-2", "SIS-3", "SGW-001", "SGW-002", "SGW-003", "SGW-1", "SGW-2", "SGW-3"];
-        const dummyJadwalIds = ["SCH-001", "SCH-002", "SCH-003", "SCH-1", "SCH-2", "SCH-3"];
+        const dummyUserIds = ["USR_MOCK_DEMO_000"];
+        const dummyUserEmails = [];
+        const dummyStudentNis = [];
+        const dummyStudentIds = [];
+        const dummyJadwalIds = [];
 
         // 1. Users / Teachers
         let users = JSON.parse(localStorage.getItem('db_users')) || [];
@@ -5508,7 +5508,7 @@
       return false;
     }
 
-    function getTeacherIdentifiers(user) {
+    function getTeacherIdentifiers(user, customTeacherList, customGmList) {
       if (!user) return [];
       const identifiers = new Set();
       
@@ -5517,13 +5517,22 @@
       const uNip = user.nip || user.NIP || "";
       const uId = user.id || user.ID || "";
 
-      if (uNama) identifiers.add(uNama.trim());
+      if (uNama) {
+        identifiers.add(uNama.trim());
+        const cleaned = cleanTeacherNameForMatching(uNama);
+        if (cleaned) {
+          identifiers.add(cleaned);
+          cleaned.split(' ').forEach(w => {
+            if (w.length > 2) identifiers.add(w);
+          });
+        }
+      }
       if (uEmail) identifiers.add(uEmail.trim());
       if (uNip) identifiers.add(uNip.toString().trim());
       if (uId) identifiers.add(uId.toString().trim());
 
-      const tList = (typeof appState !== 'undefined' && appState.teacherList) ? appState.teacherList : [];
-      const gmList = (typeof appState !== 'undefined' && appState.guruMasterList) ? appState.guruMasterList : [];
+      const tList = customTeacherList || ((typeof appState !== 'undefined' && appState.teacherList) ? appState.teacherList : []);
+      const gmList = customGmList || ((typeof appState !== 'undefined' && appState.guruMasterList) ? appState.guruMasterList : []);
 
       const allTeachers = [...tList, ...gmList];
       allTeachers.forEach(t => {
@@ -5536,7 +5545,16 @@
         const matchName = uNama && tNama && isTeacherMatch(uNama, tNama);
 
         if (matchEmail || matchNip || matchName) {
-          if (tNama) identifiers.add(tNama.trim());
+          if (tNama) {
+            identifiers.add(tNama.trim());
+            const cleaned = cleanTeacherNameForMatching(tNama);
+            if (cleaned) {
+              identifiers.add(cleaned);
+              cleaned.split(' ').forEach(w => {
+                if (w.length > 2) identifiers.add(w);
+              });
+            }
+          }
           if (tEmail) identifiers.add(tEmail.trim());
           if (tNip) identifiers.add(tNip.toString().trim());
         }
@@ -5545,7 +5563,7 @@
       return Array.from(identifiers);
     }
 
-    function isScheduleForTeacher(j, user) {
+    function isScheduleForTeacher(j, user, customTeacherList, customGmList) {
       if (!j || !user) return false;
       const gName = j.guru || j.namaGuru || j.Guru || "";
       const gEmail = j.email || j.Email || "";
@@ -5553,7 +5571,7 @@
 
       if (!gName && !gEmail && !gNip) return false;
 
-      const ids = getTeacherIdentifiers(user);
+      const ids = getTeacherIdentifiers(user, customTeacherList, customGmList);
       for (const id of ids) {
         if (!id) continue;
         const idLower = id.toLowerCase().trim();
@@ -5561,16 +5579,17 @@
         if (gEmail && (gEmail.toLowerCase().trim() === idLower || gEmail.toLowerCase().includes(idLower) || idLower.includes(gEmail.toLowerCase()))) return true;
         if (gNip && (gNip.toString().trim() === id.toString().trim() || gName.includes(id))) return true;
         if (gName && gName.toLowerCase().includes(idLower)) return true;
+        if (gName && idLower.includes(gName.toLowerCase())) return true;
       }
       return false;
     }
 
-    function isMapilForTeacher(item, user) {
+    function isMapilForTeacher(item, user, customTeacherList, customGmList) {
       if (!item || !user) return false;
       const gEmail = (item.guruEmail || item.email || item.GuruEmail || "").toString().trim();
       if (!gEmail) return false;
       
-      const ids = getTeacherIdentifiers(user);
+      const ids = getTeacherIdentifiers(user, customTeacherList, customGmList);
       for (const id of ids) {
         if (!id) continue;
         const idLower = id.toLowerCase().trim();
@@ -7215,7 +7234,7 @@
             const currentUser = (typeof appState !== 'undefined' && appState.user) ? appState.user : { nama: nama, email: payload.currentUserEmail };
             const myJurnals = jRaw.filter(j => j.guru && isTeacherMatch(j.guru, nama));
             const myPerangkats = pRaw.filter(p => p.namaGuru && isTeacherMatch(p.namaGuru, nama));
-            const myJadwals = jdRaw.filter(j => isScheduleForTeacher(j, currentUser));
+            const myJadwals = jdRaw.filter(j => isScheduleForTeacher(j, currentUser, teachers, gmRaw));
 
             result.stats = {
               totalJurnalGuru: myJurnals.length > 0 ? myJurnals.length : jRaw.length,
@@ -7223,7 +7242,7 @@
               pendingPerangkatGuru: myPerangkats.filter(p => p.status === "Pending").length,
               disetujuiPerangkatGuru: myPerangkats.filter(p => p.status === "Disetujui").length
             };
-            result.guruJadwalList = myJadwals.length > 0 ? myJadwals : jdRaw.filter(j => isScheduleForTeacher(j, currentUser));
+            result.guruJadwalList = myJadwals.length > 0 ? myJadwals : jdRaw.filter(j => isScheduleForTeacher(j, currentUser, teachers, gmRaw));
           }
           else if (role === "Wali Kelas") {
             let homeroomClass = payload.currentUserWaliKelasClass || "";
