@@ -5508,6 +5508,79 @@
       return false;
     }
 
+    function getTeacherIdentifiers(user) {
+      if (!user) return [];
+      const identifiers = new Set();
+      
+      const uNama = user.nama || user.Nama || "";
+      const uEmail = user.email || user.Email || "";
+      const uNip = user.nip || user.NIP || "";
+      const uId = user.id || user.ID || "";
+
+      if (uNama) identifiers.add(uNama.trim());
+      if (uEmail) identifiers.add(uEmail.trim());
+      if (uNip) identifiers.add(uNip.toString().trim());
+      if (uId) identifiers.add(uId.toString().trim());
+
+      const tList = (typeof appState !== 'undefined' && appState.teacherList) ? appState.teacherList : [];
+      const gmList = (typeof appState !== 'undefined' && appState.guruMasterList) ? appState.guruMasterList : [];
+
+      const allTeachers = [...tList, ...gmList];
+      allTeachers.forEach(t => {
+        const tNama = t.nama || t.guru || t.NamaGuru || "";
+        const tEmail = t.email || t.Email || "";
+        const tNip = t.nip || t.NIP || "";
+
+        const matchEmail = uEmail && tEmail && uEmail.toLowerCase().trim() === tEmail.toLowerCase().trim();
+        const matchNip = uNip && tNip && uNip.toString().trim() === tNip.toString().trim();
+        const matchName = uNama && tNama && isTeacherMatch(uNama, tNama);
+
+        if (matchEmail || matchNip || matchName) {
+          if (tNama) identifiers.add(tNama.trim());
+          if (tEmail) identifiers.add(tEmail.trim());
+          if (tNip) identifiers.add(tNip.toString().trim());
+        }
+      });
+
+      return Array.from(identifiers);
+    }
+
+    function isScheduleForTeacher(j, user) {
+      if (!j || !user) return false;
+      const gName = j.guru || j.namaGuru || j.Guru || "";
+      const gEmail = j.email || j.Email || "";
+      const gNip = j.nip || j.NIP || "";
+
+      if (!gName && !gEmail && !gNip) return false;
+
+      const ids = getTeacherIdentifiers(user);
+      for (const id of ids) {
+        if (!id) continue;
+        const idLower = id.toLowerCase().trim();
+        if (gName && isTeacherMatch(gName, id)) return true;
+        if (gEmail && (gEmail.toLowerCase().trim() === idLower || gEmail.toLowerCase().includes(idLower) || idLower.includes(gEmail.toLowerCase()))) return true;
+        if (gNip && (gNip.toString().trim() === id.toString().trim() || gName.includes(id))) return true;
+        if (gName && gName.toLowerCase().includes(idLower)) return true;
+      }
+      return false;
+    }
+
+    function isMapilForTeacher(item, user) {
+      if (!item || !user) return false;
+      const gEmail = (item.guruEmail || item.email || item.GuruEmail || "").toString().trim();
+      if (!gEmail) return false;
+      
+      const ids = getTeacherIdentifiers(user);
+      for (const id of ids) {
+        if (!id) continue;
+        const idLower = id.toLowerCase().trim();
+        const gLower = gEmail.toLowerCase();
+        if (gLower === idLower || gLower.includes(idLower) || idLower.includes(gLower)) return true;
+        if (isTeacherMatch(gEmail, id)) return true;
+      }
+      return false;
+    }
+
     function normalizeDayName(d) {
       if (!d) return "";
       let s = String(d).trim().toLowerCase();
@@ -6336,17 +6409,8 @@
       // Helper check if teacher has any schedule in system
       const hasSchedule = () => {
         if (!appState.user) return true;
-        const tName = appState.user.nama || "";
-        const tNip = appState.user.nip || "";
-        const tEmail = appState.user.email || "";
-
         const allJadwals = (appState.jadwalList && appState.jadwalList.length > 0) ? appState.jadwalList : (appState.guruJadwalList || []);
-        return allJadwals.some(j => {
-          const gName = j.guru || j.namaGuru || "";
-          const gNip = j.nip || j.NIP || "";
-          const gEmail = j.email || j.Email || "";
-          return (tName && isTeacherMatch(gName, tName)) || (tNip && (gNip === tNip || gName.includes(tNip))) || (tEmail && gEmail && gEmail.toLowerCase() === tEmail.toLowerCase());
-        });
+        return allJadwals.some(j => isScheduleForTeacher(j, appState.user));
       };
 
       // Load default pane pertama
@@ -6363,17 +6427,8 @@
     function switchPane(paneId, element = null) {
       const hasSchedule = () => {
         if (!appState.user) return true;
-        const tName = appState.user.nama || "";
-        const tNip = appState.user.nip || "";
-        const tEmail = appState.user.email || "";
-
         const allJadwals = (appState.jadwalList && appState.jadwalList.length > 0) ? appState.jadwalList : (appState.guruJadwalList || []);
-        return allJadwals.some(j => {
-          const gName = j.guru || j.namaGuru || "";
-          const gNip = j.nip || j.NIP || "";
-          const gEmail = j.email || j.Email || "";
-          return (tName && isTeacherMatch(gName, tName)) || (tNip && (gNip === tNip || gName.includes(tNip))) || (tEmail && gEmail && gEmail.toLowerCase() === tEmail.toLowerCase());
-        });
+        return allJadwals.some(j => isScheduleForTeacher(j, appState.user));
       };
 
       // Wajibkan semua guru untuk memasukkan jadwal pelajarannya hanya jika benar-benar belum ada di sistem
@@ -7157,9 +7212,10 @@
             };
           }
           else if (role === "Guru") {
+            const currentUser = (typeof appState !== 'undefined' && appState.user) ? appState.user : { nama: nama, email: payload.currentUserEmail };
             const myJurnals = jRaw.filter(j => j.guru && isTeacherMatch(j.guru, nama));
             const myPerangkats = pRaw.filter(p => p.namaGuru && isTeacherMatch(p.namaGuru, nama));
-            const myJadwals = jdRaw.filter(j => j.guru && isTeacherMatch(j.guru, nama));
+            const myJadwals = jdRaw.filter(j => isScheduleForTeacher(j, currentUser));
 
             result.stats = {
               totalJurnalGuru: myJurnals.length > 0 ? myJurnals.length : jRaw.length,
@@ -7167,7 +7223,7 @@
               pendingPerangkatGuru: myPerangkats.filter(p => p.status === "Pending").length,
               disetujuiPerangkatGuru: myPerangkats.filter(p => p.status === "Disetujui").length
             };
-            result.guruJadwalList = myJadwals.length > 0 ? myJadwals : [...jdRaw];
+            result.guruJadwalList = myJadwals.length > 0 ? myJadwals : jdRaw.filter(j => isScheduleForTeacher(j, currentUser));
           }
           else if (role === "Wali Kelas") {
             let homeroomClass = payload.currentUserWaliKelasClass || "";
@@ -12594,36 +12650,12 @@
       if (!tbody) return;
       tbody.innerHTML = "";
       
-      const teacherName = appState.user ? appState.user.nama : "";
-      const teacherNip = appState.user ? appState.user.nip : "";
-      const teacherEmail = appState.user ? appState.user.email : "";
-
       const rawJadwals = (appState.jadwalList && appState.jadwalList.length > 0) ? appState.jadwalList : (appState.guruJadwalList || []);
 
-      let list = rawJadwals.filter(j => {
-        const gName = j.guru || j.namaGuru || "";
-        const gEmail = j.email || j.Email || "";
-        const gNip = j.nip || j.NIP || "";
-
-        const matchName = teacherName && isTeacherMatch(gName, teacherName);
-        const matchNip = teacherNip && (gNip === teacherNip || gName.includes(teacherNip));
-        const matchEmail = teacherEmail && (gEmail.toLowerCase() === teacherEmail.toLowerCase() || gName.toLowerCase() === teacherEmail.toLowerCase());
-
-        return matchName || matchNip || matchEmail;
-      });
+      let list = rawJadwals.filter(j => isScheduleForTeacher(j, appState.user));
 
       if (list.length === 0 && appState.guruJadwalList && appState.guruJadwalList.length > 0) {
-        list = appState.guruJadwalList.filter(j => {
-          const gName = j.guru || j.namaGuru || "";
-          const gEmail = j.email || j.Email || "";
-          const gNip = j.nip || j.NIP || "";
-
-          const matchName = teacherName && isTeacherMatch(gName, teacherName);
-          const matchNip = teacherNip && (gNip === teacherNip || gName.includes(teacherNip));
-          const matchEmail = teacherEmail && (gEmail.toLowerCase() === teacherEmail.toLowerCase() || gName.toLowerCase() === teacherEmail.toLowerCase());
-
-          return matchName || matchNip || matchEmail;
-        });
+        list = appState.guruJadwalList.filter(j => isScheduleForTeacher(j, appState.user));
       }
 
       if (list.length === 0) {
@@ -12898,22 +12930,7 @@
       tbody.innerHTML = "";
       
       const list = appState.kelasMapelPilihanList || [];
-      const myEmail = appState.user ? (appState.user.email || "") : "";
-      const myNama = appState.user ? (appState.user.nama || "") : "";
-      const myNip = appState.user ? (appState.user.nip || "") : "";
-      
-      // Filter list berdasarkan email, NIP, atau nama guru (case-insensitive & teacher match)
-      let myMapil = list.filter(item => {
-        if (!item) return false;
-        const gEmail = (item.guruEmail || item.email || "").toString().toLowerCase().trim();
-        const mEmail = myEmail ? myEmail.toLowerCase().trim() : "";
-        const mNip = myNip ? myNip.toLowerCase().trim() : "";
-        
-        const matchEmail = mEmail && (gEmail === mEmail || gEmail.includes(mEmail) || mEmail.includes(gEmail));
-        const matchNip = mNip && (gEmail === mNip || gEmail.includes(mNip) || mNip.includes(gEmail));
-        const matchName = myNama && isTeacherMatch(gEmail, myNama);
-        return matchEmail || matchNip || matchName;
-      });
+      let myMapil = list.filter(item => isMapilForTeacher(item, appState.user));
       
       // Filter berdasarkan dropdown filter rombel
       const filterVal = document.getElementById('filterMapilKelas').value;

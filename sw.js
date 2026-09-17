@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wakasek-kurikulum-v67-gas-primary-priority';
+const CACHE_NAME = 'wakasek-kurikulum-v68-gas-primary-priority';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
