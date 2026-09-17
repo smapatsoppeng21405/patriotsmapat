@@ -12677,6 +12677,16 @@
         list = appState.guruJadwalList.filter(j => isScheduleForTeacher(j, appState.user));
       }
 
+      if (list.length === 0 && appState.jadwalList && appState.jadwalList.length > 0) {
+        const uNama = appState.user ? (appState.user.nama || "") : "";
+        if (uNama) {
+          list = appState.jadwalList.filter(j => {
+            const gName = j.guru || j.namaGuru || "";
+            return gName && isTeacherMatch(gName, uNama);
+          });
+        }
+      }
+
       if (list.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Belum ada jadwal mengajar terdaftar untuk akun Anda.</td></tr>';
         return;
@@ -12950,6 +12960,16 @@
       
       const list = appState.kelasMapelPilihanList || [];
       let myMapil = list.filter(item => isMapilForTeacher(item, appState.user));
+
+      if (myMapil.length === 0 && list.length > 0 && appState.user) {
+        const uEmail = (appState.user.email || "").toLowerCase().trim();
+        const uNama = (appState.user.nama || "").toLowerCase().trim();
+        myMapil = list.filter(item => {
+          if (!item || !item.guruEmail) return false;
+          const ge = item.guruEmail.toString().toLowerCase().trim();
+          return (uEmail && ge.includes(uEmail)) || (uNama && (ge.includes(uNama) || uNama.includes(ge))) || isTeacherMatch(ge, uNama);
+        });
+      }
       
       // Filter berdasarkan dropdown filter rombel
       const filterVal = document.getElementById('filterMapilKelas').value;
