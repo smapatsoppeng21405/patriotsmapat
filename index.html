@@ -5487,6 +5487,12 @@
       if (!str1 || !str2) return false;
       if (str1 === str2) return true;
 
+      if (str1.includes('@') || str2.includes('@')) {
+        const e1 = str1.replace(/[^a-z0-9@._-]/g, '');
+        const e2 = str2.replace(/[^a-z0-9@._-]/g, '');
+        if (e1 === e2) return true;
+      }
+
       const c1 = cleanTeacherNameForMatching(name1);
       const c2 = cleanTeacherNameForMatching(name2);
       if (!c1 || !c2) return false;
@@ -5782,12 +5788,12 @@
         });
       }
 
-      // Pastikan beralih status untuk Guru, Wali Kelas, dan Guru Wali bisa dilakukan tanpa log out
-      const teacherRoles = ["Guru", "Wali Kelas", "Guru Wali"];
+      // Pastikan beralih status untuk Guru, Wakasek, Wali Kelas, Guru Wali, Admin, Kepala Sekolah bisa dilakukan tanpa log out
+      const switchableRoles = ["Wakasek", "Guru", "Wali Kelas", "Guru Wali", "Kepala Sekolah", "Admin"];
       let profileList = allProfiles || [profile];
-      const hasTeacherRole = profileList.some(p => teacherRoles.includes(p.role));
+      const canSwitchRole = profileList.some(p => switchableRoles.includes(p.role));
       
-      if (hasTeacherRole) {
+      if (canSwitchRole) {
         let updatedList = [...profileList];
         let foundWClass = "";
         updatedList.forEach(p => {
@@ -5804,7 +5810,6 @@
             foundWClass = matchClass[1].trim().replace(/^(\d+)([a-zA-Z])$/i, "$1-$2");
           }
         }
-        // Fallback ke list guru jika ada data guru yang tercatat kelasnya
         if (!foundWClass) {
           let tList = [];
           if (typeof appState !== 'undefined' && appState.teacherList && appState.teacherList.length > 0) {
@@ -5814,14 +5819,22 @@
               tList = JSON.parse(localStorage.getItem('cache_teachers')) || [];
             } catch(e) {}
           }
-          const matchTeacher = tList.find(t => t.email && t.email.toLowerCase() === profile.email.toLowerCase() && t.waliKelasClass);
+          const matchTeacher = tList.find(t => t.email && profile.email && t.email.toLowerCase() === profile.email.toLowerCase() && t.waliKelasClass);
           if (matchTeacher) {
             foundWClass = matchTeacher.waliKelasClass;
           }
         }
         
-        const baseP = updatedList.find(p => teacherRoles.includes(p.role)) || profile;
-        teacherRoles.forEach(r => {
+        const rolesToAdd = ["Guru", "Guru Wali"];
+        if (profileList.some(p => p.role === "Wakasek") || profile.role === "Wakasek") {
+          rolesToAdd.unshift("Wakasek");
+        }
+        if (foundWClass) {
+          rolesToAdd.push("Wali Kelas");
+        }
+        
+        const baseP = updatedList[0] || profile;
+        rolesToAdd.forEach(r => {
           const exists = updatedList.some(p => p.role === r);
           if (!exists) {
             updatedList.push({
@@ -6327,14 +6340,13 @@
         const tNip = appState.user.nip || "";
         const tEmail = appState.user.email || "";
 
-        if (appState.guruJadwalList && appState.guruJadwalList.length > 0) return true;
-        if (appState.jadwalList && appState.jadwalList.length > 0) {
-          return appState.jadwalList.some(j => {
-            const gName = j.guru || j.namaGuru || "";
-            return isTeacherMatch(gName, tName) || (tNip && gName.includes(tNip)) || (tEmail && j.email && j.email.toLowerCase() === tEmail.toLowerCase());
-          });
-        }
-        return false;
+        const allJadwals = (appState.jadwalList && appState.jadwalList.length > 0) ? appState.jadwalList : (appState.guruJadwalList || []);
+        return allJadwals.some(j => {
+          const gName = j.guru || j.namaGuru || "";
+          const gNip = j.nip || j.NIP || "";
+          const gEmail = j.email || j.Email || "";
+          return (tName && isTeacherMatch(gName, tName)) || (tNip && (gNip === tNip || gName.includes(tNip))) || (tEmail && gEmail && gEmail.toLowerCase() === tEmail.toLowerCase());
+        });
       };
 
       // Load default pane pertama
@@ -6355,14 +6367,13 @@
         const tNip = appState.user.nip || "";
         const tEmail = appState.user.email || "";
 
-        if (appState.guruJadwalList && appState.guruJadwalList.length > 0) return true;
-        if (appState.jadwalList && appState.jadwalList.length > 0) {
-          return appState.jadwalList.some(j => {
-            const gName = j.guru || j.namaGuru || "";
-            return isTeacherMatch(gName, tName) || (tNip && gName.includes(tNip)) || (tEmail && j.email && j.email.toLowerCase() === tEmail.toLowerCase());
-          });
-        }
-        return false;
+        const allJadwals = (appState.jadwalList && appState.jadwalList.length > 0) ? appState.jadwalList : (appState.guruJadwalList || []);
+        return allJadwals.some(j => {
+          const gName = j.guru || j.namaGuru || "";
+          const gNip = j.nip || j.NIP || "";
+          const gEmail = j.email || j.Email || "";
+          return (tName && isTeacherMatch(gName, tName)) || (tNip && (gNip === tNip || gName.includes(tNip))) || (tEmail && gEmail && gEmail.toLowerCase() === tEmail.toLowerCase());
+        });
       };
 
       // Wajibkan semua guru untuk memasukkan jadwal pelajarannya hanya jika benar-benar belum ada di sistem
@@ -7099,6 +7110,10 @@
           if (sesiRaw.length === 0) {
             const localSesi = JSON.parse(localStorage.getItem('db_sesi')) || JSON.parse(localStorage.getItem('cache_sesi')) || [];
             if (localSesi.length > 0) sesiRaw = localSesi;
+          }
+          if (kmpRaw.length === 0) {
+            const localKmp = JSON.parse(localStorage.getItem('db_kelas_mapel_pilihan')) || JSON.parse(localStorage.getItem('cache_kelas_mapel_pilihan')) || [];
+            if (localKmp.length > 0) kmpRaw = localKmp;
           }
 
           let result = {
@@ -8705,7 +8720,15 @@
           if (data.siswaGuruWaliList && data.siswaGuruWaliList.length > 0) appState.siswaGuruWaliList = data.siswaGuruWaliList;
           if (data.jurnal7KAIHList && data.jurnal7KAIHList.length > 0) appState.jurnal7KAIHList = data.jurnal7KAIHList;
           if (data.catatanWaliKelasList && data.catatanWaliKelasList.length > 0) appState.catatanWaliKelasList = data.catatanWaliKelasList;
-          if (data.kelasMapelPilihanList && data.kelasMapelPilihanList.length > 0) appState.kelasMapelPilihanList = data.kelasMapelPilihanList;
+          if (data.kelasMapelPilihanList !== undefined) {
+            if (data.kelasMapelPilihanList.length > 0) {
+              appState.kelasMapelPilihanList = data.kelasMapelPilihanList;
+            } else {
+              const localKmp = JSON.parse(localStorage.getItem('db_kelas_mapel_pilihan')) || [];
+              if (localKmp.length > 0) appState.kelasMapelPilihanList = localKmp;
+            }
+            safeLocalStorageSetItem('db_kelas_mapel_pilihan', JSON.stringify(appState.kelasMapelPilihanList || []));
+          }
 
           const rawDbJd = localStorage.getItem('db_jadwals');
           if (rawDbJd === "[]") {
@@ -12575,7 +12598,9 @@
       const teacherNip = appState.user ? appState.user.nip : "";
       const teacherEmail = appState.user ? appState.user.email : "";
 
-      let list = (appState.guruJadwalList || []).filter(j => {
+      const rawJadwals = (appState.jadwalList && appState.jadwalList.length > 0) ? appState.jadwalList : (appState.guruJadwalList || []);
+
+      let list = rawJadwals.filter(j => {
         const gName = j.guru || j.namaGuru || "";
         const gEmail = j.email || j.Email || "";
         const gNip = j.nip || j.NIP || "";
@@ -12587,8 +12612,8 @@
         return matchName || matchNip || matchEmail;
       });
 
-      if (list.length === 0 && appState.jadwalList) {
-        list = appState.jadwalList.filter(j => {
+      if (list.length === 0 && appState.guruJadwalList && appState.guruJadwalList.length > 0) {
+        list = appState.guruJadwalList.filter(j => {
           const gName = j.guru || j.namaGuru || "";
           const gEmail = j.email || j.Email || "";
           const gNip = j.nip || j.NIP || "";
@@ -12817,13 +12842,28 @@
           nis: nis
         };
         
-        await callApi("addSiswaMapelPilihan", payload);
+        const res = await callApi("addSiswaMapelPilihan", payload);
         showToast("Siswa berhasil ditambahkan!");
+
+        const newItem = {
+          id: res && res.id ? res.id : ("KMP-" + new Date().getTime()),
+          guruEmail: appState.user.email,
+          namaKelas: tingkatan,
+          tingkatan: tingkatan === "Kelas Mapil X" ? "X" : (tingkatan === "Kelas Mapil XI" ? "XI" : "XII"),
+          namaSiswa: namaSiswa,
+          nis: nis
+        };
+        if (!appState.kelasMapelPilihanList) appState.kelasMapelPilihanList = [];
+        const existIdx = appState.kelasMapelPilihanList.findIndex(k => k.id === newItem.id);
+        if (existIdx !== -1) appState.kelasMapelPilihanList[existIdx] = newItem;
+        else appState.kelasMapelPilihanList.push(newItem);
+        safeLocalStorageSetItem('db_kelas_mapel_pilihan', JSON.stringify(appState.kelasMapelPilihanList));
         
         // Reset siswa select
         document.getElementById('mapilNamaSiswa').value = "";
         
         await loadDashboardData();
+        renderGuruMapilTable();
       } catch (err) {
         showToast("Gagal menyimpan data: " + err.message, "danger");
       } finally {
@@ -12838,8 +12878,13 @@
       showLoading(true, "Mengeluarkan siswa...");
       try {
         await callApi("deleteSiswaMapelPilihan", { id });
+        if (appState.kelasMapelPilihanList) {
+          appState.kelasMapelPilihanList = appState.kelasMapelPilihanList.filter(item => item.id.toString() !== id.toString());
+          safeLocalStorageSetItem('db_kelas_mapel_pilihan', JSON.stringify(appState.kelasMapelPilihanList));
+        }
         showToast("Siswa berhasil dikeluarkan!");
         await loadDashboardData();
+        renderGuruMapilTable();
       } catch (err) {
         showToast("Gagal mengeluarkan siswa: " + err.message, "danger");
       } finally {
@@ -12853,10 +12898,22 @@
       tbody.innerHTML = "";
       
       const list = appState.kelasMapelPilihanList || [];
-      const myEmail = appState.user.email;
+      const myEmail = appState.user ? (appState.user.email || "") : "";
+      const myNama = appState.user ? (appState.user.nama || "") : "";
+      const myNip = appState.user ? (appState.user.nip || "") : "";
       
-      // Filter list berdasarkan email guru yang login (case-insensitive)
-      let myMapil = list.filter(item => item.guruEmail && myEmail && item.guruEmail.toLowerCase().trim() === myEmail.toLowerCase().trim());
+      // Filter list berdasarkan email, NIP, atau nama guru (case-insensitive & teacher match)
+      let myMapil = list.filter(item => {
+        if (!item || !item.guruEmail) return false;
+        const gEmail = item.guruEmail.toString().toLowerCase().trim();
+        const mEmail = myEmail ? myEmail.toLowerCase().trim() : "";
+        const mNip = myNip ? myNip.toLowerCase().trim() : "";
+        
+        const matchEmail = mEmail && gEmail === mEmail;
+        const matchNip = mNip && (gEmail === mNip || gEmail.includes(mNip));
+        const matchName = myNama && isTeacherMatch(gEmail, myNama);
+        return matchEmail || matchNip || matchName;
+      });
       
       // Filter berdasarkan dropdown filter rombel
       const filterVal = document.getElementById('filterMapilKelas').value;
