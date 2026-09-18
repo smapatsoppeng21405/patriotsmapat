@@ -4471,7 +4471,7 @@
     };
 
     // 2. GOOGLE APPS SCRIPT (GAS) URL API (FALLBACK DATABASE)
-    const GAS_API_URL = ""; 
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxaIe9k2Tq-SlLGjtHlqSqg413Y8QVqZr4Gq_YS8FX5jukrIj-SFMheqzjiFVJswfNWKg/exec"; 
 
     // FIREBASE INITIALIZATION ENGINE
     let db = null;
@@ -6124,82 +6124,130 @@
       document.getElementById('absentStudentsModal').style.display = "none";
     }
 
+    // ===== UTILITY HELPER FUNCTIONS FOR TEACHER & CLASS MATCHING =====
+    function cleanTeacherNameForMatching(name) {
+      if (!name) return "";
+      let cleaned = name.toString().toLowerCase().trim();
+      const titles = [
+        "s.pd", "m.pd", "s.ag", "m.ag", "s.kom", "m.kom", "s.si", "m.si",
+        "s.sos", "m.sos", "s.e", "m.e", "s.h", "m.h", "s.st", "m.st",
+        "dra.", "drs.", "dra", "drs", "h.", "hj.", "ir.", "prof.", "dr."
+      ];
+      titles.forEach(t => {
+        cleaned = cleaned.replace(new RegExp("\\b" + t.replace(".", "\\.") + "\\b", "gi"), "");
+      });
+      cleaned = cleaned.replace(/[^a-z0-9\s]/gi, "").replace(/\s+/g, " ").trim();
+      return cleaned;
+    }
+
+    function isTeacherMatch(t1, t2) {
+      if (!t1 || !t2) return false;
+      const str1 = t1.toString().toLowerCase().trim();
+      const str2 = t2.toString().toLowerCase().trim();
+      if (str1 === str2) return true;
+
+      const emailUsername1 = str1.includes("@") ? str1.split("@")[0].trim() : str1;
+      const emailUsername2 = str2.includes("@") ? str2.split("@")[0].trim() : str2;
+      if (emailUsername1 === emailUsername2 && emailUsername1.length > 2) return true;
+
+      const clean1 = cleanTeacherNameForMatching(str1);
+      const clean2 = cleanTeacherNameForMatching(str2);
+      if (clean1 && clean2) {
+        if (clean1 === clean2) return true;
+        if (clean1.length > 3 && clean2.length > 3 && (clean1.includes(clean2) || clean2.includes(clean1))) return true;
+      }
+      return false;
+    }
+
+    function isMapilForTeacher(item, user) {
+      if (!item || !user) return false;
+      const itemTeacher = (item.guruEmail || item.guru || item.namaGuru || item.email || "").toString().trim();
+      if (!itemTeacher) return false;
+
+      const uEmail = (user.email || "").toString().trim();
+      const uNama = (user.nama || "").toString().trim();
+      const uNip = (user.nip || "").toString().trim();
+      const uId = (user.id || "").toString().trim();
+
+      if (uEmail && isTeacherMatch(itemTeacher, uEmail)) return true;
+      if (uNama && isTeacherMatch(itemTeacher, uNama)) return true;
+      if (uNip && isTeacherMatch(itemTeacher, uNip)) return true;
+      if (uId && itemTeacher.toLowerCase() === uId.toLowerCase()) return true;
+
+      return false;
+    }
+
+    function isClassMatch(c1, c2) {
+      if (!c1 || !c2) return false;
+      const s1 = c1.toString().toUpperCase().trim().replace(/[^A-Z0-9]/g, "");
+      const s2 = c2.toString().toUpperCase().trim().replace(/[^A-Z0-9]/g, "");
+      if (s1 === s2) return true;
+      if (s1.length > 2 && s2.length > 2 && (s1.includes(s2) || s2.includes(s1))) return true;
+      return false;
+    }
+
     function getStudentsForClass(className) {
       if (!className) return [];
       const upperClass = className.toString().trim().toUpperCase();
       
       const user = appState.user || {};
-      const userEmail = (user.email || "").toString().trim().toLowerCase();
-      const userNama = (user.nama || "").toString().trim().toLowerCase();
+      const kmpList = appState.kelasMapelPilihanList || [];
       
-      const isMapil = upperClass.includes("MAPIL") || 
-                      upperClass.includes("MAPEL PILIHAN") || 
-                      upperClass.startsWith("KELAS MAPIL");
+      let classTingkatan = "";
+      if (upperClass.includes("XII") || upperClass.endsWith(" 12") || upperClass.endsWith("-12")) classTingkatan = "XII";
+      else if (upperClass.includes("XI") || upperClass.endsWith(" 11") || upperClass.endsWith("-11")) classTingkatan = "XI";
+      else if (upperClass.includes("X") || upperClass.endsWith(" 10") || upperClass.endsWith("-10")) classTingkatan = "X";
 
-      if (isMapil) {
-        const kmpList = appState.kelasMapelPilihanList || [];
-        
-        // Extract grade level if present (X, XI, XII)
-        let classTingkatan = "";
-        if (upperClass.includes("XII") || upperClass.endsWith(" 12") || upperClass.endsWith("-12")) classTingkatan = "XII";
-        else if (upperClass.includes("XI") || upperClass.endsWith(" 11") || upperClass.endsWith("-11")) classTingkatan = "XI";
-        else if (upperClass.includes("X") || upperClass.endsWith(" 10") || upperClass.endsWith("-10")) classTingkatan = "X";
+      // Step 1: Search in KelasMapelPilihan for teacher AND class match
+      let myMapil = kmpList.filter(k => {
+        if (!k) return false;
+        const kNamaKelas = (k.namaKelas || "").toString().trim().toUpperCase();
+        const kTingkatan = (k.tingkatan || "").toString().trim().toUpperCase();
 
-        // Step 1: Match teacher identity AND class name / grade level
-        let myMapil = kmpList.filter(k => {
+        const classMatch = kNamaKelas === upperClass ||
+                           isClassMatch(kNamaKelas, upperClass) ||
+                           (classTingkatan && (kTingkatan === classTingkatan || isClassMatch(kNamaKelas, classTingkatan))) ||
+                           (upperClass.includes("MAPIL") && classTingkatan && (kTingkatan === classTingkatan));
+
+        if (!classMatch) return false;
+
+        if (user && (user.role === "Guru" || user.role === "Wali Kelas")) {
+          return isMapilForTeacher(k, user);
+        }
+        return true;
+      });
+
+      let names = myMapil.map(k => k.namaSiswa).filter(Boolean);
+
+      // Step 2: Fallback if teacher-specific match found 0 students
+      if (names.length === 0) {
+        const mapilByClass = kmpList.filter(k => {
           if (!k) return false;
-          const kEmail = (k.guruEmail || k.email || "").toString().trim().toLowerCase();
-          const teacherMatch = !userEmail || !kEmail || 
-                               kEmail === userEmail || 
-                               (typeof isTeacherMatch === 'function' && (isTeacherMatch(kEmail, userEmail) || isTeacherMatch(kEmail, userNama))) ||
-                               (typeof isMapilForTeacher === 'function' && isMapilForTeacher(k, user));
-          
           const kNamaKelas = (k.namaKelas || "").toString().trim().toUpperCase();
           const kTingkatan = (k.tingkatan || "").toString().trim().toUpperCase();
-
-          const classMatch = (typeof isClassMatch === 'function' && isClassMatch(kNamaKelas, upperClass)) ||
-                             kNamaKelas === upperClass ||
-                             kNamaKelas.includes(upperClass) ||
-                             upperClass.includes(kNamaKelas) ||
-                             (classTingkatan && (kTingkatan === classTingkatan || kNamaKelas.includes(classTingkatan)));
-
-          return teacherMatch && classMatch;
+          return kNamaKelas === upperClass ||
+                 isClassMatch(kNamaKelas, upperClass) ||
+                 (classTingkatan && (kTingkatan === classTingkatan || isClassMatch(kNamaKelas, classTingkatan))) ||
+                 (upperClass.includes("MAPIL") && classTingkatan && (kTingkatan === classTingkatan));
         });
-
-        let names = myMapil.map(k => k.namaSiswa).filter(Boolean);
-
-        // Step 2: Fallback if teacher filtering produced 0 results (e.g. email mismatch)
-        if (names.length === 0) {
-          const mapilByClass = kmpList.filter(k => {
-            if (!k) return false;
-            const kNamaKelas = (k.namaKelas || "").toString().trim().toUpperCase();
-            const kTingkatan = (k.tingkatan || "").toString().trim().toUpperCase();
-            return (typeof isClassMatch === 'function' && isClassMatch(kNamaKelas, upperClass)) ||
-                   kNamaKelas === upperClass ||
-                   kNamaKelas.includes(upperClass) ||
-                   upperClass.includes(kNamaKelas) ||
-                   (classTingkatan && (kTingkatan === classTingkatan || kNamaKelas.includes(classTingkatan)));
-          });
-          names = mapilByClass.map(k => k.namaSiswa).filter(Boolean);
-        }
-
-        if (names.length > 0) {
-          return [...new Set(names)];
-        }
+        names = mapilByClass.map(k => k.namaSiswa).filter(Boolean);
       }
 
-      // Standard class student search
-      let names = [];
+      if (names.length > 0) {
+        return [...new Set(names)];
+      }
+
+      // Step 3: Standard class student search
       const students = appState.studentList || [];
       students.forEach(s => {
-        if (s.kelas && (s.kelas.toUpperCase().trim() === upperClass || (typeof isClassMatch === 'function' && isClassMatch(s.kelas, className)))) {
+        if (s.kelas && (s.kelas.toUpperCase().trim() === upperClass || isClassMatch(s.kelas, className))) {
           if (s.namaSiswa && !names.includes(s.namaSiswa)) names.push(s.namaSiswa);
         }
       });
       
       if (names.length === 0 && appState.siswaGuruWaliList) {
         appState.siswaGuruWaliList.forEach(s => {
-          if (s.kelas && (s.kelas.toUpperCase().trim() === upperClass || (typeof isClassMatch === 'function' && isClassMatch(s.kelas, className)))) {
+          if (s.kelas && (s.kelas.toUpperCase().trim() === upperClass || isClassMatch(s.kelas, className))) {
             if (s.namaSiswa && !names.includes(s.namaSiswa)) names.push(s.namaSiswa);
           }
         });
@@ -6207,17 +6255,8 @@
       
       if (names.length === 0 && appState.rekapAbsenList) {
         appState.rekapAbsenList.forEach(ra => {
-          if (ra.kelas && (ra.kelas.toUpperCase().trim() === upperClass || (typeof isClassMatch === 'function' && isClassMatch(ra.kelas, className)))) {
+          if (ra.kelas && (ra.kelas.toUpperCase().trim() === upperClass || isClassMatch(ra.kelas, className))) {
             if (ra.namaSiswa && !names.includes(ra.namaSiswa)) names.push(ra.namaSiswa);
-          }
-        });
-      }
-
-      // Fallback to kmpList if no students found in regular lists
-      if (names.length === 0 && appState.kelasMapelPilihanList) {
-        appState.kelasMapelPilihanList.forEach(k => {
-          if (k.namaKelas && (k.namaKelas.toUpperCase().trim() === upperClass || (typeof isClassMatch === 'function' && isClassMatch(k.namaKelas, className)))) {
-            if (k.namaSiswa && !names.includes(k.namaSiswa)) names.push(k.namaSiswa);
           }
         });
       }
@@ -6726,9 +6765,10 @@
       };
       
       // 1. CEK MODE GOOGLE FIREBASE REALTIME DATABASE (100% GRATIS SELAMANYA)
+      const apiTimeoutMs = action === "getDashboard" ? 60000 : 15000;
       if (useRTDB && rtdb) {
         try {
-          return await withApiTimeout(callRtdbApi(action, payload), 12000);
+          return await withApiTimeout(callRtdbApi(action, payload), apiTimeoutMs);
         } catch (rtdbErr) {
           console.warn(`🔥 RTDB call failed/timed out for action "${action}", falling back to Mock API:`, rtdbErr);
           if (action === "login" || action === "getDashboard" || action === "getSiswaPublic") {
@@ -6741,7 +6781,7 @@
       // 2. CEK MODE GOOGLE FIREBASE FIRESTORE
       if (useFirebase && db) {
         try {
-          return await withApiTimeout(callFirebaseApi(action, payload), 12000);
+          return await withApiTimeout(callFirebaseApi(action, payload), apiTimeoutMs);
         } catch (fsErr) {
           console.warn(`🔥 Firestore call failed/timed out for action "${action}", falling back to Mock API:`, fsErr);
           if (action === "login" || action === "getDashboard" || action === "getSiswaPublic") {
@@ -6927,8 +6967,26 @@
           const email = payload.currentUserEmail;
           const nama = payload.currentUserName;
 
-          let snap = await ref("/").once("value");
-          let root = snap.val() || {};
+          let root = {};
+          const collectionsToFetch = [
+            "jurnals", "perangkats", "nilais", "jadwals", "laporans",
+            "gurumasters", "users", "rekapabsen", "kondisisiswa", "siswagw",
+            "jurnal7kaih", "catatanbimbingan", "students", "kelasmapelpilihan",
+            "settings", "sessions"
+          ];
+          try {
+            const rtdbSnaps = await Promise.all(collectionsToFetch.map(col => ref(col).once("value").catch(() => null)));
+            collectionsToFetch.forEach((col, idx) => {
+              const sn = rtdbSnaps[idx];
+              if (sn && sn.exists()) {
+                root[col] = sn.val();
+              }
+            });
+          } catch (errParallel) {
+            console.warn("RTDB targeted read fallback note:", errParallel);
+            let snap = await ref("/").once("value");
+            root = snap.val() || {};
+          }
 
           function findCollection(keys) {
             let combined = {};
@@ -6962,46 +7020,56 @@
           let rootSettings = findCollection(["settings", "Settings", "setting", "Setting"]);
           let sessionsObj = findCollection(["sessions", "Sesi", "sesi", "Sessions"]);
 
-          // Jika ada data di Firestore, gabungkan secara otomatis agar tidak ada data yang tertinggal
+          // Jika ada data di Firestore, gabungkan secara otomatis (dengan timeout 3s agar tidak menghambat RTDB)
           if (useFirebase && db) {
             try {
-              const [
-                fsJurnals, fsPerangkats, fsNilais, fsJadwals, fsLaporans,
-                fsGuruMasters, fsUsers, fsRekapAbsen, fsKondisiSiswa, fsSiswaGw,
-                fsJurnal7KAIH, fsCatatanBimbingan, fsStudents, fsKelasMapel, fsSessions
-              ] = await Promise.all([
-                db.collection("jurnals").get().catch(() => ({ docs: [] })),
-                db.collection("perangkats").get().catch(() => ({ docs: [] })),
-                db.collection("nilais").get().catch(() => ({ docs: [] })),
-                db.collection("jadwals").get().catch(() => ({ docs: [] })),
-                db.collection("laporans").get().catch(() => ({ docs: [] })),
-                db.collection("gurumasters").get().catch(() => ({ docs: [] })),
-                db.collection("users").get().catch(() => ({ docs: [] })),
-                db.collection("rekapabsen").get().catch(() => ({ docs: [] })),
-                db.collection("kondisisiswa").get().catch(() => ({ docs: [] })),
-                db.collection("siswagw").get().catch(() => ({ docs: [] })),
-                db.collection("jurnal7kaih").get().catch(() => ({ docs: [] })),
-                db.collection("catatanbimbingan").get().catch(() => ({ docs: [] })),
-                db.collection("students").get().catch(() => ({ docs: [] })),
-                db.collection("kelasmapelpilihan").get().catch(() => ({ docs: [] })),
-                db.collection("sessions").get().catch(() => ({ docs: [] }))
-              ]);
+              const fetchFirestoreWithTimeout = new Promise(async (resolve) => {
+                const fsRes = await Promise.all([
+                  db.collection("jurnals").get().catch(() => ({ docs: [] })),
+                  db.collection("perangkats").get().catch(() => ({ docs: [] })),
+                  db.collection("nilais").get().catch(() => ({ docs: [] })),
+                  db.collection("jadwals").get().catch(() => ({ docs: [] })),
+                  db.collection("laporans").get().catch(() => ({ docs: [] })),
+                  db.collection("gurumasters").get().catch(() => ({ docs: [] })),
+                  db.collection("users").get().catch(() => ({ docs: [] })),
+                  db.collection("rekapabsen").get().catch(() => ({ docs: [] })),
+                  db.collection("kondisisiswa").get().catch(() => ({ docs: [] })),
+                  db.collection("siswagw").get().catch(() => ({ docs: [] })),
+                  db.collection("jurnal7kaih").get().catch(() => ({ docs: [] })),
+                  db.collection("catatanbimbingan").get().catch(() => ({ docs: [] })),
+                  db.collection("students").get().catch(() => ({ docs: [] })),
+                  db.collection("kelasmapelpilihan").get().catch(() => ({ docs: [] })),
+                  db.collection("sessions").get().catch(() => ({ docs: [] }))
+                ]).catch(() => []);
+                resolve(fsRes);
+              });
+              
+              const timerFs = new Promise((resolve) => setTimeout(() => resolve([]), 3000));
+              const fsResults = await Promise.race([fetchFirestoreWithTimeout, timerFs]);
 
-              fsJurnals.docs.forEach(d => { if (!jObj[d.id]) jObj[d.id] = d.data(); });
-              fsPerangkats.docs.forEach(d => { if (!pObj[d.id]) pObj[d.id] = d.data(); });
-              fsNilais.docs.forEach(d => { if (!nObj[d.id]) nObj[d.id] = d.data(); });
-              fsJadwals.docs.forEach(d => { if (!jdObj[d.id]) jdObj[d.id] = d.data(); });
-              fsLaporans.docs.forEach(d => { if (!lpObj[d.id]) lpObj[d.id] = d.data(); });
-              fsGuruMasters.docs.forEach(d => { if (!gmObj[d.id]) gmObj[d.id] = d.data(); });
-              fsUsers.docs.forEach(d => { if (!uObj[d.id]) uObj[d.id] = d.data(); });
-              fsRekapAbsen.docs.forEach(d => { if (!raObj[d.id]) raObj[d.id] = d.data(); });
-              fsKondisiSiswa.docs.forEach(d => { if (!ksObj[d.id]) ksObj[d.id] = d.data(); });
-              fsSiswaGw.docs.forEach(d => { if (!sgwObj[d.id]) sgwObj[d.id] = d.data(); });
-              fsJurnal7KAIH.docs.forEach(d => { if (!j7Obj[d.id]) j7Obj[d.id] = d.data(); });
-              fsCatatanBimbingan.docs.forEach(d => { if (!cbObj[d.id]) cbObj[d.id] = d.data(); });
-              fsStudents.docs.forEach(d => { if (!sObj[d.id]) sObj[d.id] = d.data(); });
-              fsKelasMapel.docs.forEach(d => { if (!kmpObj[d.id]) kmpObj[d.id] = d.data(); });
-              fsSessions.docs.forEach(d => { if (!sessionsObj[d.id]) sessionsObj[d.id] = d.data(); });
+              if (Array.isArray(fsResults) && fsResults.length >= 15) {
+                const [
+                  fsJurnals, fsPerangkats, fsNilais, fsJadwals, fsLaporans,
+                  fsGuruMasters, fsUsers, fsRekapAbsen, fsKondisiSiswa, fsSiswaGw,
+                  fsJurnal7KAIH, fsCatatanBimbingan, fsStudents, fsKelasMapel, fsSessions
+                ] = fsResults;
+
+                if (fsJurnals && fsJurnals.docs) fsJurnals.docs.forEach(d => { if (!jObj[d.id]) jObj[d.id] = d.data(); });
+                if (fsPerangkats && fsPerangkats.docs) fsPerangkats.docs.forEach(d => { if (!pObj[d.id]) pObj[d.id] = d.data(); });
+                if (fsNilais && fsNilais.docs) fsNilais.docs.forEach(d => { if (!nObj[d.id]) nObj[d.id] = d.data(); });
+                if (fsJadwals && fsJadwals.docs) fsJadwals.docs.forEach(d => { if (!jdObj[d.id]) jdObj[d.id] = d.data(); });
+                if (fsLaporans && fsLaporans.docs) fsLaporans.docs.forEach(d => { if (!lpObj[d.id]) lpObj[d.id] = d.data(); });
+                if (fsGuruMasters && fsGuruMasters.docs) fsGuruMasters.docs.forEach(d => { if (!gmObj[d.id]) gmObj[d.id] = d.data(); });
+                if (fsUsers && fsUsers.docs) fsUsers.docs.forEach(d => { if (!uObj[d.id]) uObj[d.id] = d.data(); });
+                if (fsRekapAbsen && fsRekapAbsen.docs) fsRekapAbsen.docs.forEach(d => { if (!raObj[d.id]) raObj[d.id] = d.data(); });
+                if (fsKondisiSiswa && fsKondisiSiswa.docs) fsKondisiSiswa.docs.forEach(d => { if (!ksObj[d.id]) ksObj[d.id] = d.data(); });
+                if (fsSiswaGw && fsSiswaGw.docs) fsSiswaGw.docs.forEach(d => { if (!sgwObj[d.id]) sgwObj[d.id] = d.data(); });
+                if (fsJurnal7KAIH && fsJurnal7KAIH.docs) fsJurnal7KAIH.docs.forEach(d => { if (!j7Obj[d.id]) j7Obj[d.id] = d.data(); });
+                if (fsCatatanBimbingan && fsCatatanBimbingan.docs) fsCatatanBimbingan.docs.forEach(d => { if (!cbObj[d.id]) cbObj[d.id] = d.data(); });
+                if (fsStudents && fsStudents.docs) fsStudents.docs.forEach(d => { if (!sObj[d.id]) sObj[d.id] = d.data(); });
+                if (fsKelasMapel && fsKelasMapel.docs) fsKelasMapel.docs.forEach(d => { if (!kmpObj[d.id]) kmpObj[d.id] = d.data(); });
+                if (fsSessions && fsSessions.docs) fsSessions.docs.forEach(d => { if (!sessionsObj[d.id]) sessionsObj[d.id] = d.data(); });
+              }
             } catch (errFS) {
               console.warn("Sinkronisasi Firestore gabungan note:", errFS);
             }
@@ -12948,31 +13016,30 @@
       if (!tingkatan) return;
       
       let targetTingkat = "";
-      if (tingkatan === "Kelas Mapil X") targetTingkat = "X";
-      else if (tingkatan === "Kelas Mapil XI") targetTingkat = "XI";
-      else if (tingkatan === "Kelas Mapil XII") targetTingkat = "XII";
+      if (tingkatan.includes("X") && !tingkatan.includes("XI") && !tingkatan.includes("XII")) targetTingkat = "X";
+      else if (tingkatan.includes("XI") && !tingkatan.includes("XII")) targetTingkat = "XI";
+      else if (tingkatan.includes("XII")) targetTingkat = "XII";
       
       const students = appState.studentList || [];
       
-      // Filter siswa berdasarkan Tingkatan (X, XI, atau XII) dengan fallback ke kelas jika tingkatan kosong
       const filtered = students.filter(s => {
-        let tingkat = s.tingkatan;
-        if (!tingkat && s.kelas) {
-          if (s.kelas.startsWith("10")) tingkat = "X";
-          else if (s.kelas.startsWith("11")) tingkat = "XI";
-          else if (s.kelas.startsWith("12")) tingkat = "XII";
+        let tingkat = (s.tingkatan || "").toString().trim().toUpperCase();
+        const kelas = (s.kelas || "").toString().trim().toUpperCase();
+        if (!tingkat && kelas) {
+          if (kelas.startsWith("10") || kelas.startsWith("X") || kelas.includes(" 10") || kelas.includes("-10")) tingkat = "X";
+          else if (kelas.startsWith("11") || kelas.startsWith("XI") || kelas.includes(" 11") || kelas.includes("-11")) tingkat = "XI";
+          else if (kelas.startsWith("12") || kelas.startsWith("XII") || kelas.includes(" 12") || kelas.includes("-12")) tingkat = "XII";
         }
-        return tingkat === targetTingkat;
+        return targetTingkat ? (tingkat === targetTingkat) : true;
       });
       
-      // Sort alphabetically
-      filtered.sort((a, b) => a.namaSiswa.localeCompare(b.namaSiswa));
+      filtered.sort((a, b) => (a.namaSiswa || "").localeCompare(b.namaSiswa || ""));
       
       selectSiswa.innerHTML = '<option value="">-- Pilih Nama Siswa --</option>';
       filtered.forEach(s => {
         const opt = document.createElement('option');
         opt.value = s.namaSiswa;
-        opt.textContent = `${s.namaSiswa} (Kelas ${s.kelas})`;
+        opt.textContent = `${s.namaSiswa} (Kelas ${s.kelas || '-'})`;
         opt.dataset.nis = s.nis || "";
         selectSiswa.appendChild(opt);
       });
@@ -13019,11 +13086,11 @@
         else appState.kelasMapelPilihanList.push(newItem);
         safeLocalStorageSetItem('db_kelas_mapel_pilihan', JSON.stringify(appState.kelasMapelPilihanList));
         
-        // Reset siswa select
+        // Reset siswa select and update table immediately
         document.getElementById('mapilNamaSiswa').value = "";
-        
-        await loadDashboardData();
         renderGuruMapilTable();
+        
+        loadDashboardData();
       } catch (err) {
         showToast("Gagal menyimpan data: " + err.message, "danger");
       } finally {
@@ -13043,8 +13110,8 @@
           safeLocalStorageSetItem('db_kelas_mapel_pilihan', JSON.stringify(appState.kelasMapelPilihanList));
         }
         showToast("Siswa berhasil dikeluarkan!");
-        await loadDashboardData();
         renderGuruMapilTable();
+        loadDashboardData();
       } catch (err) {
         showToast("Gagal mengeluarkan siswa: " + err.message, "danger");
       } finally {
@@ -13058,44 +13125,46 @@
       tbody.innerHTML = "";
       
       const list = appState.kelasMapelPilihanList || [];
-      let myMapil = list.filter(item => isMapilForTeacher(item, appState.user));
+      const user = appState.user || {};
+      let myMapil = list.filter(item => isMapilForTeacher(item, user));
 
-      if (myMapil.length === 0 && list.length > 0 && appState.user) {
-        const uEmail = (appState.user.email || "").toLowerCase().trim();
-        const uNama = (appState.user.nama || "").toLowerCase().trim();
+      if (myMapil.length === 0 && list.length > 0 && user) {
         myMapil = list.filter(item => {
-          if (!item || !item.guruEmail) return false;
-          const ge = item.guruEmail.toString().toLowerCase().trim();
-          return (uEmail && ge.includes(uEmail)) || (uNama && (ge.includes(uNama) || uNama.includes(ge))) || isTeacherMatch(ge, uNama);
+          if (!item) return false;
+          const ge = (item.guruEmail || item.guru || item.namaGuru || item.email || "").toString();
+          return isTeacherMatch(ge, user.email) || isTeacherMatch(ge, user.nama) || isTeacherMatch(ge, user.nip);
         });
       }
       
       // Filter berdasarkan dropdown filter rombel
-      const filterVal = document.getElementById('filterMapilKelas').value;
+      const filterEl = document.getElementById('filterMapilKelas');
+      const filterVal = filterEl ? filterEl.value : "";
       if (filterVal) {
-        myMapil = myMapil.filter(item => item.namaKelas === filterVal);
+        myMapil = myMapil.filter(item => item.namaKelas === filterVal || isClassMatch(item.namaKelas, filterVal));
       }
       
       if (myMapil.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Belum ada roster siswa bimbingan mapel pilihan Anda.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding:1.5rem;">Belum ada roster siswa bimbingan mapel pilihan Anda.</td></tr>`;
         return;
       }
       
-      // Sort berdasarkan nama kelas lalu nama siswa
       myMapil.sort((a, b) => {
-        if (a.namaKelas !== b.namaKelas) return a.namaKelas.localeCompare(b.namaKelas);
-        return a.namaSiswa.localeCompare(b.namaSiswa);
+        const kA = a.namaKelas || "";
+        const kB = b.namaKelas || "";
+        if (kA !== kB) return kA.localeCompare(kB);
+        return (a.namaSiswa || "").localeCompare(b.namaSiswa || "");
       });
       
       myMapil.forEach((item, idx) => {
         const tr = document.createElement('tr');
+        const safeNama = (item.namaSiswa || '').replace(/'/g, "\\'");
         tr.innerHTML = `
           <td>${idx + 1}</td>
-          <td><span class="badge badge-primary">${item.namaKelas}</span></td>
-          <td style="font-weight:600; color:#cbd5e1;">${item.namaSiswa}</td>
+          <td><span class="badge badge-primary">${item.namaKelas || '-'}</span></td>
+          <td style="font-weight:600; color:#cbd5e1;">${item.namaSiswa || '-'}</td>
           <td style="font-family:monospace; font-size:0.85rem;">${item.nis || '-'}</td>
           <td style="text-align:center;">
-            <button type="button" class="btn btn-danger" onclick="deleteSiswaMapil('${item.id}', '${item.namaSiswa}')" style="padding:0.25rem 0.5rem; font-size:0.75rem;">
+            <button type="button" class="btn btn-danger" onclick="deleteSiswaMapil('${item.id}', '${safeNama}')" style="padding:0.25rem 0.5rem; font-size:0.75rem;">
               <i class="fa-solid fa-user-minus"></i> Keluarkan
             </button>
           </td>
