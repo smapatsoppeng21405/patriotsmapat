@@ -7641,9 +7641,43 @@
 
         else if (action === "deleteStudent") {
           if (payload.currentUserRole !== "Admin" && payload.currentUserRole !== "Tenaga Kependidikan") throw new Error("Akses Ditolak: Hanya Admin atau Tenaga Kependidikan yang dapat menghapus data siswa.");
-          const ids = payload.ids || [payload.id];
-          for (const id of ids) {
-            await ref(`students/${id}`).remove();
+          const ids = (payload.ids || [payload.id]).map(i => i ? i.toString().trim().toLowerCase() : "").filter(Boolean);
+          
+          try {
+            const sSnap = await ref("students").once("value");
+            if (sSnap.exists() && sSnap.val()) {
+              const sObj = sSnap.val();
+              for (const key of Object.keys(sObj)) {
+                const s = sObj[key] || {};
+                const nis = (s.nis || s.Nis || "").toString().trim().toLowerCase();
+                const nama = (s.namaSiswa || s.nama || s.Nama || "").toString().trim().toLowerCase();
+                const keyLower = key.toString().trim().toLowerCase();
+                
+                if (ids.includes(keyLower) || ids.includes(nis) || ids.includes(nama)) {
+                  await ref(`students/${key}`).remove();
+                }
+              }
+            }
+            const sgwSnap = await ref("siswagw").once("value");
+            if (sgwSnap.exists() && sgwSnap.val()) {
+              const sgwObj = sgwSnap.val();
+              for (const key of Object.keys(sgwObj)) {
+                const sgw = sgwObj[key] || {};
+                const nis = (sgw.nis || sgw.Nis || "").toString().trim().toLowerCase();
+                const nama = (sgw.namaSiswa || sgw.nama || sgw.Nama || "").toString().trim().toLowerCase();
+                const keyLower = key.toString().trim().toLowerCase();
+                
+                if (ids.includes(keyLower) || ids.includes(nis) || ids.includes(nama)) {
+                  await ref(`siswagw/${key}`).remove();
+                }
+              }
+            }
+            for (const id of ids) {
+              await ref(`students/${id}`).remove().catch(() => null);
+              await ref(`siswagw/${id}`).remove().catch(() => null);
+            }
+          } catch (e) {
+            console.warn("RTDB deleteStudent note:", e);
           }
           return { success: true };
         }
@@ -12249,8 +12283,28 @@
       showLoading(true, "Menghapus data siswa...");
       try {
         await callApi("deleteStudent", { id });
+        
+        // Membersihkan cache lokal db_students dan memori appState agar data siswa terhapus permanen
+        const targetStr = (id || "").toString().trim().toLowerCase();
+        const localStudents = JSON.parse(localStorage.getItem('db_students')) || [];
+        const filteredLocal = localStudents.filter(s => {
+          const sId = (s.id || "").toString().trim().toLowerCase();
+          const sNis = (s.nis || "").toString().trim().toLowerCase();
+          const sNama = (s.namaSiswa || s.nama || "").toString().trim().toLowerCase();
+          return sId !== targetStr && sNis !== targetStr && sNama !== targetStr;
+        });
+        safeLocalStorageSetItem('db_students', JSON.stringify(filteredLocal));
+
+        appState.studentList = (appState.studentList || []).filter(s => {
+          const sId = (s.id || "").toString().trim().toLowerCase();
+          const sNis = (s.nis || "").toString().trim().toLowerCase();
+          const sNama = (s.namaSiswa || s.nama || "").toString().trim().toLowerCase();
+          return sId !== targetStr && sNis !== targetStr && sNama !== targetStr;
+        });
+
         showToast("Data siswa berhasil dihapus.");
         await loadDashboardData();
+        renderStudentTable();
       } catch (err) {
         showToast("Gagal menghapus data siswa: " + err.message, "danger");
       } finally {
@@ -12363,6 +12417,25 @@
       showLoading(true, `Menghapus ${ids.length} siswa...`);
       try {
         await callApi("deleteStudent", { ids });
+        
+        // Membersihkan cache lokal db_students & appState.studentList
+        const targets = ids.map(i => i.toString().trim().toLowerCase());
+        const localStudents = JSON.parse(localStorage.getItem('db_students')) || [];
+        const filteredLocal = localStudents.filter(s => {
+          const sId = (s.id || "").toString().trim().toLowerCase();
+          const sNis = (s.nis || "").toString().trim().toLowerCase();
+          const sNama = (s.namaSiswa || s.nama || "").toString().trim().toLowerCase();
+          return !targets.includes(sId) && !targets.includes(sNis) && !targets.includes(sNama);
+        });
+        safeLocalStorageSetItem('db_students', JSON.stringify(filteredLocal));
+
+        appState.studentList = (appState.studentList || []).filter(s => {
+          const sId = (s.id || "").toString().trim().toLowerCase();
+          const sNis = (s.nis || "").toString().trim().toLowerCase();
+          const sNama = (s.namaSiswa || s.nama || "").toString().trim().toLowerCase();
+          return !targets.includes(sId) && !targets.includes(sNis) && !targets.includes(sNama);
+        });
+
         showToast(`Berhasil menghapus ${ids.length} siswa.`);
         
         // Reset select all checkbox
@@ -12372,6 +12445,7 @@
         document.getElementById('bulkDeleteContainer').style.display = "none";
         
         await loadDashboardData();
+        renderStudentTable();
       } catch (err) {
         showToast("Gagal menghapus siswa: " + err.message, "danger");
       } finally {
@@ -12404,8 +12478,13 @@
         }
         
         await callApi("deleteStudent", { ids: allIds });
+
+        safeLocalStorageSetItem('db_students', JSON.stringify([]));
+        appState.studentList = [];
+
         showToast("Seluruh data siswa berhasil dihapus.");
         await loadDashboardData();
+        renderStudentTable();
       } catch (err) {
         showToast("Gagal menghapus seluruh siswa: " + err.message, "danger");
       } finally {
@@ -14460,8 +14539,13 @@
           else if (action === "deleteStudent") {
             if (payload.currentUserRole !== "Admin" && payload.currentUserRole !== "Tenaga Kependidikan") return reject(new Error("Akses Ditolak: Hanya Admin atau Tenaga Kependidikan yang dapat menghapus data siswa."));
             const students = JSON.parse(localStorage.getItem('db_students')) || [];
-            const ids = payload.ids || [payload.id];
-            const updated = students.filter(s => !ids.includes(s.id));
+            const targets = (payload.ids || [payload.id]).map(i => i ? i.toString().trim().toLowerCase() : "").filter(Boolean);
+            const updated = students.filter(s => {
+              const sId = (s.id || "").toString().trim().toLowerCase();
+              const sNis = (s.nis || "").toString().trim().toLowerCase();
+              const sNama = (s.namaSiswa || s.nama || "").toString().trim().toLowerCase();
+              return !targets.includes(sId) && !targets.includes(sNis) && !targets.includes(sNama);
+            });
             localStorage.setItem('db_students', JSON.stringify(updated));
             resolve({ success: true });
           }
