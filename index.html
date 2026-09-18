@@ -7583,9 +7583,46 @@
 
         else if (action === "deleteTeacher") {
           if (payload.currentUserRole !== "Admin" && payload.currentUserRole !== "Tenaga Kependidikan") throw new Error("Akses Ditolak: Hanya Admin atau Tenaga Kependidikan yang dapat menghapus data guru.");
-          const ids = payload.ids || [payload.id];
-          for (const id of ids) {
-            await ref(`users/${id}`).remove();
+          const ids = (payload.ids || [payload.id]).map(i => i ? i.toString().trim().toLowerCase() : "").filter(Boolean);
+          
+          try {
+            // Hapus dari node 'users'
+            const uSnap = await ref("users").once("value");
+            if (uSnap.exists() && uSnap.val()) {
+              const uObj = uSnap.val();
+              for (const key of Object.keys(uObj)) {
+                const u = uObj[key] || {};
+                const email = (u.email || u.Email || "").toString().trim().toLowerCase();
+                const nama = (u.nama || u.Nama || u.guru || "").toString().trim().toLowerCase();
+                const keyLower = key.toString().trim().toLowerCase();
+                
+                if (ids.includes(keyLower) || ids.includes(email) || ids.includes(nama)) {
+                  await ref(`users/${key}`).remove();
+                }
+              }
+            }
+            // Hapus dari node 'gurumasters' jika ada
+            const gmSnap = await ref("gurumasters").once("value");
+            if (gmSnap.exists() && gmSnap.val()) {
+              const gmObj = gmSnap.val();
+              for (const key of Object.keys(gmObj)) {
+                const gm = gmObj[key] || {};
+                const email = (gm.email || gm.Email || "").toString().trim().toLowerCase();
+                const nama = (gm.nama || gm.Nama || gm.guru || "").toString().trim().toLowerCase();
+                const keyLower = key.toString().trim().toLowerCase();
+                
+                if (ids.includes(keyLower) || ids.includes(email) || ids.includes(nama)) {
+                  await ref(`gurumasters/${key}`).remove();
+                }
+              }
+            }
+            // Hapus langsung by ID key jika dipasangkan sebagai path
+            for (const id of ids) {
+              await ref(`users/${id}`).remove().catch(() => null);
+              await ref(`gurumasters/${id}`).remove().catch(() => null);
+            }
+          } catch (e) {
+            console.warn("RTDB deleteTeacher note:", e);
           }
           return { success: true };
         }
@@ -11927,11 +11964,31 @@
       }
       if (!confirm("Apakah Anda yakin ingin menghapus akun guru ini? Menghapus guru dapat berdampak pada roster dan tugas mengajar yang sudah terdaftar.")) return;
       
-      showLoading(true, "Menyapus akun guru...");
+      showLoading(true, "Menghapus akun guru...");
       try {
         await callApi("deleteTeacher", { id });
+        
+        // Membersihkan cache lokal db_users dan memori appState agar data yang terhapus tidak muncul kembali
+        const targetStr = (id || "").toString().trim().toLowerCase();
+        const localUsers = JSON.parse(localStorage.getItem('db_users')) || [];
+        const filteredLocal = localUsers.filter(u => {
+          const uId = (u.id || "").toString().trim().toLowerCase();
+          const uEmail = (u.email || "").toString().trim().toLowerCase();
+          const uNama = (u.nama || "").toString().trim().toLowerCase();
+          return uId !== targetStr && uEmail !== targetStr && uNama !== targetStr;
+        });
+        safeLocalStorageSetItem('db_users', JSON.stringify(filteredLocal));
+
+        appState.teacherList = (appState.teacherList || []).filter(u => {
+          const uId = (u.id || "").toString().trim().toLowerCase();
+          const uEmail = (u.email || "").toString().trim().toLowerCase();
+          const uNama = (u.nama || "").toString().trim().toLowerCase();
+          return uId !== targetStr && uEmail !== targetStr && uNama !== targetStr;
+        });
+
         showToast("Akun guru berhasil dihapus.");
         await loadDashboardData();
+        renderTeacherTable();
       } catch (err) {
         showToast("Gagal menghapus akun: " + err.message, "danger");
       } finally {
@@ -11986,6 +12043,25 @@
       showLoading(true, `Menghapus ${ids.length} guru...`);
       try {
         await callApi("deleteTeacher", { ids });
+        
+        // Membersihkan cache lokal db_users & appState
+        const targets = ids.map(i => i.toString().trim().toLowerCase());
+        const localUsers = JSON.parse(localStorage.getItem('db_users')) || [];
+        const filteredLocal = localUsers.filter(u => {
+          const uId = (u.id || "").toString().trim().toLowerCase();
+          const uEmail = (u.email || "").toString().trim().toLowerCase();
+          const uNama = (u.nama || "").toString().trim().toLowerCase();
+          return !targets.includes(uId) && !targets.includes(uEmail) && !targets.includes(uNama);
+        });
+        safeLocalStorageSetItem('db_users', JSON.stringify(filteredLocal));
+
+        appState.teacherList = (appState.teacherList || []).filter(u => {
+          const uId = (u.id || "").toString().trim().toLowerCase();
+          const uEmail = (u.email || "").toString().trim().toLowerCase();
+          const uNama = (u.nama || "").toString().trim().toLowerCase();
+          return !targets.includes(uId) && !targets.includes(uEmail) && !targets.includes(uNama);
+        });
+
         showToast(`Berhasil menghapus ${ids.length} guru.`);
         
         // Reset select all checkbox
@@ -11995,6 +12071,7 @@
         document.getElementById('bulkDeleteTeacherContainer').style.display = "none";
         
         await loadDashboardData();
+        renderTeacherTable();
       } catch (err) {
         showToast("Gagal menghapus guru: " + err.message, "danger");
       } finally {
@@ -12027,8 +12104,13 @@
         }
         
         await callApi("deleteTeacher", { ids: allIds });
+
+        safeLocalStorageSetItem('db_users', JSON.stringify([]));
+        appState.teacherList = [];
+
         showToast("Seluruh data guru berhasil dihapus.");
         await loadDashboardData();
+        renderTeacherTable();
       } catch (err) {
         showToast("Gagal menghapus seluruh guru: " + err.message, "danger");
       } finally {
