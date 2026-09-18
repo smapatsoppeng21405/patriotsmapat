@@ -5616,25 +5616,29 @@
 
     function normalizeClassName(cls) {
       if (!cls) return "";
-      let s = cls.toString().trim().toLowerCase();
-      s = s.replace(/^kelas\s+/i, '').replace(/^rombel\s+/i, '');
-      s = s.replace(/mapel\s*pilihan/gi, 'mapil').replace(/mapelpil/gi, 'mapil');
-      s = s.replace(/[\.\-_]/g, ' ');
-      s = s.replace(/\bx\b/gi, '10').replace(/\bxi\b/gi, '11').replace(/\bxii\b/gi, '12');
+      let s = cls.toString().trim().toUpperCase();
+      s = s.replace(/^(KELAS|ROMBEL)\s+/i, '');
+      s = s.replace(/MAPEL\s*PILIHAN/gi, 'MAPIL').replace(/MAPELPIL/gi, 'MAPIL');
+      s = s.replace(/[\.\-_]+/g, ' ');
+      s = s.replace(/XII/g, '12').replace(/XI/g, '11').replace(/X/g, '10');
       return s.replace(/\s+/g, ' ').trim();
     }
 
     function isClassMatch(c1, c2) {
       if (!c1 || !c2) return false;
-      const str1 = c1.toString().trim().toLowerCase();
-      const str2 = c2.toString().trim().toLowerCase();
+      const str1 = c1.toString().trim().toUpperCase();
+      const str2 = c2.toString().trim().toUpperCase();
       if (str1 === str2) return true;
 
       const norm1 = normalizeClassName(c1);
       const norm2 = normalizeClassName(c2);
       if (!norm1 || !norm2) return false;
       if (norm1 === norm2) return true;
-      if (norm1.includes(norm2) || norm2.includes(norm1)) return true;
+
+      const compact1 = norm1.replace(/\s+/g, '');
+      const compact2 = norm2.replace(/\s+/g, '');
+      if (compact1 === compact2) return true;
+
       return false;
     }
 
@@ -6104,7 +6108,7 @@
       const container = document.getElementById('absentStudentsContainer');
       container.innerHTML = "";
       
-      if (studentNames.length === 0 && temporaryAbsentStudents.filter(s => s.kelas === targetClass).length === 0) {
+      if (studentNames.length === 0 && temporaryAbsentStudents.filter(s => s.kelas && isClassMatch(s.kelas, targetClass)).length === 0) {
         container.innerHTML = `<div id="noStudentsNotice" style="text-align:center; padding:1.5rem; color:var(--text-muted); font-size:0.85rem; font-style:italic;">
           Belum ada data siswa terdaftar untuk kelas ${targetClass}. Anda bisa menambahkan nama siswa secara manual di atas atau memuat kelas lain.
         </div>`;
@@ -6112,7 +6116,7 @@
       
       studentNames.forEach(name => renderAbsentStudentRow(name, "Hadir"));
       
-      temporaryAbsentStudents.filter(s => s.kelas === targetClass).forEach(s => {
+      temporaryAbsentStudents.filter(s => s.kelas && isClassMatch(s.kelas, targetClass)).forEach(s => {
         renderAbsentStudentRow(s.nama, s.status);
       });
       
@@ -6177,86 +6181,73 @@
       return false;
     }
 
-    function isClassMatch(c1, c2) {
-      if (!c1 || !c2) return false;
-      const s1 = c1.toString().toUpperCase().trim().replace(/[^A-Z0-9]/g, "");
-      const s2 = c2.toString().toUpperCase().trim().replace(/[^A-Z0-9]/g, "");
-      if (s1 === s2) return true;
-      if (s1.length > 2 && s2.length > 2 && (s1.includes(s2) || s2.includes(s1))) return true;
-      return false;
-    }
-
     function getStudentsForClass(className) {
       if (!className) return [];
       const upperClass = className.toString().trim().toUpperCase();
-      
       const user = appState.user || {};
-      const kmpList = appState.kelasMapelPilihanList || [];
-      
-      let classTingkatan = "";
-      if (upperClass.includes("XII") || upperClass.endsWith(" 12") || upperClass.endsWith("-12")) classTingkatan = "XII";
-      else if (upperClass.includes("XI") || upperClass.endsWith(" 11") || upperClass.endsWith("-11")) classTingkatan = "XI";
-      else if (upperClass.includes("X") || upperClass.endsWith(" 10") || upperClass.endsWith("-10")) classTingkatan = "X";
+      const isMapilClass = upperClass.includes("MAPIL") || upperClass.includes("PILIHAN");
 
-      // Step 1: Search in KelasMapelPilihan for teacher AND class match
-      let myMapil = kmpList.filter(k => {
-        if (!k) return false;
-        const kNamaKelas = (k.namaKelas || "").toString().trim().toUpperCase();
-        const kTingkatan = (k.tingkatan || "").toString().trim().toUpperCase();
+      let names = [];
 
-        const classMatch = kNamaKelas === upperClass ||
-                           isClassMatch(kNamaKelas, upperClass) ||
-                           (classTingkatan && (kTingkatan === classTingkatan || isClassMatch(kNamaKelas, classTingkatan))) ||
-                           (upperClass.includes("MAPIL") && classTingkatan && (kTingkatan === classTingkatan));
-
-        if (!classMatch) return false;
-
-        if (user && (user.role === "Guru" || user.role === "Wali Kelas")) {
-          return isMapilForTeacher(k, user);
-        }
-        return true;
-      });
-
-      let names = myMapil.map(k => k.namaSiswa).filter(Boolean);
-
-      // Step 2: Fallback if teacher-specific match found 0 students
-      if (names.length === 0) {
-        const mapilByClass = kmpList.filter(k => {
-          if (!k) return false;
-          const kNamaKelas = (k.namaKelas || "").toString().trim().toUpperCase();
-          const kTingkatan = (k.tingkatan || "").toString().trim().toUpperCase();
-          return kNamaKelas === upperClass ||
-                 isClassMatch(kNamaKelas, upperClass) ||
-                 (classTingkatan && (kTingkatan === classTingkatan || isClassMatch(kNamaKelas, classTingkatan))) ||
-                 (upperClass.includes("MAPIL") && classTingkatan && (kTingkatan === classTingkatan));
-        });
-        names = mapilByClass.map(k => k.namaSiswa).filter(Boolean);
-      }
-
-      if (names.length > 0) {
-        return [...new Set(names)];
-      }
-
-      // Step 3: Standard class student search
-      const students = appState.studentList || [];
-      students.forEach(s => {
-        if (s.kelas && (s.kelas.toUpperCase().trim() === upperClass || isClassMatch(s.kelas, className))) {
-          if (s.namaSiswa && !names.includes(s.namaSiswa)) names.push(s.namaSiswa);
-        }
-      });
-      
-      if (names.length === 0 && appState.siswaGuruWaliList) {
-        appState.siswaGuruWaliList.forEach(s => {
-          if (s.kelas && (s.kelas.toUpperCase().trim() === upperClass || isClassMatch(s.kelas, className))) {
-            if (s.namaSiswa && !names.includes(s.namaSiswa)) names.push(s.namaSiswa);
+      // Step 1: For regular classes (not explicitly Mapil), search in studentList (Master Data Siswa) first
+      if (!isMapilClass) {
+        const students = appState.studentList || [];
+        students.forEach(s => {
+          if (s.kelas && isClassMatch(s.kelas, className)) {
+            const name = s.namaSiswa || s.nama;
+            if (name && !names.includes(name)) names.push(name);
           }
         });
       }
-      
+
+      // Step 2: If no students found in studentList (or if it's a Mapel Pilihan class), search in KelasMapelPilihan
+      if (names.length === 0) {
+        const kmpList = appState.kelasMapelPilihanList || [];
+
+        let myMapil = kmpList.filter(k => {
+          if (!k || !k.namaKelas) return false;
+          if (!isClassMatch(k.namaKelas, className)) return false;
+          if (user && (user.role === "Guru" || user.role === "Wali Kelas")) {
+            return typeof isMapilForTeacher === 'function' ? isMapilForTeacher(k, user) : true;
+          }
+          return true;
+        });
+
+        names = myMapil.map(k => k.namaSiswa || k.nama).filter(Boolean);
+
+        if (names.length === 0) {
+          const mapilByClass = kmpList.filter(k => k && k.namaKelas && isClassMatch(k.namaKelas, className));
+          names = mapilByClass.map(k => k.namaSiswa || k.nama).filter(Boolean);
+        }
+      }
+
+      // Step 3: Fallback to studentList if Mapil search returned 0 but className didn't find anything in Step 1
+      if (names.length === 0) {
+        const students = appState.studentList || [];
+        students.forEach(s => {
+          if (s.kelas && isClassMatch(s.kelas, className)) {
+            const name = s.namaSiswa || s.nama;
+            if (name && !names.includes(name)) names.push(name);
+          }
+        });
+      }
+
+      // Step 4: Fallback to siswaGuruWaliList if still 0
+      if (names.length === 0 && appState.siswaGuruWaliList) {
+        appState.siswaGuruWaliList.forEach(s => {
+          if (s.kelas && isClassMatch(s.kelas, className)) {
+            const name = s.namaSiswa || s.nama;
+            if (name && !names.includes(name)) names.push(name);
+          }
+        });
+      }
+
+      // Step 5: Fallback to rekapAbsenList if still 0
       if (names.length === 0 && appState.rekapAbsenList) {
         appState.rekapAbsenList.forEach(ra => {
-          if (ra.kelas && (ra.kelas.toUpperCase().trim() === upperClass || isClassMatch(ra.kelas, className))) {
-            if (ra.namaSiswa && !names.includes(ra.namaSiswa)) names.push(ra.namaSiswa);
+          if (ra.kelas && isClassMatch(ra.kelas, className)) {
+            const name = ra.namaSiswa || ra.nama;
+            if (name && !names.includes(name)) names.push(name);
           }
         });
       }
@@ -6328,7 +6319,7 @@
       if (triggerUpdate) {
         const name = row.querySelector('.student-name').textContent;
         const targetClass = document.getElementById('jurnalKelas').value;
-        const idx = temporaryAbsentStudents.findIndex(s => s.nama === name && s.kelas === targetClass);
+        const idx = temporaryAbsentStudents.findIndex(s => s.nama === name && s.kelas && isClassMatch(s.kelas, targetClass));
         if (idx !== -1) {
           temporaryAbsentStudents[idx].status = status;
         } else {
